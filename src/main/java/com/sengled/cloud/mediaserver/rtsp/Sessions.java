@@ -10,6 +10,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import javax.sdp.SessionDescription;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -47,7 +49,7 @@ public class Sessions {
     }
     
     
-    private Map<String, String> uriSdp = new ConcurrentHashMap<String, String>();
+    private Map<String, SessionDescription> uriSdp = new ConcurrentHashMap<String, SessionDescription>();
     private ConcurrentHashMap<String, List<RtspListener>> dispatchers = new ConcurrentHashMap<String, List<RtspListener>>();
     
     private ExecutorService threads = Executors.newFixedThreadPool(1);
@@ -59,13 +61,13 @@ public class Sessions {
     }
     
     
-    public String getSdp(String uri) {
+    public SessionDescription getSdp(String uri) {
         return getInstance().uriSdp.get(uri);
     }
     
-    public String removeSdp(final String uri, final String sdp) {
-        String oldSdp = getInstance().uriSdp.get(uri);
-        if (StringUtils.equals(sdp, oldSdp)) {
+    public SessionDescription removeSdp(final String uri, final SessionDescription sdp) {
+        SessionDescription oldSdp = getInstance().uriSdp.get(uri);
+        if (StringUtils.equals(sdp.toString(), oldSdp.toString())) {
             oldSdp = getInstance().uriSdp.remove(uri);
         }
         
@@ -88,8 +90,8 @@ public class Sessions {
 
 
     
-    public String updateSdp(final String uri, final String sdp) {
-        String oldSdp = getInstance().uriSdp.put(uri, sdp);
+    public SessionDescription updateSdp(final String uri, final SessionDescription sdp) {
+        SessionDescription oldSdp = getInstance().uriSdp.put(uri, sdp);
         
         
         // save sdp
@@ -97,7 +99,7 @@ public class Sessions {
         threads.submit(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
-                FileUtils.write(file, sdp);
+                FileUtils.write(file, sdp.toString());
                 logger.info("update sdp of '{}', at {}", uri, file.getAbsolutePath());
                 return null;
             }

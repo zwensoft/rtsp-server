@@ -1,7 +1,6 @@
 package com.sengled.cloud.mediaserver;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -25,13 +24,15 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
 
+import javax.sdp.SessionDescription;
+
 import org.slf4j.LoggerFactory;
 
 import com.sengled.cloud.mediaserver.rtsp.RTPSetup;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession.State;
-import com.sengled.cloud.mediaserver.rtsp.codec.InterleavedFrame;
 import com.sengled.cloud.mediaserver.rtsp.codec.DefaultInterleavedFrame;
+import com.sengled.cloud.mediaserver.rtsp.codec.InterleavedFrame;
 import com.sengled.cloud.mediaserver.rtsp.mq.RtspListener;
 import com.sengled.cloud.mediaserver.rtsp.rtp.RTPContent;
 
@@ -101,7 +102,6 @@ class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
             InterleavedFrame frame = (InterleavedFrame)msg;
             if (null != session && frame.getChannel() % 2 == 0) {
                 RTPContent wrap = RTPContent.wrap(frame);
-                logger.info("{}", wrap);
                 session.dispatch(wrap);
             }
         }
@@ -111,7 +111,6 @@ class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
 
     private void readHttpRequest(final ChannelHandlerContext ctx,
                         FullHttpRequest request) throws UnsupportedEncodingException {
-        String sdp = null;
         FullHttpResponse response = null;
         
         HttpMethod method = request.getMethod();
@@ -129,13 +128,13 @@ class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
             
             response = makeResponse(request, session);
             
-            sdp = session.getSdp();
+            SessionDescription sdp = session.getSdp();
             if (null == sdp) {
                 response.setStatus(HttpResponseStatus.NOT_FOUND);
                 ctx.writeAndFlush(response);
                 return;
             } else {
-                response.content().writeBytes(sdp.getBytes("UTF-8"));
+                response.content().writeBytes(sdp.toString().getBytes("UTF-8"));
             }
             
             response.headers().add(RtspHeaders.Names.CACHE_CONTROL, RtspHeaders.Values.NO_CACHE);
@@ -145,7 +144,7 @@ class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
         } 
         // ANNOUNCE
         else if (RtspMethods.ANNOUNCE.equals(method)) {
-            sdp = request.content().toString(Charset.forName("UTF-8"));
+            String sdp = request.content().toString(Charset.forName("UTF-8"));
             logger.info("sdp\r\n{}", sdp);
             
             session = new RtspSession(request.getUri())

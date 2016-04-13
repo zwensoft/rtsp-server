@@ -1,14 +1,26 @@
 package com.sengled.cloud.mediaserver.rtsp;
 
+import gov.nist.core.StringTokenizer;
+import gov.nist.javax.sdp.SessionDescriptionImpl;
+import gov.nist.javax.sdp.fields.SDPField;
+import gov.nist.javax.sdp.parser.ParserFactory;
+import gov.nist.javax.sdp.parser.SDPParser;
+
 import java.io.Serializable;
+import java.text.ParseException;
+
+import javax.sdp.SessionDescription;
 
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.sengled.cloud.mediaserver.rtsp.codec.InterleavedFrame;
 import com.sengled.cloud.mediaserver.rtsp.mq.RtspListener;
 
 public class RtspSession implements Serializable {
+    private static final Logger logger = LoggerFactory.getLogger(RtspSession.class);
     private static final long serialVersionUID = -8562791602891803122L;
 
     public enum State {
@@ -26,7 +38,7 @@ public class RtspSession implements Serializable {
 
     final private String id;
     private String uri;
-    private String sdp;
+    private SessionDescription sdp;
     private State currentState = State.ANNOUNCING;
     private boolean receiveFromClient;
     private RtspListener listener;
@@ -51,8 +63,23 @@ public class RtspSession implements Serializable {
     }
     
     public RtspSession withSdp(String sdp) {
-        this.sdp = sdp;
+        SessionDescriptionImpl sd = new SessionDescriptionImpl();
+        StringTokenizer tokenizer = new StringTokenizer(sdp);
+        while (tokenizer.hasMoreChars()) {
+            String line = tokenizer.nextToken();
+
+            try {
+                SDPParser paser = ParserFactory.createParser(line);
+                if (null != paser) {
+                    SDPField obj = paser.parse();
+                    sd.addField(obj);
+                }
+            } catch (ParseException e) {
+                logger.warn("fail parse [{}]", line, e);
+            }
+        }
         
+        this.sdp = sd;
         return this;
     }
     
@@ -112,7 +139,7 @@ public class RtspSession implements Serializable {
         return currentState;
     }
     
-    public String getSdp() {
+    public SessionDescription getSdp() {
         return sdp;
     }
     
