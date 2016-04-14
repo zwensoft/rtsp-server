@@ -62,7 +62,7 @@ public class Sessions {
     }
     
     
-    public SessionDescription getSdp(String uri) {
+    public SessionDescription getSessionDescription(String uri) {
         RtspSession session = getInstance().sessions.get(uri);
         
         return null != session ? session.getSessionDescription() : null;

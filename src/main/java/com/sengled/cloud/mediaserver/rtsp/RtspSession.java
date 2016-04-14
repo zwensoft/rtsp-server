@@ -25,7 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.sengled.cloud.mediaserver.event.Listener;
-import com.sengled.cloud.mediaserver.rtsp.codec.InterleavedFrame;
+import com.sengled.cloud.mediaserver.rtsp.rtp.RTPContent;
 import com.sengled.cloud.mediaserver.rtsp.rtp.RTPStream;
 
 public class RtspSession implements Serializable {
@@ -49,6 +49,7 @@ public class RtspSession implements Serializable {
 
     private SessionDescription sd;
     private RTPStream[] streams;
+    private Clock clock = new Clock();
     
     public RtspSession(String url) {
         this.id = RandomStringUtils.random(16, false, true);
@@ -75,7 +76,7 @@ public class RtspSession implements Serializable {
         for (MediaDescription dm : getMediaDescriptions(sd)) {
             try {
                 if (StringUtils.endsWith(uri, getUri(dm.getAttribute("control")))) {
-                    streams[mediaIndex] = new RTPStream(dm, interleaved[0], interleaved[1]);
+                    streams[mediaIndex] = new RTPStream(clock, dm, interleaved[0], interleaved[1]);
                     return t.toString();
                 }
             } catch (SdpParseException ex) {
@@ -92,15 +93,18 @@ public class RtspSession implements Serializable {
     @SuppressWarnings("unchecked")
     public java.util.List<MediaDescription> getMediaDescriptions(SessionDescription sd) {
         try {
-            Vector vector = sd.getMediaDescriptions(false);
-            if (null != vector) {
-                return new ArrayList<MediaDescription>(vector);
+            if (null != sd) {
+                @SuppressWarnings("rawtypes")
+                Vector vector = sd.getMediaDescriptions(false);
+                if (null != vector) {
+                    return new ArrayList<MediaDescription>(vector);
+                }
             }
         } catch (SdpException e) {
             logger.warn("fail get getMediaDescriptions from {}, {}", uri, e.getMessage(), e);
         }
+
         return Collections.emptyList();
-        
     }
     
     public static String getUri(String url) {
@@ -149,7 +153,7 @@ public class RtspSession implements Serializable {
         Sessions sessions = Sessions.getInstance();
         switch (newMode) {
             case PLAY:
-                this.sd = sessions.getSdp(uri);
+                this.sd = sessions.getSessionDescription(uri);
                 this.streams = new RTPStream[getMediaDescriptions(sd).size()];
                 break;
             case PUBLISH:
@@ -172,9 +176,11 @@ public class RtspSession implements Serializable {
         switch (mode) {
             case PUBLISH:
                 sessions.updateSession(uri, this);
+                this.clock.start();
                 break;
             case PLAY:
                 Sessions.getInstance().register(uri, listener);
+                this.clock.start();
                 break;
             default:
                 break;
@@ -196,7 +202,7 @@ public class RtspSession implements Serializable {
     }
     
 
-    public void dispatch(InterleavedFrame msg) {
+    public void dispatch(RTPContent msg) {
         if (mode == SessionMode.PUBLISH) {
             int channel = msg.getChannel();
             
