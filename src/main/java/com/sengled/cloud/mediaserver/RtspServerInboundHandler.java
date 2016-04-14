@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import com.sengled.cloud.mediaserver.rtsp.RTPSetup;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
-import com.sengled.cloud.mediaserver.rtsp.RtspSession.State;
+import com.sengled.cloud.mediaserver.rtsp.RtspSession.SessionMode;
 import com.sengled.cloud.mediaserver.rtsp.codec.DefaultInterleavedFrame;
 import com.sengled.cloud.mediaserver.rtsp.codec.InterleavedFrame;
 import com.sengled.cloud.mediaserver.rtsp.mq.RtspListener;
@@ -55,7 +55,7 @@ class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         if (null != session) {
-            session.withState(State.TEARDOWN);
+            session.destroy();
         }
         
         super.channelInactive(ctx);
@@ -124,7 +124,25 @@ class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
         // DESCRIBE
         else if (RtspMethods.DESCRIBE.equals(method)){
             session = new RtspSession(request.getUri())
-                            .withState(State.DESCRIBING);
+                            .withMode(SessionMode.PLAY)
+                            .withListener(new RtspListener() {
+                                @Override
+                                public void onRTPFrame(InterleavedFrame frame) {
+                                    try {
+                                        int channel = frame.getChannel();
+                                        ByteBuf content = frame.content();
+                                        
+                                        // netty bytebuf 缓存，只在当前线程有效， 所以需要重新拷贝
+                                        ByteBuf payload = ctx.alloc().buffer(content.readableBytes()).writeBytes(content);
+                                        DefaultInterleavedFrame newMsg = new DefaultInterleavedFrame(channel, payload);
+                                        logger.trace("writeAndFlush {}", newMsg);
+            
+                                        ctx.writeAndFlush(newMsg);
+                                    } finally {
+                                        ReferenceCountUtil.release(frame);
+                                    }
+                                }
+                            });
             
             response = makeResponse(request, session);
             
@@ -149,7 +167,8 @@ class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
             
             session = new RtspSession(request.getUri())
                             .withSdp(sdp)
-                            .withState(State.ANNOUNCING);
+                            .withMode(SessionMode.PUBLISH)
+                            ;
             response = makeResponse(request, session);
         }
         // SETUP
@@ -165,31 +184,15 @@ class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
         }
         // RECORD
         else if (RtspMethods.RECORD.equals(method)) {
-            session.withState(State.RECORD);
             response = makeResponse(request, session);
             response.headers().set(RtspHeaders.Names.RTP_INFO,  getRtpInfo(request));
+            
+            session.record();
         }
         // PLAY
         else if (RtspMethods.PLAY.equals(method)) {
-            session.withState(State.PLAY)
-                    .withListener(new RtspListener() {
-                        @Override
-                        public void onRTPFrame(InterleavedFrame frame) {
-                            try {
-                                int channel = frame.getChannel();
-                                ByteBuf content = frame.content();
-                                
-                                // netty bytebuf 缓存，只在当前线程有效， 所以需要重新拷贝
-                                ByteBuf payload = ctx.alloc().buffer(content.readableBytes()).writeBytes(content);
-                                DefaultInterleavedFrame newMsg = new DefaultInterleavedFrame(channel, payload);
-                                logger.trace("writeAndFlush {}", newMsg);
-
-                                ctx.writeAndFlush(newMsg);
-                            } finally {
-                                ReferenceCountUtil.release(frame);
-                            }
-                        }
-                    });
+            session.play();
+            
             // response = makeResponse(request, null);
             response = makeResponse(request, session);
             response.headers().set(RtspHeaders.Names.RTP_INFO,  getRtpInfo(request));
@@ -197,7 +200,7 @@ class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
         // TEARDOWN
         else if (RtspMethods.TEARDOWN.equals(method)) {
             if (null != session) {
-                session.withState(State.TEARDOWN);
+                session.destroy();
                 session = null;
             }
             

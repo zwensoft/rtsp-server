@@ -23,24 +23,20 @@ public class RtspSession implements Serializable {
     private static final Logger logger = LoggerFactory.getLogger(RtspSession.class);
     private static final long serialVersionUID = -8562791602891803122L;
 
-    public enum State {
-        /** DESCRIBING: 客户端准备拉流 */
-        DESCRIBING,
-        /** ANNOUNCING: 客户端准备推流 */
-        ANNOUNCING,
-        /** PLAY: 正在播放 */
+    public enum SessionMode {
+        /** PUBLISH: 客户端向服务器推流 */
+        PUBLISH,
+        /** PLAY: 客户端从服务器拉流 */
         PLAY,
-        /** PLAY: 服务器正在录像 */
-        RECORD,
-        /** TEARDOWN: 连接断开  */
-        TEARDOWN
+        
+        /** 其他 */
+        OTHERS
     }
 
     final private String id;
     private String uri;
     private SessionDescription sdp;
-    private State currentState = State.ANNOUNCING;
-    private boolean receiveFromClient;
+    private SessionMode mode = SessionMode.OTHERS;
     private RtspListener listener;
     
     public RtspSession(String url) {
@@ -89,44 +85,61 @@ public class RtspSession implements Serializable {
         
         // use new
         this.listener = listener;
-        Sessions.getInstance().register(uri, listener);
         return this;
     }
     
-    public RtspSession withState(State newState) {
+    public RtspSession withMode(SessionMode newMode) {
         Sessions sessions = Sessions.getInstance();
-        switch (newState) {
-            case ANNOUNCING:
-                this.receiveFromClient = true;
-                break;
-            case DESCRIBING:
-                this.receiveFromClient = false;
+        switch (newMode) {
+            case PLAY:
                 this.sdp = sessions.getSdp(uri);
                 break;
-            case RECORD:
-            case PLAY:
-                if (isReceiveFromClient()) {
-                    sessions.updateSdp(uri, getSdp());
-                }
-                break;
-            case TEARDOWN:
-                sessions.unregister(uri, listener);
-                
-                if (isReceiveFromClient()) {
-                    sessions.removeSdp(uri, getSdp());
-                }
+            case PUBLISH:
                 break;
             default:
                 break;
         }
-        this.currentState = newState;
-        
+
+        this.mode = newMode;
         return this;
+    }
+    
+    public void record() {
+        this.play();
+    }
+
+    public void play() {
+        Sessions sessions = Sessions.getInstance();
+        
+        switch (mode) {
+            case PUBLISH:
+                sessions.updateSdp(uri, getSdp());
+                break;
+            case PLAY:
+                Sessions.getInstance().register(uri, listener);
+                break;
+            default:
+                break;
+        }
+    }
+
+    public void destroy() {
+        Sessions sessions = Sessions.getInstance();
+        
+        switch (mode) {
+            case PUBLISH:
+                sessions.removeSdp(uri, getSdp());
+                break;
+            case PLAY:
+                Sessions.getInstance().unregister(uri, listener);
+            default:
+                break;
+        }
     }
     
 
     public void dispatch(InterleavedFrame msg) {
-        if (isReceiveFromClient()) {
+        if (mode == SessionMode.PUBLISH) {
             Sessions.getInstance().dispatch(uri, msg);
         }
     }
@@ -135,18 +148,14 @@ public class RtspSession implements Serializable {
         return uri;
     }
     
-    public State getState() {
-        return currentState;
+    public SessionMode getState() {
+        return mode;
     }
     
     public SessionDescription getSdp() {
         return sdp;
     }
     
-    
-    private boolean isReceiveFromClient() {
-        return receiveFromClient;
-    }
     
     public String getId() {
         return id;
@@ -158,7 +167,7 @@ public class RtspSession implements Serializable {
         StringBuilder buf = new StringBuilder();
         buf.append("{RtspSession#").append(id);
         buf.append(", uri=").append(uri);
-        buf.append(receiveFromClient ? ", receive" : ", play");
+        buf.append(", ").append(mode);
         
         buf.append("}");
         return buf.toString();
