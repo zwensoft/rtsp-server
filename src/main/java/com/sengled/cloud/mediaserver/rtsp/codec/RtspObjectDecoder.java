@@ -25,6 +25,9 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.sengled.cloud.mediaserver.rtsp.rtp.RTCPContent;
+import com.sengled.cloud.mediaserver.rtsp.rtp.RTPContent;
+
 
 /**
  * Decodes {@link ByteBuf}s into RTSP messages represented in
@@ -259,7 +262,12 @@ public abstract class  RtspObjectDecoder extends ByteToMessageDecoder {
                     }
 
                     ByteBuf frame = buffer.readSlice(rtpSize).retain();
-                    out.add(new DefaultInterleavedFrame(rtpChannel, frame));
+                    if (rtpChannel % 2 == 0) {
+                        out.add(new RTPContent(rtpChannel, frame));
+                    } else {
+                        out.add(new RTCPContent(rtpChannel, frame));
+                    }
+                    
                     currentState = State.READ_RTP_CONTROL;
                     break;
                 }

@@ -11,22 +11,28 @@ public class DefaultInterleavedFrame extends DefaultByteBufHolder implements Int
         this.channel = channel;
     }
     
-    public long getUnsignedInt(int offset) {
+    protected long getUnsignedInt(int offset) {
         ByteBuf content = content();
         return content.getUnsignedInt(content.readerIndex() + offset);
     }
     
-    public int getUnsignedMedium(int offset) {
+    protected void setUnsignedInt(int offset, long value) {
+        ByteBuf content = content();
+        content.setInt(content.readerIndex() + offset, (int)(value & 0xFFFFFFFFL));
+    }
+    
+    
+    protected int getUnsignedMedium(int offset) {
         ByteBuf content = content();
         return content.getUnsignedMedium(content.readerIndex() + offset);
     }
     
-    public int getUnsignedShort(int offset) {
+    protected int getUnsignedShort(int offset) {
         ByteBuf content = content();
         return content.getUnsignedShort(content.readerIndex() + offset);
     }
     
-    public short getUnsignedByte(int offset) {
+    protected short getUnsignedByte(int offset) {
         ByteBuf content = content();
         return content.getUnsignedByte(content.readerIndex() + offset);
     }
