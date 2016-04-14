@@ -10,9 +10,36 @@ public class RTPContent extends DefaultInterleavedFrame {
     public static RTPContent wrap(InterleavedFrame frame) {
         return new RTPContent(frame.getChannel(), frame.content());
     }
+    
+    public static RTPContent wrap(int channel, ByteBuf content) {
+        return new RTPContent(channel, content);
+    }
 
     public RTPContent(int channel, ByteBuf payload) {
         super(channel, payload);
+    }
+    
+    @Override
+    public RTPContent copy() {
+        return new RTPContent(getChannel(), content().copy());
+    }
+    
+    @Override
+    public RTPContent duplicate() {
+        return new RTPContent(getChannel(), content().duplicate());
+    }
+    
+    @Override
+    public DefaultInterleavedFrame retain() {
+        content().retain();
+        return this;
+    }
+    
+    
+    @Override
+    public DefaultInterleavedFrame retain(int increment) {
+        content().retain(increment);
+        return this;
     }
 
     public int getFlags() {
@@ -32,6 +59,11 @@ public class RTPContent extends DefaultInterleavedFrame {
     }
     
     public long getTimestamp() {
+        return getUnsignedInt(4);
+    }
+    
+    
+    public long setTimestamp(long timestamp) {
         return getUnsignedInt(4);
     }
     
