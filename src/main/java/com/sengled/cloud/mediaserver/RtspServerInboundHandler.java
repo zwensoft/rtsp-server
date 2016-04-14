@@ -82,7 +82,7 @@ class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
             FullHttpRequest request = (FullHttpRequest) msg;
             HttpMethod method = request.getMethod();
             HttpHeaders headers = request.headers();
-            logger.info("{} {}", method, request.getUri());
+            logger.info("{} {} {}", method, request.getUri(), request.getProtocolVersion());
             if (logger.isDebugEnabled()) {
                 for (Entry<String, String> entry : headers) {
                     logger.debug("{}:{}", entry.getKey(), entry.getValue());
@@ -119,7 +119,7 @@ class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
         if (RtspMethods.OPTIONS.equals(method)) {
             response = makeResponseWithStatus(request, HttpResponseStatus.OK);
             
-            response.headers().add(RtspHeaders.Names.PUBLIC, "OPTIONS, DESCRIBE");
+            response.headers().add(RtspHeaders.Names.PUBLIC, "OPTIONS, DESCRIBE, PLAY, ANNOUNCE, SETUP, PLAY, GET_PARAMETER, TEARDOWN");
         }
         // DESCRIBE
         else if (RtspMethods.DESCRIBE.equals(method)){
@@ -196,6 +196,9 @@ class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
             // response = makeResponse(request, null);
             response = makeResponse(request, session);
             response.headers().set(RtspHeaders.Names.RTP_INFO,  getRtpInfo(request));
+        }
+        else if (RtspMethods.GET_PARAMETER.equals(method)) {
+            response = makeResponse(request, session);
         }
         // TEARDOWN
         else if (RtspMethods.TEARDOWN.equals(method)) {
