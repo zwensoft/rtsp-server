@@ -35,6 +35,7 @@ import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession.SessionMode;
 import com.sengled.cloud.mediaserver.rtsp.codec.DefaultInterleavedFrame;
 import com.sengled.cloud.mediaserver.rtsp.codec.InterleavedFrame;
+import com.sengled.cloud.mediaserver.rtsp.rtp.RTPContent;
 import com.sengled.cloud.mediaserver.rtsp.rtp.RtpEvent;
 
 class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
@@ -101,8 +102,8 @@ class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
             }
 
             InterleavedFrame frame = (InterleavedFrame)msg;
-            if (null != session && frame.getChannel() % 2 == 0) {
-                session.dispatch(frame.retain());
+            if (null != session && frame instanceof RTPContent) {
+                session.dispatch((RTPContent)frame.retain());
             }
         }
         
