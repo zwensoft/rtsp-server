@@ -1,5 +1,7 @@
 package com.sengled.cloud.mediaserver.rtsp;
 
+import io.netty.util.ReferenceCountUtil;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -13,12 +15,11 @@ import java.util.concurrent.Executors;
 import javax.sdp.SessionDescription;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.sengled.cloud.mediaserver.rtsp.codec.InterleavedFrame;
-import com.sengled.cloud.mediaserver.rtsp.mq.RtspListener;
+import com.sengled.cloud.mediaserver.event.Listener;
+import com.sengled.cloud.mediaserver.rtsp.rtp.RtpEvent;
 
 public class Sessions {
     private static final Logger logger = LoggerFactory.getLogger(Sessions.class);
@@ -49,8 +50,8 @@ public class Sessions {
     }
     
     
-    private Map<String, SessionDescription> uriSdp = new ConcurrentHashMap<String, SessionDescription>();
-    private ConcurrentHashMap<String, List<RtspListener>> dispatchers = new ConcurrentHashMap<String, List<RtspListener>>();
+    private Map<String, RtspSession> sessions = new ConcurrentHashMap<String, RtspSession>();
+    private ConcurrentHashMap<String, List<Listener>> dispatchers = new ConcurrentHashMap<String, List<Listener>>();
     
     private ExecutorService threads = Executors.newFixedThreadPool(1);
     
@@ -62,13 +63,15 @@ public class Sessions {
     
     
     public SessionDescription getSdp(String uri) {
-        return getInstance().uriSdp.get(uri);
+        RtspSession session = getInstance().sessions.get(uri);
+        
+        return null != session ? session.getSessionDescription() : null;
     }
     
-    public SessionDescription removeSdp(final String uri, final SessionDescription sdp) {
-        SessionDescription oldSdp = getInstance().uriSdp.get(uri);
-        if (StringUtils.equals(sdp.toString(), oldSdp.toString())) {
-            oldSdp = getInstance().uriSdp.remove(uri);
+    public RtspSession removeSession(final String uri, final RtspSession session) {
+        RtspSession oldSession = getInstance().sessions.get(uri);
+        if (oldSession == session) {
+            oldSession = getInstance().sessions.remove(uri);
         }
         
         // delete sdp
@@ -85,58 +88,59 @@ public class Sessions {
             }
         });
         
-        return oldSdp;
+        return oldSession;
     }
 
 
     
-    public SessionDescription updateSdp(final String uri, final SessionDescription sdp) {
-        SessionDescription oldSdp = getInstance().uriSdp.put(uri, sdp);
-        
+    public RtspSession updateSession(final String uri, final RtspSession session) {
+        RtspSession oldSession = getInstance().sessions.put(uri, session);
         
         // save sdp
         final File file = getSdpFile(uri);
         threads.submit(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
-                FileUtils.write(file, sdp.toString());
+                FileUtils.write(file, session.getSDP());
                 logger.info("update sdp of '{}', at {}", uri, file.getAbsolutePath());
                 return null;
             }
         });
         
         
-        return oldSdp;
+        return oldSession;
     }
 
-    public void register(String uri, RtspListener listener) {
+    public void register(String uri, Listener listener) {
         if (null != listener) {
-            dispatchers.putIfAbsent(uri, new CopyOnWriteArrayList<RtspListener>());
+            dispatchers.putIfAbsent(uri, new CopyOnWriteArrayList<Listener>());
             dispatchers.get(uri).add(listener);
         }
     }
 
-    public void unregister(String uri, RtspListener listener) {
+    public void unregister(String uri, Listener listener) {
         if (null != listener) {
-            dispatchers.putIfAbsent(uri, new CopyOnWriteArrayList<RtspListener>());
+            dispatchers.putIfAbsent(uri, new CopyOnWriteArrayList<Listener>());
             dispatchers.get(uri).remove(listener);
         }
     }
     
-    public void dispatch(String uri,
-                         InterleavedFrame msg) {
-        List<RtspListener> listen = dispatchers.get(uri);
-        if (null != listen) {
-            logger.trace("dispatch {} to {} listener(s) ", msg, listen.size());
+    public void dispatch(String uri, RtpEvent msg) {
+        try {
+            List<Listener> listen = dispatchers.get(uri);
+            if (null != listen) {
+                logger.trace("dispatch {} to {} listener(s) ", msg, listen.size());
 
-            for (RtspListener rtspListener : listen) {
-                rtspListener.onRTPFrame(msg.retain().duplicate());
+                for (Listener rtspListener : listen) {
+                    rtspListener.on(msg.duplicate());
+                }
+
+            } else {
+                logger.trace("NO Listeners For {}", uri);
             }
-
-        } else {
-            logger.trace("NO Listeners For {}", uri);
+        } finally {
+            ReferenceCountUtil.release(msg);
         }
-        
     }
     
     

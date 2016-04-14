@@ -24,17 +24,18 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
 
-import javax.sdp.SessionDescription;
+import javax.sip.TransportNotSupportedException;
 
 import org.slf4j.LoggerFactory;
 
+import com.sengled.cloud.mediaserver.event.Event;
+import com.sengled.cloud.mediaserver.event.Listener;
 import com.sengled.cloud.mediaserver.rtsp.RTPSetup;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession.SessionMode;
 import com.sengled.cloud.mediaserver.rtsp.codec.DefaultInterleavedFrame;
 import com.sengled.cloud.mediaserver.rtsp.codec.InterleavedFrame;
-import com.sengled.cloud.mediaserver.rtsp.mq.RtspListener;
-import com.sengled.cloud.mediaserver.rtsp.rtp.RTPContent;
+import com.sengled.cloud.mediaserver.rtsp.rtp.RtpEvent;
 
 class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
     private org.slf4j.Logger logger = LoggerFactory.getLogger(getClass());
@@ -101,8 +102,7 @@ class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
 
             InterleavedFrame frame = (InterleavedFrame)msg;
             if (null != session && frame.getChannel() % 2 == 0) {
-                RTPContent wrap = RTPContent.wrap(frame);
-                session.dispatch(wrap);
+                session.dispatch(frame.retain());
             }
         }
         
@@ -115,44 +115,49 @@ class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
         
         HttpMethod method = request.getMethod();
         
-        // OPTIONS
         if (RtspMethods.OPTIONS.equals(method)) {
             response = makeResponseWithStatus(request, HttpResponseStatus.OK);
             
             response.headers().add(RtspHeaders.Names.PUBLIC, "OPTIONS, DESCRIBE, PLAY, ANNOUNCE, SETUP, PLAY, GET_PARAMETER, TEARDOWN");
         }
-        // DESCRIBE
         else if (RtspMethods.DESCRIBE.equals(method)){
-            session = new RtspSession(request.getUri())
-                            .withMode(SessionMode.PLAY)
-                            .withListener(new RtspListener() {
-                                @Override
-                                public void onRTPFrame(InterleavedFrame frame) {
-                                    try {
-                                        int channel = frame.getChannel();
-                                        ByteBuf content = frame.content();
-                                        
-                                        // netty bytebuf 缓存，只在当前线程有效， 所以需要重新拷贝
-                                        ByteBuf payload = ctx.alloc().buffer(content.readableBytes()).writeBytes(content);
-                                        DefaultInterleavedFrame newMsg = new DefaultInterleavedFrame(channel, payload);
-                                        logger.trace("writeAndFlush {}", newMsg);
-            
-                                        ctx.writeAndFlush(newMsg);
-                                    } finally {
-                                        ReferenceCountUtil.release(frame);
-                                    }
-                                }
-                            });
+            session = new RtspSession(request.getUri());
+            final RtspSession mySession = session;
+            mySession
+                .withMode(SessionMode.PLAY)
+                .withListener(new Listener() {
+                    @Override
+                    public void on(Event event) {
+                        if(event instanceof RtpEvent) {
+                            RtpEvent rtp = ((RtpEvent)event);
+
+                            int streamIndex = rtp.getStreamIndex();
+                            ByteBuf content = rtp.content();
+                            
+                            if (mySession.isStreamSetup(streamIndex)) {
+                                int channel = mySession.getStreamRTPChannel(streamIndex);
+                                
+                                // netty bytebuf 缓存，只在当前线程有效， 所以需要重新拷贝
+                                ByteBuf payload = ctx.alloc().buffer(content.readableBytes()).writeBytes(content);
+                                DefaultInterleavedFrame newMsg = new DefaultInterleavedFrame(channel, payload);
+                                logger.trace("writeAndFlush {}", newMsg);
+
+                                ctx.writeAndFlush(newMsg);
+                            }
+                        }
+                    }
+                });
             
             response = makeResponse(request, session);
             
-            SessionDescription sdp = session.getSdp();
+            String sdp = session.getSDP();
             if (null == sdp) {
                 response.setStatus(HttpResponseStatus.NOT_FOUND);
                 ctx.writeAndFlush(response);
                 return;
             } else {
-                response.content().writeBytes(sdp.toString().getBytes("UTF-8"));
+                logger.debug("output:\r\n{}", sdp);
+                response.content().writeBytes(sdp.getBytes("UTF-8"));
             }
             
             response.headers().add(RtspHeaders.Names.CACHE_CONTROL, RtspHeaders.Values.NO_CACHE);
@@ -160,36 +165,37 @@ class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
             response.headers().set(RtspHeaders.Names.CONTENT_LENGTH, response.content().readableBytes());
             response.headers().set(RtspHeaders.Names.CONTENT_TYPE, "application/sdp");
         } 
-        // ANNOUNCE
         else if (RtspMethods.ANNOUNCE.equals(method)) {
             String sdp = request.content().toString(Charset.forName("UTF-8"));
             logger.info("sdp\r\n{}", sdp);
             
             session = new RtspSession(request.getUri())
                             .withSdp(sdp)
-                            .withMode(SessionMode.PUBLISH)
-                            ;
+                            .withMode(SessionMode.PUBLISH);
             response = makeResponse(request, session);
         }
-        // SETUP
         else if (RtspMethods.SETUP.equals(method)) {
-            setups.add(session.setupStream(request.getUri()));
+            try {
+                String exceptTransport = request.headers().get(RtspHeaders.Names.TRANSPORT);
+                String transport = session.setupStream(request.getUri(), exceptTransport);
 
-            String transport = request.headers().get(RtspHeaders.Names.TRANSPORT);
-            logger.info("SETUP, {}: {}", RtspHeaders.Names.TRANSPORT, transport);
-            response = makeResponse(request, session);
-            response.headers().add(RtspHeaders.Names.CACHE_CONTROL, RtspHeaders.Values.NO_CACHE);
-            response.headers().add(RtspHeaders.Names.EXPIRES, response.headers().get(RtspHeaders.Names.DATE));
-            response.headers().add(RtspHeaders.Names.TRANSPORT, transport);
+                response = makeResponse(request, session);
+                response.headers().add(RtspHeaders.Names.CACHE_CONTROL, RtspHeaders.Values.NO_CACHE);
+                response.headers().add(RtspHeaders.Names.EXPIRES, response.headers().get(RtspHeaders.Names.DATE));
+                response.headers().add(RtspHeaders.Names.TRANSPORT, transport);
+            } catch (TransportNotSupportedException ex) {
+                logger.warn("Not Supported Transport '{}'", ex.getMessage(), ex);
+                
+                response = makeResponse(request, session);
+                response.setStatus(HttpResponseStatus.NOT_EXTENDED);
+            }
         }
-        // RECORD
         else if (RtspMethods.RECORD.equals(method)) {
             response = makeResponse(request, session);
             response.headers().set(RtspHeaders.Names.RTP_INFO,  getRtpInfo(request));
             
             session.record();
         }
-        // PLAY
         else if (RtspMethods.PLAY.equals(method)) {
             session.play();
             
@@ -200,7 +206,6 @@ class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
         else if (RtspMethods.GET_PARAMETER.equals(method)) {
             response = makeResponse(request, session);
         }
-        // TEARDOWN
         else if (RtspMethods.TEARDOWN.equals(method)) {
             if (null != session) {
                 session.destroy();
@@ -257,7 +262,7 @@ class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
                 new DefaultFullHttpResponse(RtspVersions.RTSP_1_0, status);
         resp.headers().set(RtspHeaders.Names.CSEQ, headers.get(RtspHeaders.Names.CSEQ));
         resp.headers().set(RtspHeaders.Names.DATE, new Timestamp(System.currentTimeMillis()));
-        resp.headers().set(RtspHeaders.Names.SERVER, "Sengled Media Server base Netty");
+        resp.headers().set(RtspHeaders.Names.SERVER, "Sengled Media Server On Netty");
 
         return resp;
     }

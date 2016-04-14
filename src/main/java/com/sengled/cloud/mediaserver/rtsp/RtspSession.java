@@ -8,16 +8,25 @@ import gov.nist.javax.sdp.parser.SDPParser;
 
 import java.io.Serializable;
 import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Vector;
 
+import javax.sdp.MediaDescription;
+import javax.sdp.SdpException;
+import javax.sdp.SdpParseException;
 import javax.sdp.SessionDescription;
+import javax.sip.TransportNotSupportedException;
 
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.sengled.cloud.mediaserver.event.Listener;
 import com.sengled.cloud.mediaserver.rtsp.codec.InterleavedFrame;
-import com.sengled.cloud.mediaserver.rtsp.mq.RtspListener;
+import com.sengled.cloud.mediaserver.rtsp.rtp.RTPStream;
 
 public class RtspSession implements Serializable {
     private static final Logger logger = LoggerFactory.getLogger(RtspSession.class);
@@ -35,21 +44,65 @@ public class RtspSession implements Serializable {
 
     final private String id;
     private String uri;
-    private SessionDescription sdp;
     private SessionMode mode = SessionMode.OTHERS;
-    private RtspListener listener;
+    private Listener listener;
+
+    private SessionDescription sd;
+    private RTPStream[] streams;
     
     public RtspSession(String url) {
         this.id = RandomStringUtils.random(16, false, true);
         this.uri = getUri(url);
     }
 
-    public RTPSetup setupStream(String url) {
-        //TODO setup streams
-        return new RTPSetup(getUri(url));
+    public String setupStream(String url, String transport) throws TransportNotSupportedException {
+        Transport t = Transport.parse(transport);
+        if (!StringUtils.equals(Transport.RTP_AVP_TCP, t.getTranport())) {
+            throw new TransportNotSupportedException(t.getTranport());
+        }
+        
+        if (!StringUtils.equals(Transport.UNICAST, t.getUnicast())) {
+            throw new TransportNotSupportedException(t.getUnicast());
+        }
+        
+        int[] interleaved = t.getInterleaved();
+        if (null == interleaved) {
+            throw new TransportNotSupportedException("interleaved");
+        }
+        
+        String uri = getUri(url);
+        int mediaIndex = 0;
+        for (MediaDescription dm : getMediaDescriptions(sd)) {
+            try {
+                if (StringUtils.endsWith(uri, getUri(dm.getAttribute("control")))) {
+                    streams[mediaIndex] = new RTPStream(dm, interleaved[0], interleaved[1]);
+                    return t.toString();
+                }
+            } catch (SdpParseException ex) {
+                logger.warn("{}", ex.getMessage(), ex);
+            }
+            
+            mediaIndex ++;
+        }
+
+        throw new IllegalArgumentException("No Media Found in SDP, Named as '" + uri + "'");
     }
 
 
+    @SuppressWarnings("unchecked")
+    public java.util.List<MediaDescription> getMediaDescriptions(SessionDescription sd) {
+        try {
+            Vector vector = sd.getMediaDescriptions(false);
+            if (null != vector) {
+                return new ArrayList<MediaDescription>(vector);
+            }
+        } catch (SdpException e) {
+            logger.warn("fail get getMediaDescriptions from {}, {}", uri, e.getMessage(), e);
+        }
+        return Collections.emptyList();
+        
+    }
+    
     public static String getUri(String url) {
         String uri = url;
         if (StringUtils.startsWith(url, "rtsp://")) {
@@ -75,11 +128,15 @@ public class RtspSession implements Serializable {
             }
         }
         
-        this.sdp = sd;
+        List<MediaDescription> mediaDescripts = getMediaDescriptions(sd);
+        
+        this.sd = sd;
+        this.streams = new RTPStream[mediaDescripts.size()];
         return this;
     }
+
     
-    public RtspSession withListener(RtspListener listener) {
+    public RtspSession withListener(Listener listener) {
         // remove old
         Sessions.getInstance().unregister(uri, this.listener);
         
@@ -92,7 +149,8 @@ public class RtspSession implements Serializable {
         Sessions sessions = Sessions.getInstance();
         switch (newMode) {
             case PLAY:
-                this.sdp = sessions.getSdp(uri);
+                this.sd = sessions.getSdp(uri);
+                this.streams = new RTPStream[getMediaDescriptions(sd).size()];
                 break;
             case PUBLISH:
                 break;
@@ -113,7 +171,7 @@ public class RtspSession implements Serializable {
         
         switch (mode) {
             case PUBLISH:
-                sessions.updateSdp(uri, getSdp());
+                sessions.updateSession(uri, this);
                 break;
             case PLAY:
                 Sessions.getInstance().register(uri, listener);
@@ -128,7 +186,7 @@ public class RtspSession implements Serializable {
         
         switch (mode) {
             case PUBLISH:
-                sessions.removeSdp(uri, getSdp());
+                sessions.removeSession(uri, this);
                 break;
             case PLAY:
                 Sessions.getInstance().unregister(uri, listener);
@@ -140,7 +198,15 @@ public class RtspSession implements Serializable {
 
     public void dispatch(InterleavedFrame msg) {
         if (mode == SessionMode.PUBLISH) {
-            Sessions.getInstance().dispatch(uri, msg);
+            int channel = msg.getChannel();
+            
+            
+            for (int streamIndex = 0; null != streams && streamIndex < streams.length; streamIndex++) {
+                if (streams[streamIndex].getRtpChannel() == channel) {
+                    streams[streamIndex].dispatch(uri, streamIndex, msg);
+                    break;
+                }
+            }
         }
     }
     
@@ -152,8 +218,12 @@ public class RtspSession implements Serializable {
         return mode;
     }
     
-    public SessionDescription getSdp() {
-        return sdp;
+    public SessionDescription getSessionDescription() {
+        return sd;
+    }
+    
+    public String getSDP() {
+        return null == sd ? null : sd.toString();
     }
     
     
@@ -161,7 +231,14 @@ public class RtspSession implements Serializable {
         return id;
     }
 
+    public boolean isStreamSetup(int streamIndex) {
+        return null != streams[streamIndex];
+    }
 
+    public int getStreamRTPChannel(int streamIndex)  {
+        return streams[streamIndex].getRtpChannel();
+    }
+    
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();

@@ -62,7 +62,8 @@ public class DefaultInterleavedFrame extends DefaultByteBufHolder implements Int
      */
     @Override
     public DefaultInterleavedFrame retain() {
-        return new DefaultInterleavedFrame(channel, content().retain());
+        content().retain();
+        return this;
     }
     
     /* (non-Javadoc)
@@ -70,7 +71,8 @@ public class DefaultInterleavedFrame extends DefaultByteBufHolder implements Int
      */
     @Override
     public DefaultInterleavedFrame retain(int increment) {
-        return new DefaultInterleavedFrame(channel, content().retain(increment));
+        content().retain(increment);
+        return this;
     }
     
     @Override
