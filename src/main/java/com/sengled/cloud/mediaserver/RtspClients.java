@@ -41,11 +41,12 @@ public class RtspClients {
         URLObject urlObj = new URLObject(url);
 
         Bootstrap b = new Bootstrap();
-        b.group(workerGroup);
-        b.channel(NioSocketChannel.class);
-        b.option(ChannelOption.SO_KEEPALIVE, true);
-        b.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5 * 1000);
-        b.handler(new ChannelInitializer<SocketChannel>() {
+        b.group(workerGroup)
+         .channel(NioSocketChannel.class)
+         .option(ChannelOption.SO_KEEPALIVE, true)
+         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5 * 1000)
+         .option(ChannelOption.SO_RCVBUF, 32 * 1024)
+         .handler(new ChannelInitializer<SocketChannel>() {
             @Override
             public void initChannel(SocketChannel ch) throws Exception {
                 ch.pipeline().addLast(new IdleStateHandler(60, 30, 0));
