@@ -136,7 +136,8 @@ public class RtspServer {
                 .option(ChannelOption.SO_BACKLOG, 128)
                 .childOption(ChannelOption.SO_KEEPALIVE, true)
                 .childOption(ChannelOption.ALLOCATOR, allocator)
-                .childOption(ChannelOption.SO_SNDBUF, 1460);
+                .childOption(ChannelOption.SO_SNDBUF, 32 * 1024)
+                .childOption(ChannelOption.SO_RCVBUF, 32 * 1024);
 
         return b;
     }
