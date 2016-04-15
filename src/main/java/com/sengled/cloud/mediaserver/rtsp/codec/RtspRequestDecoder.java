@@ -62,12 +62,6 @@ public class RtspRequestDecoder extends RtspObjectDecoder {
     public RtspRequestDecoder() {
     }
 
-    /**
-     * Creates a new instance with the specified parameters.
-     */
-    public RtspRequestDecoder(int maxInitialLineLength, int maxHeaderSize, int maxContentLength) {
-        super(maxInitialLineLength, maxHeaderSize, maxContentLength);
-    }
 
     public RtspRequestDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxContentLength, boolean validateHeaders) {
