@@ -7,7 +7,7 @@ public class RtspRedirect {
         int port = Integer.valueOf(args.length > 1 ? args[1] : "15454");
 
         RtspRedirectInboundHandler.setNewLocation(newServer);
-        RtspBootstrap rtsp = new RtspBootstrap().withHandlerClass(RtspRedirectInboundHandler.class);
+        RtspServer rtsp = new RtspServer().withHandlerClass(RtspRedirectInboundHandler.class);
         rtsp.listen(port, "0.0.0.0");
     }
 }
