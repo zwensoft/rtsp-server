@@ -26,7 +26,7 @@ public class MediaServer {
         }
 
         try {
-            String uri = "rtsp://54.223.242.201:554/210360B871EECBD4D0AE1B9DCC24C568.sdp";
+            String uri = "rtsp://localhost:554/210360B871EECBD4D0AE1B9DCC24C568.sdp";
             RtspClient client = RtspClients.open(uri);
             System.out.println(client);
         } catch (ConnectException ex) {
