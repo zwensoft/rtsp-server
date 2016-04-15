@@ -267,7 +267,9 @@ public class RtspSession implements Serializable {
             
             // 匹配时间戳
             int numStreams = numStreams();
-            if (numStreams == 2 && null != streams[0] && null != streams[1]) {
+            if (numStreams == 2 
+                    && null != streams[0] && streams[0].isStarted() 
+                    && null != streams[1] && streams[1].isStarted()) {
                 long t0 = streams[0].getTimestampMillis();
                 long t1 = streams[1].getTimestampMillis();
                 long delay = t0 - t1;
