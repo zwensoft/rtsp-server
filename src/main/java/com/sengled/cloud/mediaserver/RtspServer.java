@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession.SessionMode;
-import com.sengled.cloud.mediaserver.rtsp.codec.RtspInterleavedFrameEncoder;
 import com.sengled.cloud.mediaserver.rtsp.codec.RtspRequestDecoder;
 
 /**
@@ -127,7 +126,6 @@ public class RtspServer {
                         
                         // server端发送的是httpResponse，所以要使用HttpResponseEncoder进行编码
                         ch.pipeline().addLast("rtspEncoder", new RtspResponseEncoder());
-                        ch.pipeline().addLast("FrameEncoder", new RtspInterleavedFrameEncoder());
                     
 
                         // server端接收到的是httpRequest，所以要使用HttpRequestDecoder进行解码
@@ -137,7 +135,8 @@ public class RtspServer {
                 }).option(ChannelOption.ALLOCATOR, allocator)
                 .option(ChannelOption.SO_BACKLOG, 128)
                 .childOption(ChannelOption.SO_KEEPALIVE, true)
-                .childOption(ChannelOption.ALLOCATOR, allocator);
+                .childOption(ChannelOption.ALLOCATOR, allocator)
+                .childOption(ChannelOption.SO_SNDBUF, 1460);
 
         return b;
     }

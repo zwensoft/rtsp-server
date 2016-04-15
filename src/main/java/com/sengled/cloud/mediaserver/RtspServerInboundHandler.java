@@ -34,7 +34,6 @@ import com.sengled.cloud.mediaserver.event.Listener;
 import com.sengled.cloud.mediaserver.rtsp.RTPSetup;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession.SessionMode;
-import com.sengled.cloud.mediaserver.rtsp.codec.DefaultInterleavedFrame;
 import com.sengled.cloud.mediaserver.rtsp.codec.InterleavedFrame;
 import com.sengled.cloud.mediaserver.rtsp.rtp.RTPContent;
 import com.sengled.cloud.mediaserver.rtsp.rtp.RtpEvent;
@@ -52,7 +51,7 @@ class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         super.channelActive(ctx);
 
-        logger.info("channel open {} with local {}", ctx.channel().remoteAddress(), ctx.channel().localAddress());
+        logger.info("open <{}, {}>", ctx.channel().remoteAddress(), ctx.channel().localAddress());
     }
 
     @Override
@@ -63,7 +62,7 @@ class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
         
         super.channelInactive(ctx);
 
-        logger.info("channel close {} with local {}", ctx.channel().remoteAddress(), ctx.channel().localAddress());
+        logger.info("close <{}, {}>", ctx.channel().remoteAddress(), ctx.channel().localAddress());
     }
 
     @Override
@@ -147,16 +146,18 @@ class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
 
                             int streamIndex = rtp.getStreamIndex();
                             ByteBuf content = rtp.content();
+                            int payloadLength = content.readableBytes();
                             
                             if (mySession.isStreamSetup(streamIndex)) {
                                 int channel = mySession.getStreamRTPChannel(streamIndex);
                                 
-                                // netty bytebuf 缓存，只在当前线程有效， 所以需要重新拷贝
-                                ByteBuf payload = ctx.alloc().buffer(content.readableBytes()).writeBytes(content);
-                                DefaultInterleavedFrame newMsg = new DefaultInterleavedFrame(channel, payload);
-                                logger.trace("writeAndFlush {}", newMsg);
+                                ByteBuf payload = ctx.alloc().buffer(4 + payloadLength);
+                                payload.writeByte('$');
+                                payload.writeByte(channel);
+                                payload.writeShort(payloadLength);
+                                payload.writeBytes(content);
 
-                                ctx.writeAndFlush(newMsg);
+                                ctx.writeAndFlush(payload);
                             }
                         }
                     }
@@ -208,11 +209,8 @@ class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
             response = makeResponse(request, session);
             response.headers().set(RtspHeaders.Names.RTP_INFO,  getRtpInfo(request));
             
-            session.record();
         }
         else if (RtspMethods.PLAY.equals(method)) {
-            session.play();
-            
             // response = makeResponse(request, null);
             response = makeResponse(request, session);
             response.headers().set(RtspHeaders.Names.RTP_INFO,  getRtpInfo(request));
@@ -241,6 +239,12 @@ class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
         
         if (null != response) {
             ctx.writeAndFlush(response);
+            
+            if (RtspMethods.RECORD.equals(method)) {
+                session.record();
+            } else if (RtspMethods.PLAY.equals(method)) {
+                session.play();
+            }
         }
     }
 

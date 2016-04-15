@@ -214,7 +214,7 @@ public class RtspClient implements Closeable {
             } else if (msg instanceof RTPContent) {
                 handleRtpPacket(msg);
             } else if (msg instanceof RTCPContent) {
-                logger.info("{}", msg);
+                logger.debug("{}", msg);
             } else {
                 logger.warn("what's this '{}'?", msg);
             }
