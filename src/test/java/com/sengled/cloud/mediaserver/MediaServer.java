@@ -32,33 +32,35 @@ public class MediaServer {
         }
 
         /**
+        */
         try {
-            String uri = "rtsp://localhost:554/210360B871EECBD4D0AE1B9DCC24C568.sdp";
+            String uri = "rtsp://darwin-server:554/210360B871EECBD4D0AE1B9DCC24C568.sdp";
             RtspClient client = RtspClients.open(uri);
             System.out.println(client);
         } catch (ConnectException ex) {
             ex.printStackTrace();
         }
-        */
         
         
         /**
         try {
-            String uri = "rtsp://localhost:554/notExisted.sdp";
+            String uri = "rtsp://darwin-server:554/notExisted.sdp";
+            RtspClient client = RtspClients.open(uri);
+            System.out.println(client);
+        } catch (ConnectException ex) {
+            ex.printStackTrace();
+        }
+        
+        */
+
+        /**
+        try {
+            String uri = "rtsp://darwin-server:5544/urlError.sdp";
             RtspClient client = RtspClients.open(uri);
             System.out.println(client);
         } catch (ConnectException ex) {
             ex.printStackTrace();
         }
         */
-        
-
-        try {
-            String uri = "rtsp://localhost:5544/urlError.sdp";
-            RtspClient client = RtspClients.open(uri);
-            System.out.println(client);
-        } catch (ConnectException ex) {
-            ex.printStackTrace();
-        }
     }
 }
