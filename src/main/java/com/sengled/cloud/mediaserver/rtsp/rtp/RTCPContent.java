@@ -32,4 +32,12 @@ public class RTCPContent  extends DefaultInterleavedFrame {
         content().retain(increment);
         return this;
     }
+    
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder();
+        buf.append("{RTCP, stream.channel=").append(getChannel());
+        buf.append("}");
+        return buf.toString();
+    }
 }

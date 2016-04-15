@@ -9,7 +9,6 @@ import javax.sdp.MediaDescription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.sengled.cloud.mediaserver.rtsp.Clock;
 import com.sengled.cloud.mediaserver.rtsp.Sessions;
 
 public class RTPStream {
@@ -20,7 +19,6 @@ public class RTPStream {
     private int rtpChannel;
     private int rtcpChannel;
     private MediaDescription md;
-    private Clock clock;
     
     private boolean isAudio;
     private boolean isVideo;
@@ -37,11 +35,10 @@ public class RTPStream {
     private long timestamp;
     private long rtpTimestamp;
     
-    public RTPStream(Clock clock, MediaDescription md, int rtpChannel, int rtcpChannel) {
+    public RTPStream(MediaDescription md, int rtpChannel, int rtcpChannel) {
         this.md = md;
         this.rtcpChannel = rtcpChannel;
         this.rtpChannel = rtpChannel;
-        this.clock = clock;
         
         this.unit = Rational._1000;
         this.channels = 1;
@@ -129,7 +126,7 @@ public class RTPStream {
 
                 this.timestamp += duration;
                 this.rtpTimestamp = newRtpTimestamp;
-                logger.debug("duration = {}ms",  Rational._1000.convert(duration, unit));
+                logger.trace("duration = {}ms",  Rational._1000.convert(duration, unit));
             }
 
             rtp.setTimestamp(timestamp);
