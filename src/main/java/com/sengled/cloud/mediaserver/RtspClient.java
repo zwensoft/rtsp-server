@@ -214,7 +214,7 @@ public class RtspClient implements Closeable {
             } else if (msg instanceof RTPContent) {
                 handleRtpPacket(msg);
             } else if (msg instanceof RTCPContent) {
-                logger.debug("{}", msg);
+                // logger.debug("{}", msg);
             } else {
                 logger.warn("what's this '{}'?", msg);
             }
@@ -261,9 +261,9 @@ public class RtspClient implements Closeable {
                 logger.info("send {}, {}", request.getMethod(), request.getUri());
                 if (logger.isDebugEnabled()) {
                     for (Entry<String, String> keyValue : request.headers().entries()) {
-                        logger.debug("{}:{}", keyValue.getKey(), keyValue.getValue());
+                        logger.trace("{}:{}", keyValue.getKey(), keyValue.getValue());
                     }
-                    logger.debug("<<");
+                    logger.trace("<<");
                 }
                 writeAndFlush(ctx.channel(), request);
             }

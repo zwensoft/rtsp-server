@@ -19,6 +19,11 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.internal.AppendableCharSequence;
 
+/**
+ * @see io.netty.handler.codec.rtsp.RtspObjectDecoder
+ * @author 陈修恒
+ * @date 2016年4月15日
+ */
 public abstract class RtspObjectDecoder extends ByteToMessageDecoder {
     private static org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(RtspObjectDecoder.class);
     

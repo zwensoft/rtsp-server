@@ -1,5 +1,6 @@
 package com.sengled.cloud.mediaserver.rtsp.rtp;
 
+import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -19,6 +20,7 @@ public class RTPStream {
     private int rtpChannel;
     private int rtcpChannel;
     private MediaDescription md;
+    private int streamIndex;
     
     private boolean isAudio;
     private boolean isVideo;
@@ -32,17 +34,36 @@ public class RTPStream {
     
     boolean isStarted = false;
     private long duration;
-    private long timestamp;
+    private long timestamp = -1;
     private long rtpTimestamp;
     
-    public RTPStream(MediaDescription md, int rtpChannel, int rtcpChannel) {
+    public RTPStream(int streamIndex, MediaDescription md, int rtpChannel, int rtcpChannel) {
         this.md = md;
+        this.streamIndex = streamIndex;
         this.rtcpChannel = rtcpChannel;
         this.rtpChannel = rtpChannel;
         
-        this.unit = Rational._1000;
+        this.unit = Rational.$_1_000;
         this.channels = 1;
         try {
+            Media media = md.getMedia();
+            if (null != media) {
+                isAudio = "audio".equals(media.getMediaType());
+                isVideo = "video".equals(media.getMediaType());
+            }
+            
+            @SuppressWarnings("unchecked")
+            Vector<String> formats = media.getMediaFormats(false);
+            if (null != formats) {
+                for (String format : formats) {
+                    if ("8".equals(format)) { // pcm_alaw
+                        channels = 1;
+                        unit = Rational.$_8_000;
+                    }
+                }
+            }
+            
+            
             String rtpmap = md.getAttribute("rtpmap");
             if (null != rtpmap) {
                 Matcher matcher =Pattern.compile("([\\d]+) ([^/]+)/([\\d]+)(/([\\d]+))?").matcher(rtpmap);
@@ -57,22 +78,17 @@ public class RTPStream {
                 }
             }
 
-            Media media = md.getMedia();
-            if (null != media) {
-                isAudio = "audio".equals(media.getMediaType());
-                isVideo = "video".equals(media.getMediaType());
-            }
         } catch(Exception e) {
             logger.error("{}", e.getMessage(), e);
         }
         
-        maxDuration = unit.convert(1000, Rational._1000);
+        maxDuration = unit.convert(1000, Rational.$_1_000);
         if (isVideo) {
-            defaultDuration = unit.convert(40, Rational._1000);
+            defaultDuration = unit.convert(40, Rational.$_1_000);
         } else if (isAudio) {
-            defaultDuration = unit.convert(23, Rational._1000);
+            defaultDuration = unit.convert(23, Rational.$_1_000);
         } else {
-            defaultDuration = unit.convert(33, Rational._1000);
+            defaultDuration = unit.convert(33, Rational.$_1_000);
         }
     }
 
@@ -116,7 +132,7 @@ public class RTPStream {
     }
     
     private void fixTimestamp(RTPContent rtp) {
-        if (isStarted) {
+        if (isStarted()) {
             final long newRtpTimestamp = rtp.getTimestamp();
             final long newDuration = newRtpTimestamp - rtpTimestamp;
             if (newDuration != 0L) { // 时间戳变了
@@ -126,18 +142,41 @@ public class RTPStream {
 
                 this.timestamp += duration;
                 this.rtpTimestamp = newRtpTimestamp;
-                logger.trace("duration = {}ms",  Rational._1000.convert(duration, unit));
+                
+                if (logger.isTraceEnabled()) {
+                    logger.trace("stream#{}, duration = {}ms",  streamIndex, Rational.$_1_000.convert(duration, unit));
+                }
             }
 
             rtp.setTimestamp(timestamp);
         } else {
             this.isStarted = true;
             this.duration = defaultDuration; // 40ms一帧
-            this.timestamp = rtp.getTimestamp();
+            this.timestamp = 0;
             this.rtpTimestamp = rtp.getTimestamp();
         }
     }
 
+
+    public final boolean isStarted() {
+        return isStarted;
+    }
+    
+    public final long getTimestampMillis() {
+        return isStarted() ? Rational.$_1_000.convert(timestamp, unit) : -1;
+    }
+    
+    public final void setTimestampMillis(long newTiemstampMillis) {
+        long lastTimestamp = getTimestampMillis();
+        timestamp = unit.convert(newTiemstampMillis, Rational.$_1_000);
+        
+        logger.warn("change stream#{} timestamp from {} to {}", this.streamIndex, lastTimestamp, newTiemstampMillis);
+    }
+
+    public int getStreamIndex() {
+        return streamIndex;
+    }
+    
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();

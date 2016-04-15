@@ -91,7 +91,7 @@ public class RtspSession implements Serializable {
         for (MediaDescription dm : getMediaDescriptions(sd)) {
             try {
                 if (StringUtils.endsWith(uri, getUri(dm.getAttribute("control")))) {
-                    streams[mediaIndex] = new RTPStream(dm, interleaved[0], interleaved[1]);
+                    streams[mediaIndex] = new RTPStream(mediaIndex, dm, interleaved[0], interleaved[1]);
                     return t.toString();
                 }
             } catch (SdpParseException ex) {
@@ -254,14 +254,31 @@ public class RtspSession implements Serializable {
     
 
     public void dispatch(RTPContent msg) {
-        if (mode == SessionMode.PUBLISH) {
+        if (mode == SessionMode.PUBLISH && streams.length > 0) {
             int channel = msg.getChannel();
-            
-            
+
+            // 分发
             for (int streamIndex = 0; null != streams && streamIndex < streams.length; streamIndex++) {
                 if (streams[streamIndex].getRtpChannel() == channel) {
                     streams[streamIndex].dispatch(uri, streamIndex, msg);
                     break;
+                }
+            }
+            
+            // 匹配时间戳
+            int numStreams = numStreams();
+            if (numStreams == 2 && null != streams[0] && null != streams[1]) {
+                long t0 = streams[0].getTimestampMillis();
+                long t1 = streams[1].getTimestampMillis();
+                long delay = t0 - t1;
+                if (delay > 300) {
+                    logger.info(" stream#0 fast {}ms then stream#1", delay);
+                    streams[1].setTimestampMillis(t0);
+                } else if(delay < - 300) {
+                    logger.info(" stream#0 late {}ms then stream#1", -delay);
+                    streams[0].setTimestampMillis(t1);
+                } else {
+                    logger.trace("delay is {}ms between stream#0 and stream#1", delay);
                 }
             }
         }
