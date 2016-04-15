@@ -74,17 +74,20 @@ public class RtspClient implements Closeable {
     }
 
     @Override
-    public void close() throws IOException {}
+    public void close() throws IOException {
+        isClosed = true; 
+        writeAndFlush(channel, makeRequest(RtspMethods.TEARDOWN));
+    }
 
 
 
-    public void connect() throws ConnectException, InterruptedException {
+    public void connect() throws IOException, InterruptedException {
         writeAndFlush(channel, makeRequest(RtspMethods.OPTIONS));
 
         connectOrFail.acquire();
         Throwable throwable = error.get();
-        if (throwable instanceof ConnectException) {
-            throw (ConnectException) throwable;
+        if (throwable instanceof IOException) {
+            throw (IOException) throwable;
         } else if (throwable instanceof Exception) {
             logger.info("{}", throwable.getMessage(), throwable);
             throw new ConnectException(throwable.toString());
@@ -95,23 +98,19 @@ public class RtspClient implements Closeable {
 
     private void writeAndFlush(Channel channel,
                                HttpRequest request) {
-        if (null != request && channel.isActive()) {
+        if (null != request && channel.isOpen() && !isClosed) {
             channel.writeAndFlush(request);
             RtspClient.this.requestUrl = request.getUri();
             RtspClient.this.requestMethod = request.getMethod();
             RtspClient.this.requestHeaders = request.headers();
-            
-            if (RtspMethods.TEARDOWN.equals(requestMethod)) {
-                isClosed = true; // 标记为主动关闭连接
-                channel.close();
-                
-                // 通知已经结束了
-                if (connectOrFail.availablePermits() == 0) {
-                    connectOrFail.release();
-                    error.compareAndSet(null, new IOException("TearDown"));
-                }
-            } 
         }
+        
+        if (RtspMethods.TEARDOWN.equals(requestMethod)) {
+            // 标记为已经关闭
+            if (channel.isOpen()) {
+                channel.close();
+            }
+        } 
     }
 
     
@@ -143,7 +142,7 @@ public class RtspClient implements Closeable {
     }
 
     private class RtspClientInboundResponseHandler extends ChannelInboundHandlerAdapter {
-        
+        private boolean isAuth;
         private boolean supportGetParameter;
         
         @Override
@@ -226,30 +225,29 @@ public class RtspClient implements Closeable {
             int code = response.getStatus().code();
 
             HttpRequest request = null;
-            
             if (200 == code) {
-                logger.info("{} {} {}", requestMethod, requestUrl, response.getStatus());
+                logger.info("{} {}, {}", requestMethod, requestUrl, response.getStatus());
                 request = nextRequest(response);
-            } else if (400 <= code && code < 500) {
-                logger.warn("{} {} {}", method, requestUrl, response.getStatus());
-                request = makeRequest(RtspMethods.TEARDOWN);
             } else if (RtspResponseStatuses.UNAUTHORIZED.equals(response.getStatus())) {
+                if (isAuth) {
+                    throw new AuthorizedException(urlObj.getUser(), urlObj.getPassword());
+                }
+                
                 String auth = getAuthorizationString(response);
                 if (null != auth) {
                     request = makeRequest(method, requestUrl);
                     request.headers().add(requestHeaders.remove(RtspHeaders.Names.CSEQ));
                     request.headers().add(RtspHeaders.Names.AUTHORIZATION, auth);
                 } else {
-                    request = makeRequest(RtspMethods.TEARDOWN);
-                    error.compareAndSet(null,
-                            new AuthorizedException(urlObj.getUser(), urlObj.getPassword()));
-                    connectOrFail.release(); // 验证失败
+                    throw new AuthorizedException(urlObj.getUser(), urlObj.getPassword());
                 }
 
+                isAuth = true; // 标记为已经验证过了，避免重复验证
                 logger.info("send authorized again");
+            } else if (400 <= code && code < 500) {
+                throw new StreamNotFoundException(urlObj.getUrl());
             } else  {
-                request = makeRequest(RtspMethods.TEARDOWN);
-                logger.warn("I don't known what to do, just tear down. code = {}", code);
+                throw new ConnectException(response.getStatus() + " when call " + method + " " + requestUrl);
             }
 
             if (null != request && ctx.channel().isActive()) {

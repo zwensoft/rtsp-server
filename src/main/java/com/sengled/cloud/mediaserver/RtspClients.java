@@ -12,7 +12,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.rtsp.RtspRequestEncoder;
 import io.netty.handler.timeout.IdleStateHandler;
 
-import java.net.ConnectException;
+import java.io.IOException;
 
 import com.sengled.cloud.mediaserver.rtsp.codec.RtspResponseDecoder;
 import com.sengled.cloud.mediaserver.url.URLObject;
@@ -28,17 +28,16 @@ public class RtspClients {
         
     }
 
-    public static RtspClient open(String url) throws ConnectException, InterruptedException {
+    public static RtspClient open(String url) throws InterruptedException, IOException {
         return clients.doOpen(url, clients.workerGroup);
     }
     
-    public RtspClient open(String url, EventLoopGroup workerGroup) throws ConnectException, InterruptedException {
+    public RtspClient open(String url, EventLoopGroup workerGroup) throws InterruptedException, IOException {
         return doOpen(url, workerGroup);
     }
 
     private RtspClient doOpen(String url,
-                              EventLoopGroup workerGroup) throws ConnectException,
-            InterruptedException {
+                              EventLoopGroup workerGroup) throws InterruptedException, IOException {
         URLObject urlObj = new URLObject(url);
 
         Bootstrap b = new Bootstrap();

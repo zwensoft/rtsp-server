@@ -1,6 +1,14 @@
 package com.sengled.cloud.mediaserver;
 
-public class AuthorizedException extends RuntimeException {
+import java.io.IOException;
+
+/**
+ * 验证失败
+ * 
+ * @author 陈修恒
+ * @date 2016年4月15日
+ */
+public class AuthorizedException  extends IOException {
 
     /** */
     private static final long serialVersionUID = -5988808023931086727L;

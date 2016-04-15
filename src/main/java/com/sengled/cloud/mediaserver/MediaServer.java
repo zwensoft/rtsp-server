@@ -1,5 +1,6 @@
 package com.sengled.cloud.mediaserver;
 
+import java.io.IOException;
 import java.net.ConnectException;
 
 import org.slf4j.Logger;
@@ -8,7 +9,7 @@ import org.slf4j.LoggerFactory;
 public class MediaServer {
     private static final Logger logger = LoggerFactory.getLogger(MediaServer.class);
     
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, IOException {
         int[] ports = new int[Math.max(1, args.length)];
         ports[0] = 5454;
         
@@ -25,8 +26,19 @@ public class MediaServer {
             }
         }
 
+        /**
         try {
             String uri = "rtsp://localhost:554/210360B871EECBD4D0AE1B9DCC24C568.sdp";
+            RtspClient client = RtspClients.open(uri);
+            System.out.println(client);
+        } catch (ConnectException ex) {
+            ex.printStackTrace();
+        }
+        */
+        
+        
+        try {
+            String uri = "rtsp://localhost:554/notExisted.sdp";
             RtspClient client = RtspClients.open(uri);
             System.out.println(client);
         } catch (ConnectException ex) {
