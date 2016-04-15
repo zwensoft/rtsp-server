@@ -13,6 +13,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.rtsp.RtspHeaders;
 import io.netty.handler.codec.rtsp.RtspMethods;
 import io.netty.handler.codec.rtsp.RtspVersions;
+import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.ReferenceCountUtil;
 
 import java.io.IOException;
@@ -65,6 +66,18 @@ class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
         logger.info("channel close {} with local {}", ctx.channel().remoteAddress(), ctx.channel().localAddress());
     }
 
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx,
+                                   Object evt) throws Exception {
+        super.userEventTriggered(ctx, evt);
+        
+        if (evt instanceof IdleStateEvent) {
+            if (null != session && session.getMode() == SessionMode.PUBLISH) {
+                throw new java.util.concurrent.TimeoutException("TimeOut To ReadOrWrite Data");
+            }
+        }
+    }
+    
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx,
                                 Throwable cause) throws Exception {

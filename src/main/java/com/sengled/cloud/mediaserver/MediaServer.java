@@ -1,5 +1,7 @@
 package com.sengled.cloud.mediaserver;
 
+import java.net.ConnectException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,6 +23,14 @@ public class MediaServer {
             } catch(Exception e) {
                 logger.error("fail listen port[{}] for {}", ports[i], e);
             }
+        }
+
+        try {
+            String uri = "rtsp://54.223.242.201:554/210360B871EECBD4D0AE1B9DCC24C568.sdp";
+            RtspClient client = RtspClients.open(uri);
+            System.out.println(client);
+        } catch (ConnectException ex) {
+            ex.printStackTrace();
         }
     }
 }

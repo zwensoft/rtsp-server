@@ -5,7 +5,6 @@ import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.group.ChannelGroup;
@@ -13,17 +12,12 @@ import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.MessageToMessageEncoder;
-import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.rtsp.RtspResponseEncoder;
-
-import java.util.Map.Entry;
+import io.netty.handler.timeout.IdleStateHandler;
 
 import org.slf4j.LoggerFactory;
 
 import com.sengled.cloud.mediaserver.rtsp.codec.RtspInterleavedFrameEncoder;
-import com.sengled.cloud.mediaserver.rtsp.codec.RtspObjectAggregator;
 import com.sengled.cloud.mediaserver.rtsp.codec.RtspRequestDecoder;
 
 public class RtspServer {
@@ -34,6 +28,10 @@ public class RtspServer {
     final private ServerBootstrap bootstrap;
     
     private ChannelGroup channels = new DefaultChannelGroup("rtsp-server", null);
+    
+    
+    private NioEventLoopGroup bossGroup = new NioEventLoopGroup(Math.max(1, Runtime.getRuntime().availableProcessors() * 2));
+    private NioEventLoopGroup workerGroup = new NioEventLoopGroup();
     
     private Class<? extends ChannelHandler> rtspHandlerClass;
     
@@ -102,38 +100,22 @@ public class RtspServer {
     }
 
     private ServerBootstrap makeServerBosststrap() {
-        int numCpu = Runtime.getRuntime().availableProcessors();
-        
         ServerBootstrap b = new ServerBootstrap();
-   
-        NioEventLoopGroup bossGroup = new NioEventLoopGroup(Math.max(1, numCpu * 2));
-        NioEventLoopGroup workerGroup = new NioEventLoopGroup();
+
         b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     public void initChannel(SocketChannel ch) throws Exception {
+                        // 心跳
+                        ch.pipeline().addLast(new IdleStateHandler(0, 0, 60));
+                        
                         // server端发送的是httpResponse，所以要使用HttpResponseEncoder进行编码
                         ch.pipeline().addLast("rtspEncoder", new RtspResponseEncoder());
                         ch.pipeline().addLast("FrameEncoder", new RtspInterleavedFrameEncoder());
-                        
-                        ch.pipeline().addLast(new MessageToMessageEncoder<FullHttpResponse>() {
-                            protected void encode(ChannelHandlerContext ctx, FullHttpResponse resp, java.util.List<Object> out) throws Exception {
-                                out.add(resp.retain());
-                                HttpHeaders headers = resp.headers();
-                                if (logger.isInfoEnabled()) {
-                                    logger.info("--------------- response --------------");
-                                    for (Entry<String, String> entry : headers) {
-                                        logger.info("{}:{}", entry.getKey(), entry.getValue());
-                                    }
-                                    logger.debug("<<<");
-                                }
-                            };
-                        });
-                        
+                    
 
                         // server端接收到的是httpRequest，所以要使用HttpRequestDecoder进行解码
                         ch.pipeline().addLast("rtspDecoder", new RtspRequestDecoder());
-                        ch.pipeline().addLast("objectAggregator", new RtspObjectAggregator(64 * 1024));
                         ch.pipeline().addLast("rtsp", rtspHandlerClass.newInstance());
                     }
                 }).option(ChannelOption.ALLOCATOR, allocator)
