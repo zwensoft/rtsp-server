@@ -4,6 +4,14 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 
+/**
+ * URL 对象
+ * 
+ * <p>
+ * 把普通的 url 地址， 如 'rtsp://user:pass@host:port/uri' ，解析成方便使用的对象
+ * @author 陈修恒
+ * @date 2016年4月15日
+ */
 public class URLObject {
     private final String scheme;
     private final String user;

@@ -5,6 +5,12 @@ import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
 
+/**
+ * rtsp 协议的头信息中， Transoprt 属性的实例化对象
+ *  
+ * @author 陈修恒
+ * @date 2016年4月15日
+ */
 public class Transport {
     public static final String RTP_AVP_TCP = "RTP/AVP/TCP";
     public static final String UNICAST = "unicast";

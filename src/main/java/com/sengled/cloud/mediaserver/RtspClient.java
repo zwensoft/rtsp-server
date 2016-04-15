@@ -39,6 +39,13 @@ import com.sengled.cloud.mediaserver.rtsp.rtp.RTCPContent;
 import com.sengled.cloud.mediaserver.rtsp.rtp.RTPContent;
 import com.sengled.cloud.mediaserver.url.URLObject;
 
+/**
+ * 从其他的 rtsp 流中拉取视频数据，
+ * <p>
+ * 通过  {@link #connect()} 方法，完成 rtsp 协商. 
+ * @author 陈修恒
+ * @date 2016年4月15日
+ */
 public class RtspClient implements Closeable {
     private static final Logger logger = LoggerFactory.getLogger(RtspClient.class);
 

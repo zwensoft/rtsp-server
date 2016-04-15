@@ -28,6 +28,17 @@ import com.sengled.cloud.mediaserver.event.Listener;
 import com.sengled.cloud.mediaserver.rtsp.rtp.RTPContent;
 import com.sengled.cloud.mediaserver.rtsp.rtp.RTPStream;
 
+/**
+ * 一个 rtsp 会话。
+ * 
+ * <p>
+ * <ul>
+ * <li>1、通过 {@link #dispatch(RTPContent)} 把流数据分发给他的监听者</li>
+ * <li>2、通过 {@link #getSessionDescription()} 获取 SDP 信息</li>
+ * </ul>
+ * @author 陈修恒
+ * @date 2016年4月15日
+ */
 public class RtspSession implements Serializable {
     private static final Logger logger = LoggerFactory.getLogger(RtspSession.class);
     private static final long serialVersionUID = -8562791602891803122L;

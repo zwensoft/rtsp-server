@@ -12,14 +12,31 @@ import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.rtsp.RtspMethods;
 import io.netty.handler.codec.rtsp.RtspResponseEncoder;
 import io.netty.handler.timeout.IdleStateHandler;
 
 import org.slf4j.LoggerFactory;
 
+import com.sengled.cloud.mediaserver.rtsp.RtspSession;
+import com.sengled.cloud.mediaserver.rtsp.RtspSession.SessionMode;
 import com.sengled.cloud.mediaserver.rtsp.codec.RtspInterleavedFrameEncoder;
 import com.sengled.cloud.mediaserver.rtsp.codec.RtspRequestDecoder;
 
+/**
+ * RTSP 服务
+ * <p>
+ * <ul>
+ * <li>1、服务有 {@link SessionMode#PUBLISH PUBLISH}, {@link SessionMode#PLAY PLAY} 两种运用场景，
+ *       分别用于：向服务器推流，和从播放器拉流。  
+ * </li>
+ * <li>2、利用 {@link RtspSession} 实现流内容共享。 服务器会把  {@link SessionMode#PUBLISH PUBLISH} 模式收取的流，转发给 {@link SessionMode#PLAY PLAY} 模式的客户端，</li>
+ * 
+ * </ul>
+ * </p>
+ * @author 陈修恒
+ * @date 2016年4月15日
+ */
 public class RtspServer {
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(RtspServer.class);
     
