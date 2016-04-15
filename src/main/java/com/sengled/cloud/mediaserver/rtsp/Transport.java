@@ -57,6 +57,13 @@ public class Transport {
         return this.parameters.get(name);
     }
     
+    public static Transport rtpOnTcp (int rtpChannel, int rtcpChannel) {
+        Transport t = new Transport();
+        t.parameters.put(INTERLEAVED, rtpChannel + "-" + rtcpChannel);
+        
+        return t;
+    }
+    
     public static Transport parse(String transport) {
         if (null == transport) {
             throw new IllegalArgumentException("Transport parse NULL");

@@ -42,20 +42,24 @@ public class RtspSession implements Serializable {
         OTHERS
     }
 
-    final private String id;
+    private String id;
     private String uri;
     private SessionMode mode = SessionMode.OTHERS;
     private Listener listener;
 
     private SessionDescription sd;
     private RTPStream[] streams;
-    private Clock clock = new Clock();
     
     public RtspSession(String url) {
-        this.id = RandomStringUtils.random(16, false, true);
+        this(getUri(url), RandomStringUtils.random(16, false, true));
+    }
+    
+    public RtspSession(String url, String sessionId) {
+        this.id = sessionId;
         this.uri = getUri(url);
     }
 
+    
     public String setupStream(String url, String transport) throws TransportNotSupportedException {
         Transport t = Transport.parse(transport);
         if (!StringUtils.equals(Transport.RTP_AVP_TCP, t.getTranport())) {
@@ -76,7 +80,7 @@ public class RtspSession implements Serializable {
         for (MediaDescription dm : getMediaDescriptions(sd)) {
             try {
                 if (StringUtils.endsWith(uri, getUri(dm.getAttribute("control")))) {
-                    streams[mediaIndex] = new RTPStream(clock, dm, interleaved[0], interleaved[1]);
+                    streams[mediaIndex] = new RTPStream(dm, interleaved[0], interleaved[1]);
                     return t.toString();
                 }
             } catch (SdpParseException ex) {
@@ -90,8 +94,42 @@ public class RtspSession implements Serializable {
     }
 
 
+    public int numStreams() {
+        return getMediaDescriptions(sd).size();
+    }
+    
+    public String getStreamUri(int index) {
+        java.util.List<MediaDescription> medias = getMediaDescriptions(sd);
+        
+        try {
+            return uri + "/" + medias.get(index).getAttribute("control");
+        } catch (SdpParseException e) {
+            logger.error("MediaDescription has error on stream[" + index + "], sdp = " + sd);
+        }
+        
+        return null;
+    }
+    
+    public int getStreamIndex(String url) {
+        String uri = getUri(url);
+        int mediaIndex = 0;
+        for (MediaDescription dm : getMediaDescriptions(sd)) {
+            try {
+                if (StringUtils.endsWith(uri, getUri(dm.getAttribute("control")))) {
+                    return mediaIndex;
+                }
+            } catch (SdpParseException ex) {
+                logger.warn("{}", ex.getMessage(), ex);
+            }
+            
+            mediaIndex ++;
+        }
+        
+        throw new IllegalArgumentException("stream[" + url + "] Not Found IN " + sd);
+    }
+    
     @SuppressWarnings("unchecked")
-    public java.util.List<MediaDescription> getMediaDescriptions(SessionDescription sd) {
+    private java.util.List<MediaDescription> getMediaDescriptions(SessionDescription sd) {
         try {
             if (null != sd) {
                 @SuppressWarnings("rawtypes")
@@ -117,23 +155,27 @@ public class RtspSession implements Serializable {
     
     public RtspSession withSdp(String sdp) {
         SessionDescriptionImpl sd = new SessionDescriptionImpl();
-        StringTokenizer tokenizer = new StringTokenizer(sdp);
-        while (tokenizer.hasMoreChars()) {
-            String line = tokenizer.nextToken();
 
-            try {
-                SDPParser paser = ParserFactory.createParser(line);
-                if (null != paser) {
-                    SDPField obj = paser.parse();
-                    sd.addField(obj);
+        if (!StringUtils.isEmpty(sdp)) {
+            StringTokenizer tokenizer = new StringTokenizer(sdp);
+            while (tokenizer.hasMoreChars()) {
+                String line = tokenizer.nextToken();
+
+                try {
+                    SDPParser paser = ParserFactory.createParser(line);
+                    if (null != paser) {
+                        SDPField obj = paser.parse();
+                        sd.addField(obj);
+                    }
+                } catch (ParseException e) {
+                    logger.warn("fail parse [{}]", line, e);
                 }
-            } catch (ParseException e) {
-                logger.warn("fail parse [{}]", line, e);
             }
+            
         }
-        
+    
         List<MediaDescription> mediaDescripts = getMediaDescriptions(sd);
-        
+
         this.sd = sd;
         this.streams = new RTPStream[mediaDescripts.size()];
         return this;
@@ -176,11 +218,9 @@ public class RtspSession implements Serializable {
         switch (mode) {
             case PUBLISH:
                 sessions.updateSession(uri, this);
-                this.clock.start();
                 break;
             case PLAY:
                 Sessions.getInstance().register(uri, listener);
-                this.clock.start();
                 break;
             default:
                 break;
@@ -245,6 +285,15 @@ public class RtspSession implements Serializable {
         return streams[streamIndex].getRtpChannel();
     }
     
+
+    public void setId(String id) {
+        this.id = id;
+    }
+    
+    
+    public SessionMode getMode() {
+        return mode;
+    }
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
