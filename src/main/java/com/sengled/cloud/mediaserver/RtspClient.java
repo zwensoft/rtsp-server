@@ -274,7 +274,6 @@ public class RtspClient implements Closeable {
             HttpRequest request = null;
             if (RtspMethods.OPTIONS.equals(requestMethod)) {
                 String supports = response.headers().get(RtspHeaders.Names.PUBLIC);
-                logger.info("supports: {}", supports);
                 supportGetParameter = StringUtils.contains(supports, RtspMethods.GET_PARAMETER.name());
 
                 if (!isConnected) {
