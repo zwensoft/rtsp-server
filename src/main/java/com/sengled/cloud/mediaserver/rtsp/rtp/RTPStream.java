@@ -167,10 +167,7 @@ public class RTPStream {
     }
     
     public final void setTimestampMillis(long newTiemstampMillis) {
-        long lastTimestamp = getTimestampMillis();
         timestamp = unit.convert(newTiemstampMillis, Rational.$_1_000);
-        
-        logger.warn("change stream#{} timestamp from {} to {}", this.streamIndex, lastTimestamp, newTiemstampMillis);
     }
 
     public int getStreamIndex() {
