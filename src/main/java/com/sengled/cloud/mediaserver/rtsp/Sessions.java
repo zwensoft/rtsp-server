@@ -68,18 +68,18 @@ public class Sessions {
         return null != session ? session.getSessionDescription() : null;
     }
     
-    public RtspSession removeSession(final String uri, final RtspSession session) {
-        RtspSession oldSession = getInstance().sessions.get(uri);
+    public RtspSession removeSession(final String name, final RtspSession session) {
+        RtspSession oldSession = getInstance().sessions.get(name);
         if (oldSession == session) {
-            oldSession = getInstance().sessions.remove(uri);
+            oldSession = getInstance().sessions.remove(name);
         }
         
         // delete sdp
-        final File file = getSdpFile(uri);
+        final File file = getSdpFile(name);
         threads.submit(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
-                logger.info("delete sdp of '{}', at {}", uri, file.getAbsolutePath());
+                logger.info("delete sdp of '{}', at {}", name, file.getAbsolutePath());
 
                 File newFile = new File(file.getParentFile(), file.getName() + ".deleted");
                 newFile.delete();
@@ -93,16 +93,16 @@ public class Sessions {
 
 
     
-    public RtspSession updateSession(final String uri, final RtspSession session) {
-        RtspSession oldSession = getInstance().sessions.put(uri, session);
+    public RtspSession updateSession(final String name, final RtspSession session) {
+        RtspSession oldSession = getInstance().sessions.put(name, session);
         
         // save sdp
-        final File file = getSdpFile(uri);
+        final File file = getSdpFile(name);
         threads.submit(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
                 FileUtils.write(file, session.getSDP());
-                logger.info("update sdp of '{}', at {}", uri, file.getAbsolutePath());
+                logger.info("update sdp of '{}', at {}", name, file.getAbsolutePath());
                 return null;
             }
         });
@@ -111,10 +111,10 @@ public class Sessions {
         return oldSession;
     }
 
-    public void register(String uri, Listener listener) {
+    public void register(String name, Listener listener) {
         if (null != listener) {
-            dispatchers.putIfAbsent(uri, new CopyOnWriteArrayList<Listener>());
-            dispatchers.get(uri).add(listener);
+            dispatchers.putIfAbsent(name, new CopyOnWriteArrayList<Listener>());
+            dispatchers.get(name).add(listener);
         }
     }
 
@@ -125,9 +125,9 @@ public class Sessions {
         }
     }
     
-    public void dispatch(String uri, RtpEvent msg) {
+    public void dispatch(String name, RtpEvent msg) {
         try {
-            List<Listener> listen = dispatchers.get(uri);
+            List<Listener> listen = dispatchers.get(name);
             if (null != listen) {
                 logger.trace("dispatch {} to {} listener(s) ", msg, listen.size());
 
@@ -136,7 +136,7 @@ public class Sessions {
                 }
 
             } else {
-                logger.trace("NO Listeners For {}", uri);
+                logger.trace("NO Listeners For {}", name);
             }
         } finally {
             ReferenceCountUtil.release(msg);

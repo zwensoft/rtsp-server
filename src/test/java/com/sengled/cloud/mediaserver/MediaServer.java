@@ -31,8 +31,16 @@ public class MediaServer {
             }
         }
 
+        try {
+            String uri = "rtsp://admin:admin@192.168.1.108/";
+            RtspClient client = RtspClients.open(uri, "/dahua");
+            System.out.println(client);
+        } catch (ConnectException ex) {
+            ex.printStackTrace();
+        }
+        
         /**
-        */
+        
         try {
             String uri = "rtsp://darwin-server:554/210360B871EECBD4D0AE1B9DCC24C568.sdp";
             RtspClient client = RtspClients.open(uri);
@@ -40,7 +48,7 @@ public class MediaServer {
         } catch (ConnectException ex) {
             ex.printStackTrace();
         }
-        
+        */
         
         /**
         try {

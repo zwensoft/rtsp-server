@@ -50,6 +50,7 @@ public class RtspClient implements Closeable {
     private static final Logger logger = LoggerFactory.getLogger(RtspClient.class);
 
     private int seqNo = 1;
+    private String name;
     private URLObject urlObj;
 
     private RtspSession session;
@@ -65,8 +66,9 @@ public class RtspClient implements Closeable {
     
     private boolean isClosed;
 
-    public RtspClient(URLObject urlObj, Channel channel) {
+    public RtspClient(String name, URLObject urlObj, Channel channel) {
         super();
+        this.name = null != name ? name : urlObj.getUri();
         this.urlObj = urlObj;
         this.channel = channel;
     }
@@ -289,7 +291,7 @@ public class RtspClient implements Closeable {
                 }
             } else if (RtspMethods.DESCRIBE.equals(requestMethod)) {
                 String sessionId = response.headers().get(RtspHeaders.Names.SESSION);
-                session = new RtspSession(urlObj.getUrl(), sessionId);
+                session = new RtspSession(urlObj.getUrl(), sessionId, name);
                 session.withMode(SessionMode.PUBLISH)
                         .withSdp(response.content().toString(Charset.forName("UTF-8")));
 

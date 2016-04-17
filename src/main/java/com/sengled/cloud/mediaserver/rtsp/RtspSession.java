@@ -54,6 +54,7 @@ public class RtspSession implements Serializable {
     }
 
     private String id;
+    private String name;
     private String uri;
     private SessionMode mode = SessionMode.OTHERS;
     private Listener listener;
@@ -66,10 +67,15 @@ public class RtspSession implements Serializable {
     }
     
     public RtspSession(String url, String sessionId) {
-        this.id = sessionId;
-        this.uri = getUri(url);
+        this(url, sessionId, getUri(url));
     }
 
+    public RtspSession(String url, String sessionId, String name) {
+        this.id = sessionId;
+        this.uri = getUri(url);
+        this.name = name;
+    }
+    
     
     public String setupStream(String url, String transport) throws TransportNotSupportedException {
         Transport t = Transport.parse(transport);
@@ -228,10 +234,10 @@ public class RtspSession implements Serializable {
         
         switch (mode) {
             case PUBLISH:
-                sessions.updateSession(uri, this);
+                sessions.updateSession(name, this);
                 break;
             case PLAY:
-                Sessions.getInstance().register(uri, listener);
+                Sessions.getInstance().register(name, listener);
                 break;
             default:
                 break;
@@ -243,10 +249,10 @@ public class RtspSession implements Serializable {
         
         switch (mode) {
             case PUBLISH:
-                sessions.removeSession(uri, this);
+                sessions.removeSession(name, this);
                 break;
             case PLAY:
-                Sessions.getInstance().unregister(uri, listener);
+                Sessions.getInstance().unregister(name, listener);
             default:
                 break;
         }
@@ -260,7 +266,7 @@ public class RtspSession implements Serializable {
             // 分发
             for (int streamIndex = 0; null != streams && streamIndex < streams.length; streamIndex++) {
                 if (streams[streamIndex].getRtpChannel() == channel) {
-                    streams[streamIndex].dispatch(uri, streamIndex, msg);
+                    streams[streamIndex].dispatch(name, streamIndex, msg);
                     break;
                 }
             }

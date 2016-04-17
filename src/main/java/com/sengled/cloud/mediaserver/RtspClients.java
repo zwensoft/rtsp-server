@@ -28,15 +28,16 @@ public class RtspClients {
         
     }
 
-    public static RtspClient open(String url) throws InterruptedException, IOException {
-        return clients.doOpen(url, clients.workerGroup);
+    public static RtspClient open(String url, String name) throws InterruptedException, IOException {
+        return clients.doOpen(url, name, clients.workerGroup);
     }
     
-    public RtspClient open(String url, EventLoopGroup workerGroup) throws InterruptedException, IOException {
-        return doOpen(url, workerGroup);
+    public RtspClient open(String url, String name, EventLoopGroup workerGroup) throws InterruptedException, IOException {
+        return doOpen(url, name, workerGroup);
     }
 
     private RtspClient doOpen(String url,
+    						  String name,
                               EventLoopGroup workerGroup) throws InterruptedException, IOException {
         URLObject urlObj = new URLObject(url);
 
@@ -67,7 +68,7 @@ public class RtspClients {
 
         boolean closeChannel = true;
         try {
-            RtspClient client = new RtspClient(urlObj, channel);
+            RtspClient client = new RtspClient(name, urlObj, channel);
             channel.pipeline().addLast(client.getRtspResponseHandler());
             client.connect();
             
