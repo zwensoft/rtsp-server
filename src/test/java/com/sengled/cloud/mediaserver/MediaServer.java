@@ -1,6 +1,10 @@
 package com.sengled.cloud.mediaserver;
 
+import java.beans.XMLDecoder;
+import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.ConnectException;
 
 import org.slf4j.Logger;
@@ -38,6 +42,12 @@ public class MediaServer {
         } catch (ConnectException ex) {
             ex.printStackTrace();
         }
+        
+        InputStream in = MediaServer.class.getResourceAsStream("/config/streams.xml");
+        
+        XMLDecoder d = new XMLDecoder(new BufferedInputStream(in));
+        Object obj  = d.readObject();
+        System.out.println(obj);
         
         /**
         

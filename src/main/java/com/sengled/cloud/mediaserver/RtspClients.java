@@ -14,6 +14,8 @@ import io.netty.handler.timeout.IdleStateHandler;
 
 import java.io.IOException;
 
+import org.apache.commons.lang.StringUtils;
+
 import com.sengled.cloud.mediaserver.rtsp.codec.RtspResponseDecoder;
 import com.sengled.cloud.mediaserver.url.URLObject;
 
@@ -39,7 +41,14 @@ public class RtspClients {
     private RtspClient doOpen(String url,
     						  String name,
                               EventLoopGroup workerGroup) throws InterruptedException, IOException {
-        URLObject urlObj = new URLObject(url);
+        if (StringUtils.isEmpty(name)) {
+        	throw new IllegalArgumentException("stream name is EMPTY");
+        } else if(!StringUtils.startsWith(name, "/") ) {
+        	throw new IllegalArgumentException("stream name[" + name + "] is NOT start with '/'");
+        }
+        
+
+    	URLObject urlObj = new URLObject(url);
 
         Bootstrap b = new Bootstrap();
         b.group(workerGroup)
