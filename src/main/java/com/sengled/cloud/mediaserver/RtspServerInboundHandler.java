@@ -120,6 +120,8 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
             InterleavedFrame frame = (InterleavedFrame)msg;
             if (null != session && frame instanceof RTPContent) {
                 session.dispatch((RTPContent)frame.retain());
+            } else {
+                logger.debug("{}", frame);
             }
         }
         

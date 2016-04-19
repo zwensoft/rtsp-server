@@ -212,24 +212,24 @@ public class RtspClient implements Closeable {
         @Override
         public void channelRead(ChannelHandlerContext ctx,
                                 Object msg) throws Exception {
-            if (msg instanceof FullHttpResponse) {
-                handleHttpResponse(ctx, ((FullHttpResponse) msg));
-            } else if (msg instanceof RTPContent) {
-                handleRtpPacket(((RTPContent)msg));
-            } else if (msg instanceof RTCPContent) {
-                // logger.debug("{}", msg);
-            } else {
-                logger.warn("what's this '{}'?", msg);
+            try {
+                if (msg instanceof FullHttpResponse) {
+                    handleHttpResponse(ctx, ((FullHttpResponse) msg));
+                } else if (msg instanceof RTPContent) {
+                    handleRtpPacket(((RTPContent)msg));
+                } else if (msg instanceof RTCPContent) {
+                    logger.debug("{}", msg);
+                } else {
+                    logger.warn("what's this '{}'?", msg);
+                }
+            } finally {
+                ReferenceCountUtil.release(msg);
             }
         }
 
         private void handleRtpPacket(Object msg) {
-            try {
-                if (null != session) {
-                    session.dispatch(((RTPContent) msg).retain());
-                }
-            } finally {
-                ReferenceCountUtil.release(msg);
+            if (null != session) {
+                session.dispatch(((RTPContent) msg).retain());
             }
         }
 

@@ -132,13 +132,14 @@ public abstract class RtspObjectDecoder extends ByteToMessageDecoder {
                 state(STATE.READ_RTP, rtpLength);
                 break;
             case READ_RTP:
-                ByteBuf rtpContent = in.alloc().buffer(rtpLength);
-                in.readBytes(rtpContent);
-                
                 
                 if (rtpChannle % 2 ==0) {
+                    ByteBuf rtpContent = in.alloc().buffer(rtpLength);
+                    in.readBytes(rtpContent);
                     out.add(new RTPContent(rtpChannle, rtpContent));
                 } else {
+                    ByteBuf rtpContent = in.alloc().buffer(rtpLength);
+                    in.readBytes(rtpContent);
                     out.add(new RTCPContent(rtpChannle, rtpContent));
                 }
 

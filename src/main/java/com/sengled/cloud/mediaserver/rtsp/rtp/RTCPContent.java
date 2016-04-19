@@ -37,6 +37,7 @@ public class RTCPContent  extends DefaultInterleavedFrame {
     public String toString() {
         StringBuilder buf = new StringBuilder();
         buf.append("{RTCP, stream.channel=").append(getChannel());
+        buf.append(", refCnt=").append(refCnt());
         buf.append("}");
         return buf.toString();
     }
