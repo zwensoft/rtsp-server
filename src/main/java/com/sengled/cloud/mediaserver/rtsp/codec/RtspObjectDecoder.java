@@ -3,6 +3,8 @@ package com.sengled.cloud.mediaserver.rtsp.codec;
 import java.util.List;
 
 
+
+
 import com.sengled.cloud.mediaserver.rtsp.rtp.RTCPContent;
 import com.sengled.cloud.mediaserver.rtsp.rtp.RTPContent;
 
@@ -17,6 +19,7 @@ import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.AppendableCharSequence;
 
 /**
@@ -88,6 +91,19 @@ public abstract class RtspObjectDecoder extends ByteToMessageDecoder {
     }
     
     @Override
+    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
+        // 释放缓存
+        if (null != message) {
+            ReferenceCountUtil.release(message);
+            message = null;
+        }
+        
+        // 通知其他 handler
+        super.handlerRemoved0(ctx);
+    }
+    
+    
+    @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         while (in.readableBytes() >= remains) {
             switch (state()) {
@@ -148,6 +164,7 @@ public abstract class RtspObjectDecoder extends ByteToMessageDecoder {
                 } else {
                     message = createInvalidMessage();
                     out.add(message);
+                    message = null;
                     state(STATE.SKIP_CONTROL_CHARS, Math.max(1, in.readableBytes()));
                 }
                 
@@ -186,6 +203,7 @@ public abstract class RtspObjectDecoder extends ByteToMessageDecoder {
                 } else {
                     message = createInvalidMessage();
                     out.add(message);
+                    message= null;
                     state(STATE.SKIP_CONTROL_CHARS, Math.max(1, in.readableBytes()));
                 }
 
@@ -201,11 +219,13 @@ public abstract class RtspObjectDecoder extends ByteToMessageDecoder {
                     DefaultFullHttpRequest full = new DefaultFullHttpRequest(request.getProtocolVersion(), request.getMethod(), request.getUri(), bytes, validateHeaders);
                     full.headers().add(request.headers());
                     out.add(full);
+                    message = null;
                 } else if (message instanceof HttpResponse) {
                     HttpResponse response = (HttpResponse)message;
                     DefaultFullHttpResponse full = new DefaultFullHttpResponse(response.getProtocolVersion(), response.getStatus(), bytes, validateHeaders);
                     full.headers().add(response.headers());
                     out.add(full);
+                    message = null;
                 }
 
                 state(STATE.SKIP_CONTROL_CHARS, 1);
