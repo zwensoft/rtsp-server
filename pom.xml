@@ -87,7 +87,7 @@
 					<archive>
 						<manifest>
 							<!--这里要替换成jar包main方法所在类 -->
-							<mainClass>com.sengled.cloud.mediaserver.RtspServer</mainClass>
+							<mainClass>com.sengled.cloud.MediaServer</mainClass>
 						</manifest>
 						<manifestEntries>
 							<Class-Path>.</Class-Path>
