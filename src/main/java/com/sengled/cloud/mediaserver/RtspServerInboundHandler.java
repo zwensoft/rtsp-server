@@ -18,6 +18,7 @@ import io.netty.util.ReferenceCountUtil;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
 import java.nio.charset.Charset;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
 
+import javax.sdp.SessionDescription;
 import javax.sip.TransportNotSupportedException;
 
 import org.slf4j.LoggerFactory;
@@ -34,9 +36,11 @@ import com.sengled.cloud.mediaserver.event.Listener;
 import com.sengled.cloud.mediaserver.rtsp.RTPSetup;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession.SessionMode;
+import com.sengled.cloud.mediaserver.rtsp.Sessions;
 import com.sengled.cloud.mediaserver.rtsp.codec.InterleavedFrame;
 import com.sengled.cloud.mediaserver.rtsp.rtp.RTPContent;
 import com.sengled.cloud.mediaserver.rtsp.rtp.RtpEvent;
+import com.sengled.cloud.mediaserver.url.URLObject;
 
 public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
     private org.slf4j.Logger logger = LoggerFactory.getLogger(getClass());
@@ -216,7 +220,21 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
             response.headers().set(RtspHeaders.Names.RTP_INFO,  getRtpInfo(request));
         }
         else if (RtspMethods.GET_PARAMETER.equals(method)) {
-            response = makeResponse(request, session);
+            try {
+                URLObject urlObj = new URLObject(request.getUri());
+                SessionDescription  sd = Sessions.getInstance().getSessionDescription(urlObj.getUri());
+                
+                if (null == sd) {
+                    response = makeResponse(request, session);
+                    response.setStatus(HttpResponseStatus.NOT_FOUND);
+                } else {
+                    response = makeResponse(request, session);
+                }
+            } catch (MalformedURLException ex) {
+                response = makeResponse(request, session);
+                response.setStatus(HttpResponseStatus.BAD_REQUEST);
+                logger.warn("request url decode failed. {}", ex.getMessage(), ex);
+            }
         }
         else if (RtspMethods.TEARDOWN.equals(method)) {
             if (null != session) {

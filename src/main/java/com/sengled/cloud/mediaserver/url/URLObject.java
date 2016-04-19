@@ -1,5 +1,6 @@
 package com.sengled.cloud.mediaserver.url;
 
+import java.net.MalformedURLException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -20,11 +21,11 @@ public class URLObject {
     private final int port;
     private final String uri;
 
-    public URLObject(String url) {
+    public URLObject(String url) throws MalformedURLException {
         Pattern pattern = Pattern.compile("^([^:]+)://(([^:]+):([^@]*)@)?([^:/]+)(:([0-9]+))?([^\\?]*)");
         Matcher m = pattern.matcher(url);
         if (!m.find()) {
-            throw new IllegalArgumentException("非法的 RTSP 地址[" + url + "]");
+            throw new MalformedURLException("非法的 RTSP 地址[" + url + "]");
         }
 
         scheme = m.group(1);

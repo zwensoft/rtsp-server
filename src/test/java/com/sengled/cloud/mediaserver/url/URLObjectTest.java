@@ -1,14 +1,13 @@
 package com.sengled.cloud.mediaserver.url;
 
 import java.net.MalformedURLException;
-import java.text.ParseException;
 
 import junit.framework.TestCase;
 
 import com.sengled.cloud.mediaserver.url.URLObject;
 
 public class URLObjectTest extends TestCase {
-    public static void testSimple() throws MalformedURLException, ParseException {
+    public static void testSimple() throws MalformedURLException {
         String url = "rtsp://user:password@127.0.0.1:5454/path/proxh";
         URLObject obj = new URLObject(url);
 
@@ -20,14 +19,14 @@ public class URLObjectTest extends TestCase {
         assertEquals("/path/proxh", obj.getUri());
     }
 
-    public static void testDefaultPort() throws MalformedURLException, ParseException {
+    public static void testDefaultPort() throws MalformedURLException {
         String url = "rtsp://user:password@127.0.0.1/path/proxh";
         URLObject obj = new URLObject(url);
 
         assertEquals(554, obj.getPort());
     }
     
-    public static void testWithParams() throws MalformedURLException, ParseException {
+    public static void testWithParams() throws MalformedURLException {
         String url = "rtsp://user:password@127.0.0.1/path/proxh?a=b";
         URLObject obj = new URLObject(url);
 
