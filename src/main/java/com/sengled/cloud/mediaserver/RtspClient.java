@@ -321,8 +321,8 @@ public class RtspClient implements Closeable {
 
         private HttpRequest setupStream(int streamIndex) {
             HttpRequest request;
-            logger.info("{}, {}", streamIndex, session.numStreams());
             if (streamIndex < session.numStreams()) {
+                logger.info("setup stream {}/{}", streamIndex, session.numStreams());
                 String url = urlObj.getUrl(session.getStreamUri(streamIndex));
                 request = makeRequest(RtspMethods.SETUP, url);
 
