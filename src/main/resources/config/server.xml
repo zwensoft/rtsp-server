@@ -1,0 +1,14 @@
+
+<server>
+	<ports>
+		<port>5454</port>
+		<port>15454</port>
+	</ports>
+	<streams>
+		<stream>
+			<name>/dahua</name>
+			<url>rtsp://admin:admin@192.168.1.108</url>
+		</stream>
+	</streams>
+
+</server>

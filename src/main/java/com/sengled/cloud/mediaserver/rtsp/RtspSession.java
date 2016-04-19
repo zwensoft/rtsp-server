@@ -120,7 +120,11 @@ public class RtspSession implements Serializable {
         java.util.List<MediaDescription> medias = getMediaDescriptions(sd);
         
         try {
-            return uri + "/" + medias.get(index).getAttribute("control");
+        	if (StringUtils.endsWith(uri, "/")) {
+        		return uri + medias.get(index).getAttribute("control");
+        	} else {
+        		return uri + "/" + medias.get(index).getAttribute("control");
+        	}
         } catch (SdpParseException e) {
             logger.error("MediaDescription has error on stream[" + index + "], sdp = " + sd);
         }
@@ -166,7 +170,8 @@ public class RtspSession implements Serializable {
     public static String getUri(String url) {
         String uri = url;
         if (StringUtils.startsWith(url, "rtsp://")) {
-            uri = url.substring(url.indexOf("/", "rtsp://".length()));
+            int indexOf = url.indexOf("/", "rtsp://".length());
+			uri = indexOf > 0 ? url.substring(indexOf) : "/";
         }
         return uri;
     }

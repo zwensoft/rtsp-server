@@ -31,14 +31,18 @@ public class RtspClients {
     }
 
     public static RtspClient open(String url, String name) throws InterruptedException, IOException {
-        return clients.doOpen(url, name, clients.workerGroup);
+        return clients.doOpen(new URLObject(url), name, clients.workerGroup);
+    }
+    
+    public static RtspClient open(URLObject urlObj, String name) throws InterruptedException, IOException {
+        return clients.doOpen(urlObj, name, clients.workerGroup);
     }
     
     public RtspClient open(String url, String name, EventLoopGroup workerGroup) throws InterruptedException, IOException {
-        return doOpen(url, name, workerGroup);
+        return doOpen(new URLObject(url), name, workerGroup);
     }
 
-    private RtspClient doOpen(String url,
+    private RtspClient doOpen(URLObject urlObj,
     						  String name,
                               EventLoopGroup workerGroup) throws InterruptedException, IOException {
         if (StringUtils.isEmpty(name)) {
@@ -48,7 +52,6 @@ public class RtspClients {
         }
         
 
-    	URLObject urlObj = new URLObject(url);
 
         Bootstrap b = new Bootstrap();
         b.group(workerGroup)
