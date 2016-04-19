@@ -299,7 +299,6 @@ public class RtspClient implements Closeable {
             } else if (RtspMethods.SETUP.equals(requestMethod)) {
                 int streamIndex = session.getStreamIndex(requestUrl);
                 String transport = response.headers().get(RtspHeaders.Names.TRANSPORT);
-                logger.info("setup {}, transport = {}", requestUrl, transport);
 
                 session.setupStream(requestUrl, transport);
                 session.setId(response.headers().get(RtspHeaders.Names.SESSION));
