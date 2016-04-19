@@ -15,6 +15,7 @@ import java.util.concurrent.Executors;
 import javax.sdp.SessionDescription;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,7 +30,7 @@ public class Sessions {
     private final static String SDP_URL;
     static {
         String tmpDir = System.getProperty("java.io.tmpdir");
-        String sdpUrl = tmpDir + "/sengled/media/sdps";
+        String sdpUrl = FilenameUtils.normalize(tmpDir + "/sengled/media/sdps");
         
         File directory = new File(sdpUrl);
         try {
