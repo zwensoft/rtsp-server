@@ -80,7 +80,7 @@ public class Sessions {
         threads.submit(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
-                logger.info("delete sdp of '{}', at {}", name, file.getAbsolutePath());
+                logger.info("delete sdp '{}'", file.getAbsolutePath());
 
                 File newFile = new File(file.getParentFile(), file.getName() + ".deleted");
                 newFile.delete();
@@ -104,7 +104,7 @@ public class Sessions {
             @Override
             public Void call() throws Exception {
                 FileUtils.write(file, session.getSDP());
-                logger.info("update sdp of '{}', at {}", name, file.getAbsolutePath());
+                logger.info("update sdp '{}'", file.getAbsolutePath());
                 return null;
             }
         });
@@ -134,7 +134,7 @@ public class Sessions {
                 logger.trace("dispatch {} to {} listener(s) ", msg, listen.size());
 
                 for (Listener rtspListener : listen) {
-                    rtspListener.on(msg.duplicate());
+                    rtspListener.on(msg.duplicate().retain());
                 }
 
             } else {

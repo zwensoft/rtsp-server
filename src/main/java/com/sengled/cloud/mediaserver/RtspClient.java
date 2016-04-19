@@ -16,6 +16,7 @@ import io.netty.handler.codec.rtsp.RtspMethods;
 import io.netty.handler.codec.rtsp.RtspResponseStatuses;
 import io.netty.handler.codec.rtsp.RtspVersions;
 import io.netty.handler.timeout.IdleStateEvent;
+import io.netty.util.ReferenceCountUtil;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -212,9 +213,9 @@ public class RtspClient implements Closeable {
         public void channelRead(ChannelHandlerContext ctx,
                                 Object msg) throws Exception {
             if (msg instanceof FullHttpResponse) {
-                handleHttpResponse(ctx, (FullHttpResponse) msg);
+                handleHttpResponse(ctx, ((FullHttpResponse) msg));
             } else if (msg instanceof RTPContent) {
-                handleRtpPacket(msg);
+                handleRtpPacket(((RTPContent)msg));
             } else if (msg instanceof RTCPContent) {
                 // logger.debug("{}", msg);
             } else {
@@ -223,8 +224,12 @@ public class RtspClient implements Closeable {
         }
 
         private void handleRtpPacket(Object msg) {
-            if (null != session) {
-                session.dispatch((RTPContent) msg);
+            try {
+                if (null != session) {
+                    session.dispatch(((RTPContent) msg).retain());
+                }
+            } finally {
+                ReferenceCountUtil.release(msg);
             }
         }
 

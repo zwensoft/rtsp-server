@@ -145,24 +145,28 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
                 .withListener(new Listener() {
                     @Override
                     public void on(Event event) {
-                        if(event instanceof RtpEvent) {
-                            RtpEvent rtp = ((RtpEvent)event);
-
-                            int streamIndex = rtp.getStreamIndex();
-                            ByteBuf content = rtp.content();
-                            int payloadLength = content.readableBytes();
-                            
-                            if (mySession.isStreamSetup(streamIndex)) {
-                                int channel = mySession.getStreamRTPChannel(streamIndex);
+                        try {
+                            if(event instanceof RtpEvent) {
+                                RtpEvent rtp = ((RtpEvent)event);
+    
+                                int streamIndex = rtp.getStreamIndex();
+                                ByteBuf content = rtp.content();
+                                int payloadLength = content.readableBytes();
                                 
-                                ByteBuf payload = ctx.alloc().buffer(4 + payloadLength);
-                                payload.writeByte('$');
-                                payload.writeByte(channel);
-                                payload.writeShort(payloadLength);
-                                payload.writeBytes(content);
-
-                                ctx.writeAndFlush(payload);
+                                if (mySession.isStreamSetup(streamIndex)) {
+                                    int channel = mySession.getStreamRTPChannel(streamIndex);
+                                    
+                                    ByteBuf payload = ctx.alloc().buffer(4 + payloadLength);
+                                    payload.writeByte('$');
+                                    payload.writeByte(channel);
+                                    payload.writeShort(payloadLength);
+                                    payload.writeBytes(content);
+    
+                                    ctx.writeAndFlush(payload);
+                                }
                             }
+                        } finally {
+                            ReferenceCountUtil.release(event);
                         }
                     }
                 });

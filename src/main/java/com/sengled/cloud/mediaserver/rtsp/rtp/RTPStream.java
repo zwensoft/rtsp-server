@@ -1,5 +1,7 @@
 package com.sengled.cloud.mediaserver.rtsp.rtp;
 
+import io.netty.util.ReferenceCountUtil;
+
 import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -126,9 +128,13 @@ public class RTPStream {
 
 
     public void dispatch(String uri, int streamIndex, RTPContent rtp) {
-        fixTimestamp(rtp);
-        
-        sessions.dispatch(uri, new RtpEvent(streamIndex, md, rtp));
+        try {
+            fixTimestamp(rtp);
+            
+            sessions.dispatch(uri, new RtpEvent(streamIndex, md, rtp.retain()));
+        } finally {
+            ReferenceCountUtil.release(rtp);
+        }
     }
     
     private void fixTimestamp(RTPContent rtp) {

@@ -30,14 +30,14 @@ public class RTPContent extends DefaultInterleavedFrame {
     }
     
     @Override
-    public DefaultInterleavedFrame retain() {
+    public RTPContent retain() {
         content().retain();
         return this;
     }
     
     
     @Override
-    public DefaultInterleavedFrame retain(int increment) {
+    public RTPContent retain(int increment) {
         content().retain(increment);
         return this;
     }

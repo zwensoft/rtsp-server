@@ -5,6 +5,7 @@ import gov.nist.javax.sdp.SessionDescriptionImpl;
 import gov.nist.javax.sdp.fields.SDPField;
 import gov.nist.javax.sdp.parser.ParserFactory;
 import gov.nist.javax.sdp.parser.SDPParser;
+import io.netty.util.ReferenceCountUtil;
 
 import java.io.Serializable;
 import java.text.ParseException;
@@ -260,35 +261,39 @@ public class RtspSession implements Serializable {
     
 
     public void dispatch(RTPContent msg) {
-        if (mode == SessionMode.PUBLISH && streams.length > 0) {
-            int channel = msg.getChannel();
-
-            // 分发
-            for (int streamIndex = 0; null != streams && streamIndex < streams.length; streamIndex++) {
-                if (streams[streamIndex].getRtpChannel() == channel) {
-                    streams[streamIndex].dispatch(name, streamIndex, msg);
-                    break;
+        try {
+            if (mode == SessionMode.PUBLISH && streams.length > 0) {
+                int channel = msg.getChannel();
+    
+                // 分发
+                for (int streamIndex = 0; null != streams && streamIndex < streams.length; streamIndex++) {
+                    if (streams[streamIndex].getRtpChannel() == channel) {
+                        streams[streamIndex].dispatch(name, streamIndex, msg.retain());
+                        break;
+                    }
                 }
+                
+                /* 匹配时间戳
+                int numStreams = numStreams();
+                if (numStreams == 2 
+                        && null != streams[0] && streams[0].isStarted() 
+                        && null != streams[1] && streams[1].isStarted()) {
+                    long t0 = streams[0].getTimestampMillis();
+                    long t1 = streams[1].getTimestampMillis();
+                    long delay = t0 - t1;
+                    if (delay > 500) {
+                        logger.info(" stream#0 fast {}ms then stream#1", delay);
+                        streams[1].setTimestampMillis(t0);
+                    } else if(delay < - 500) {
+                        logger.info(" stream#0 late {}ms then stream#1", -delay);
+                        streams[0].setTimestampMillis(t1);
+                    } else {
+                        logger.trace("delay is {}ms between stream#0 and stream#1", delay);
+                    }
+                }*/
             }
-            
-            /* 匹配时间戳
-            int numStreams = numStreams();
-            if (numStreams == 2 
-                    && null != streams[0] && streams[0].isStarted() 
-                    && null != streams[1] && streams[1].isStarted()) {
-                long t0 = streams[0].getTimestampMillis();
-                long t1 = streams[1].getTimestampMillis();
-                long delay = t0 - t1;
-                if (delay > 500) {
-                    logger.info(" stream#0 fast {}ms then stream#1", delay);
-                    streams[1].setTimestampMillis(t0);
-                } else if(delay < - 500) {
-                    logger.info(" stream#0 late {}ms then stream#1", -delay);
-                    streams[0].setTimestampMillis(t1);
-                } else {
-                    logger.trace("delay is {}ms between stream#0 and stream#1", delay);
-                }
-            }*/
+        } finally {
+            ReferenceCountUtil.release(msg);
         }
     }
     
