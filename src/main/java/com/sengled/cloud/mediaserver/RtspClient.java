@@ -235,7 +235,7 @@ public class RtspClient implements Closeable {
 
             HttpRequest request = null;
             if (200 == code) {
-                logger.info("{} {}, {}", requestMethod, requestUrl, response.getStatus());
+                logger.info("{}, {} {}", response.getStatus(), requestMethod, requestUrl);
                 request = nextRequest(response);
             } else if (RtspResponseStatuses.UNAUTHORIZED.equals(response.getStatus())) {
                 if (isAuth) {
@@ -260,7 +260,7 @@ public class RtspClient implements Closeable {
             }
 
             if (null != request && ctx.channel().isActive()) {
-                logger.info("send {}, {}", request.getMethod(), request.getUri());
+                logger.info("send, {} {}", request.getMethod(), request.getUri());
                 if (logger.isDebugEnabled()) {
                     for (Entry<String, String> keyValue : request.headers().entries()) {
                         logger.trace("{}:{}", keyValue.getKey(), keyValue.getValue());
