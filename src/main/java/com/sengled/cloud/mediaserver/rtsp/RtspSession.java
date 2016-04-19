@@ -271,7 +271,7 @@ public class RtspSession implements Serializable {
                 }
             }
             
-            // 匹配时间戳
+            /* 匹配时间戳
             int numStreams = numStreams();
             if (numStreams == 2 
                     && null != streams[0] && streams[0].isStarted() 
@@ -279,16 +279,16 @@ public class RtspSession implements Serializable {
                 long t0 = streams[0].getTimestampMillis();
                 long t1 = streams[1].getTimestampMillis();
                 long delay = t0 - t1;
-                if (delay > 300) {
+                if (delay > 500) {
                     logger.info(" stream#0 fast {}ms then stream#1", delay);
                     streams[1].setTimestampMillis(t0);
-                } else if(delay < - 300) {
+                } else if(delay < - 500) {
                     logger.info(" stream#0 late {}ms then stream#1", -delay);
                     streams[0].setTimestampMillis(t1);
                 } else {
                     logger.trace("delay is {}ms between stream#0 and stream#1", delay);
                 }
-            }
+            }*/
         }
     }
     

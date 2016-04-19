@@ -38,7 +38,7 @@ import com.sengled.cloud.mediaserver.rtsp.codec.InterleavedFrame;
 import com.sengled.cloud.mediaserver.rtsp.rtp.RTPContent;
 import com.sengled.cloud.mediaserver.rtsp.rtp.RtpEvent;
 
-class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
+public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
     private org.slf4j.Logger logger = LoggerFactory.getLogger(getClass());
 
     

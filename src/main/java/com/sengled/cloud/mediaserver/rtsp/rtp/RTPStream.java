@@ -128,7 +128,6 @@ public class RTPStream {
     public void dispatch(String uri, int streamIndex, RTPContent rtp) {
         fixTimestamp(rtp);
         
-        logger.info("dispath {}, {}", getTimestampMillis() * 1.0/1000,  rtp);
         sessions.dispatch(uri, new RtpEvent(streamIndex, md, rtp));
     }
     

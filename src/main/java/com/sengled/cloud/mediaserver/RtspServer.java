@@ -57,6 +57,7 @@ public class RtspServer {
     public RtspServer(boolean preferDirect) {
         this.bootstrap = makeServerBosststrap();
         this.allocator = new PooledByteBufAllocator(preferDirect);
+        this.rtspHandlerClass = RtspServerInboundHandler.class;
     }
     
     public RtspServer withHandlerClass(Class<? extends ChannelHandler> rtspHandlerClass) {

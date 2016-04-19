@@ -88,6 +88,7 @@ public class Sessions {
             }
         });
         
+        logger.info("{} rtsp session(s) online", sessions.size());
         return oldSession;
     }
 
@@ -107,7 +108,7 @@ public class Sessions {
             }
         });
         
-        
+        logger.info("{} rtsp session(s) online", sessions.size());
         return oldSession;
     }
 
