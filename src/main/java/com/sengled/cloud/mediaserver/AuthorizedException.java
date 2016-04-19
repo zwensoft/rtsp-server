@@ -14,7 +14,7 @@ public class AuthorizedException  extends IOException {
     private static final long serialVersionUID = -5988808023931086727L;
 
     public AuthorizedException(String name, String pass) {
-        super("use auth[" + name + "," + pass + "]");
+        super("(" + name + "," + pass + ")");
     }
     
     public AuthorizedException(String message, Throwable cause) {
