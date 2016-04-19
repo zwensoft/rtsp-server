@@ -263,9 +263,9 @@ public class RtspClient implements Closeable {
                 logger.info("send, {} {}", request.getMethod(), request.getUri());
                 if (logger.isDebugEnabled()) {
                     for (Entry<String, String> keyValue : request.headers().entries()) {
-                        logger.trace("{}:{}", keyValue.getKey(), keyValue.getValue());
+                        logger.debug("{}:{}", keyValue.getKey(), keyValue.getValue());
                     }
-                    logger.trace("<<");
+                    logger.debug("<<");
                 }
                 writeAndFlush(ctx.channel(), request);
             }
