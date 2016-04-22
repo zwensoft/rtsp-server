@@ -9,7 +9,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.rtsp.RtspRequestEncoder;
+import io.netty.handler.codec.rtsp.RtspEncoder;
 import io.netty.handler.timeout.IdleStateHandler;
 
 import java.io.IOException;
@@ -31,20 +31,19 @@ public class RtspClients {
     }
 
     public static RtspClient open(String url, String name) throws InterruptedException, IOException {
-        return clients.doOpen(new URLObject(url), name, clients.workerGroup);
+        return clients.doOpen(new URLObject(url), name);
     }
     
     public static RtspClient open(URLObject urlObj, String name) throws InterruptedException, IOException {
-        return clients.doOpen(urlObj, name, clients.workerGroup);
+        return clients.doOpen(urlObj, name);
     }
     
     public RtspClient open(String url, String name, EventLoopGroup workerGroup) throws InterruptedException, IOException {
-        return doOpen(new URLObject(url), name, workerGroup);
+        return doOpen(new URLObject(url), name);
     }
 
     private RtspClient doOpen(URLObject urlObj,
-    						  String name,
-                              EventLoopGroup workerGroup) throws InterruptedException, IOException {
+    						  String name) throws InterruptedException, IOException {
         if (StringUtils.isEmpty(name)) {
         	throw new IllegalArgumentException("stream name is EMPTY");
         } else if(!StringUtils.startsWith(name, "/") ) {
@@ -63,7 +62,7 @@ public class RtspClients {
             @Override
             public void initChannel(SocketChannel ch) throws Exception {
                 ch.pipeline().addLast(new IdleStateHandler(60, 30, 0));
-                ch.pipeline().addLast(new RtspRequestEncoder());
+                ch.pipeline().addLast(new RtspEncoder());
                 ch.pipeline().addLast(new RtspResponseDecoder());
             }
         });

@@ -12,7 +12,7 @@ import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.rtsp.RtspResponseEncoder;
+import io.netty.handler.codec.rtsp.RtspEncoder;
 import io.netty.handler.timeout.IdleStateHandler;
 
 import org.slf4j.LoggerFactory;
@@ -118,27 +118,27 @@ public class RtspServer {
     private ServerBootstrap makeServerBosststrap() {
         ServerBootstrap b = new ServerBootstrap();
 
-        b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
-                .childHandler(new ChannelInitializer<SocketChannel>() {
-                    @Override
-                    public void initChannel(SocketChannel ch) throws Exception {
-                        // 心跳
-                        ch.pipeline().addLast(new IdleStateHandler(0, 0, 60));
-                        
-                        // server端发送的是httpResponse，所以要使用HttpResponseEncoder进行编码
-                        ch.pipeline().addLast("rtspEncoder", new RtspResponseEncoder());
-                    
-
-                        // server端接收到的是httpRequest，所以要使用HttpRequestDecoder进行解码
-                        ch.pipeline().addLast("rtspDecoder", new RtspRequestDecoder());
-                        ch.pipeline().addLast("rtsp", rtspHandlerClass.newInstance());
-                    }
-                }).option(ChannelOption.ALLOCATOR, allocator)
-                .option(ChannelOption.SO_BACKLOG, 128)
-                .childOption(ChannelOption.SO_KEEPALIVE, true)
-                .childOption(ChannelOption.ALLOCATOR, allocator)
-                .childOption(ChannelOption.SO_SNDBUF, 32 * 1024)
-                .childOption(ChannelOption.SO_RCVBUF, 32 * 1024);
+        b.group(bossGroup, workerGroup)
+         .channel(NioServerSocketChannel.class)
+         .option(ChannelOption.ALLOCATOR, allocator)
+         .option(ChannelOption.SO_BACKLOG, 128)
+         .childOption(ChannelOption.SO_KEEPALIVE, true)
+         .childOption(ChannelOption.ALLOCATOR, allocator)
+         .childOption(ChannelOption.SO_SNDBUF, 16 * 1024)
+         .childOption(ChannelOption.SO_RCVBUF, 16 * 1024)
+         .childOption(ChannelOption.SO_TIMEOUT, 10 * 1000)
+         .childHandler(new ChannelInitializer<SocketChannel>() {
+            @Override
+            public void initChannel(SocketChannel ch) throws Exception {
+                // 心跳
+                ch.pipeline().addLast(new IdleStateHandler(0, 0, 60));
+                ch.pipeline().addLast("rtspEncoder", new RtspEncoder());
+        
+                // server端接收到的是httpRequest，所以要使用HttpRequestDecoder进行解码
+                ch.pipeline().addLast("rtspDecoder", new RtspRequestDecoder());
+                ch.pipeline().addLast("rtsp", rtspHandlerClass.newInstance());
+            }
+         });
 
         return b;
     }
