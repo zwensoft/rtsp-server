@@ -126,7 +126,6 @@ public class RtspServer {
          .childOption(ChannelOption.ALLOCATOR, allocator)
          .childOption(ChannelOption.SO_SNDBUF, 16 * 1024)
          .childOption(ChannelOption.SO_RCVBUF, 16 * 1024)
-         .childOption(ChannelOption.SO_TIMEOUT, 10 * 1000)
          .childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
             public void initChannel(SocketChannel ch) throws Exception {
