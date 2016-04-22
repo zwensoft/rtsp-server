@@ -15,6 +15,8 @@ import io.netty.handler.codec.rtsp.RtspMethods;
 import io.netty.handler.codec.rtsp.RtspVersions;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -42,8 +44,18 @@ import com.sengled.cloud.mediaserver.rtsp.rtp.RTPContent;
 import com.sengled.cloud.mediaserver.rtsp.rtp.RtpEvent;
 import com.sengled.cloud.mediaserver.url.URLObject;
 
+/**
+ * 处理客户端的 rtsp 请求。
+ * 
+ * <p>
+ * 接收 ANOUNCE 往服务器推流
+ * 同时支持  DESCRIBE 方式从服务器拉流
+ * </p>
+ * @author 陈修恒
+ * @date 2016年4月22日
+ */
 public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
-    private org.slf4j.Logger logger = LoggerFactory.getLogger(getClass());
+    private static org.slf4j.Logger logger = LoggerFactory.getLogger(RtspServerInboundHandler.class);
 
     
     private RtspSession session = null;
@@ -144,34 +156,7 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
             final RtspSession mySession = session;
             mySession
                 .withMode(SessionMode.PLAY)
-                .withListener(new Listener() {
-                    @Override
-                    public void on(Event event) {
-                        try {
-                            if(event instanceof RtpEvent) {
-                                RtpEvent rtp = ((RtpEvent)event);
-    
-                                int streamIndex = rtp.getStreamIndex();
-                                ByteBuf content = rtp.content();
-                                int payloadLength = content.readableBytes();
-                                
-                                if (mySession.isStreamSetup(streamIndex)) {
-                                    int channel = mySession.getStreamRTPChannel(streamIndex);
-                                    
-                                    ByteBuf payload = ctx.alloc().buffer(4 + payloadLength);
-                                    payload.writeByte('$');
-                                    payload.writeByte(channel);
-                                    payload.writeShort(payloadLength);
-                                    payload.writeBytes(content);
-    
-                                    ctx.writeAndFlush(payload);
-                                }
-                            }
-                        } finally {
-                            ReferenceCountUtil.release(event);
-                        }
-                    }
-                });
+                .withListener(new RtspEventListener(session, ctx, 1024));
             
             response = makeResponse(request, session);
             
@@ -307,5 +292,80 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
         resp.headers().set(RtspHeaders.Names.SERVER, "Sengled Media Server On Netty");
 
         return resp;
+    }
+    
+    public static class RtspEventListener implements Listener, GenericFutureListener<Future<? super Void>> {
+        final private AtomicLong rtpBufferSize = new AtomicLong();
+        final private RtspSession mySession;
+        final private ChannelHandlerContext ctx ;
+        final private int maxRtpBufferSize;
+        
+        public RtspEventListener(RtspSession mySession, ChannelHandlerContext ctx, int maxRtpBufferSize) {
+            super();
+            this.ctx = ctx;
+            this.mySession = mySession;
+            this.maxRtpBufferSize = maxRtpBufferSize;
+        }
+
+
+        @Override
+        public void on(Event event) {
+            try {
+                if(event instanceof RtpEvent) {
+                    RtpEvent rtp = ((RtpEvent)event);
+
+                    onRtpEvent(rtp);
+                }
+            } finally {
+                ReferenceCountUtil.release(event);
+            }
+        }
+
+
+        private void onRtpEvent(RtpEvent rtp) {
+            int streamIndex = rtp.getStreamIndex();
+            ByteBuf content = rtp.content();
+            int payloadLength = content.readableBytes();
+            
+            if (mySession.isStreamSetup(streamIndex)) {
+                int channel = mySession.getStreamRTPChannel(streamIndex);
+                
+                ByteBuf payload = ctx.alloc().buffer(4 + payloadLength);
+                payload.writeByte('$');
+                payload.writeByte(channel);
+                payload.writeShort(payloadLength);
+                payload.writeBytes(content);
+
+                long bufferSize = rtpBufferSize.incrementAndGet();
+                if (!bufferIfFull(bufferSize)) {
+                    // 当成功发送数据包后， 更新计数器
+                    ctx.writeAndFlush(payload, ctx.newPromise().addListener(this));
+                } else {
+                    // 已经有很多数据没有发送了， 可能客户端网络不好，直接丢包
+                    rtpBufferSize.decrementAndGet();
+
+                    ctx.fireExceptionCaught(new BufferOverflowException("limit is " + maxRtpBufferSize + ", but real is" + bufferSize));
+                }
+            }
+        }
+
+
+        private boolean bufferIfFull(long bufferSize) {
+            return maxRtpBufferSize > 0 && bufferSize > maxRtpBufferSize;
+        }
+
+        /**
+         * 监听消息是否成功发送出去了
+         */
+        @Override
+        public void operationComplete(Future<? super Void> future) throws Exception {
+            long bufferSize = rtpBufferSize.decrementAndGet();
+            if (bufferIfFull(bufferSize)) {
+                ctx.fireExceptionCaught(new BufferOverflowException("limit is " + maxRtpBufferSize + ", but real is" + bufferSize));
+            }
+
+            logger.trace("rtp buffer size = {}", bufferSize);
+        }
+
     }
 }
