@@ -51,7 +51,7 @@ public class RtspServer {
     private Class<? extends ChannelHandler> rtspHandlerClass;
     
     public RtspServer() {
-        this(false);
+        this(true);
     }
     
     public RtspServer(boolean preferDirect) {
@@ -118,14 +118,19 @@ public class RtspServer {
     private ServerBootstrap makeServerBosststrap() {
         ServerBootstrap b = new ServerBootstrap();
 
+        // server socket
         b.group(bossGroup, workerGroup)
          .channel(NioServerSocketChannel.class)
          .option(ChannelOption.ALLOCATOR, allocator)
-         .option(ChannelOption.SO_BACKLOG, 128)
-         .childOption(ChannelOption.SO_KEEPALIVE, true)
+         .option(ChannelOption.SO_BACKLOG, 0); // 服务端处理线程全忙后，允许多少个新请求进入等待。 
+        
+        // accept socket
+        b.childOption(ChannelOption.SO_KEEPALIVE, true)
          .childOption(ChannelOption.ALLOCATOR, allocator)
-         .childOption(ChannelOption.SO_SNDBUF, 16 * 1024)
-         .childOption(ChannelOption.SO_RCVBUF, 16 * 1024)
+         .childOption(ChannelOption.SO_RCVBUF, 4 * 1500)
+         .childOption(ChannelOption.SO_SNDBUF, 8 * 1500)
+         .childOption(ChannelOption.SO_LINGER, 0)      // SO_LINGER还有一个作用就是用来减少TIME_WAIT套接字的数量
+         .childOption(ChannelOption.TCP_NODELAY, true) // 禁用nagle算法，减少时延迟
          .childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
             public void initChannel(SocketChannel ch) throws Exception {
