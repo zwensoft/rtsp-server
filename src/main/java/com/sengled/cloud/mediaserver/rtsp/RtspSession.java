@@ -21,14 +21,13 @@ import javax.sdp.SdpParseException;
 import javax.sdp.SessionDescription;
 import javax.sip.TransportNotSupportedException;
 
-import jlibrtp.tcp.InterLeavedRTPSession;
-
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtcpContent;
+import com.sengled.cloud.mediaserver.rtsp.rtp.InterLeavedRTPSession;
 
 /**
  * 一个 rtsp 会话。

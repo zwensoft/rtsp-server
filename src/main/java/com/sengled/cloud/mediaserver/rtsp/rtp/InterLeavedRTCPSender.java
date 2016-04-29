@@ -1,11 +1,11 @@
-package jlibrtp.tcp;
+package com.sengled.cloud.mediaserver.rtsp.rtp;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.util.ReferenceCountUtil;
 import jlibrtp.RtcpPktSR;
 
-import com.sengled.cloud.mediaserver.rtsp.FullRtpPkt;
+import com.sengled.cloud.mediaserver.rtsp.interleaved.FullRtpPkt;
 
 /**
  * 发送  rtcp 包
@@ -19,7 +19,6 @@ public class InterLeavedRTCPSender {
     private InterLeavedRTPSession rtpSession;
     private InterLeavedRTCPSession rtcpSession;
     
-    private long ntpTs1 = 0;
     
     public InterLeavedRTCPSender(InterLeavedRTPSession rtpSession,
             InterLeavedRTCPSession rtcpSession) {

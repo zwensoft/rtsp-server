@@ -9,8 +9,6 @@ import io.netty.util.concurrent.GenericFutureListener;
 import java.util.concurrent.atomic.AtomicLong;
 
 import jlibrtp.AbstractParticipant;
-import jlibrtp.tcp.InterLeavedParticipant;
-import jlibrtp.tcp.InterLeavedRTPSession;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +19,8 @@ import com.sengled.cloud.mediaserver.rtsp.event.TearDownEvent;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.FullRtpPkt;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtcpContent;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtpPkt;
+import com.sengled.cloud.mediaserver.rtsp.rtp.InterLeavedParticipant;
+import com.sengled.cloud.mediaserver.rtsp.rtp.InterLeavedRTPSession;
 
 public class RtspSessionListener implements GenericFutureListener<Future<? super Void>> {
     private static final Logger logger = LoggerFactory.getLogger(RtspSessionListener.class);

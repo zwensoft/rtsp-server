@@ -28,8 +28,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import javax.sdp.SessionDescription;
 import javax.sip.TransportNotSupportedException;
 
-import jlibrtp.tcp.InterLeavedRTPSession;
-
 import org.slf4j.LoggerFactory;
 
 import com.sengled.cloud.mediaserver.rtsp.RTPSetup;
@@ -41,6 +39,7 @@ import com.sengled.cloud.mediaserver.rtsp.codec.RtpObjectAggregator;
 import com.sengled.cloud.mediaserver.rtsp.codec.RtspObjectDecoder;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.FullRtpPkt;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtcpContent;
+import com.sengled.cloud.mediaserver.rtsp.rtp.InterLeavedRTPSession;
 import com.sengled.cloud.mediaserver.url.URLObject;
 
 /**
