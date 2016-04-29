@@ -32,15 +32,15 @@ import jlibrtp.tcp.InterLeavedRTPSession;
 
 import org.slf4j.LoggerFactory;
 
-import com.sengled.cloud.mediaserver.rtsp.FullRtpPkt;
 import com.sengled.cloud.mediaserver.rtsp.RTPSetup;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession.SessionMode;
-import com.sengled.cloud.mediaserver.rtsp.Sessions;
+import com.sengled.cloud.mediaserver.rtsp.RtspSessions;
 import com.sengled.cloud.mediaserver.rtsp.Transport;
 import com.sengled.cloud.mediaserver.rtsp.codec.RtpObjectAggregator;
 import com.sengled.cloud.mediaserver.rtsp.codec.RtspObjectDecoder;
-import com.sengled.cloud.mediaserver.rtsp.rtp.RtcpContent;
+import com.sengled.cloud.mediaserver.rtsp.interleaved.FullRtpPkt;
+import com.sengled.cloud.mediaserver.rtsp.interleaved.RtcpContent;
 import com.sengled.cloud.mediaserver.url.URLObject;
 
 /**
@@ -219,7 +219,7 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
         else if (RtspMethods.GET_PARAMETER.equals(method)) {
             try {
                 URLObject urlObj = new URLObject(request.getUri());
-                SessionDescription  sd = Sessions.getInstance().getSessionDescription(urlObj.getUri());
+                SessionDescription  sd = RtspSessions.getInstance().getSessionDescription(urlObj.getUri());
                 
                 if (null == sd) {
                     response = makeResponse(request, session);

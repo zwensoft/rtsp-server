@@ -2,8 +2,6 @@ package com.sengled.cloud.mediaserver.rtsp;
 
 import org.apache.commons.lang.time.DateFormatUtils;
 
-import com.sengled.cloud.mediaserver.rtsp.rtp.Rational;
-
 /**
  * Ntp 时间
  * 

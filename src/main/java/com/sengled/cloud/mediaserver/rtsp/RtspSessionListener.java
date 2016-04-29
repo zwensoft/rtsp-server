@@ -15,32 +15,58 @@ import jlibrtp.tcp.InterLeavedRTPSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.sengled.cloud.mediaserver.rtsp.rtp.RtcpContent;
-import com.sengled.cloud.mediaserver.rtsp.rtp.RtpPkt;
+import com.sengled.cloud.mediaserver.rtsp.event.FullRtpPktEvent;
+import com.sengled.cloud.mediaserver.rtsp.event.NtpTimeEvent;
+import com.sengled.cloud.mediaserver.rtsp.event.TearDownEvent;
+import com.sengled.cloud.mediaserver.rtsp.interleaved.FullRtpPkt;
+import com.sengled.cloud.mediaserver.rtsp.interleaved.RtcpContent;
+import com.sengled.cloud.mediaserver.rtsp.interleaved.RtpPkt;
 
 public class RtspSessionListener implements GenericFutureListener<Future<? super Void>> {
     private static final Logger logger = LoggerFactory.getLogger(RtspSessionListener.class);
     
-    final private RtspSession rtsp;
+    final private RtspSession consumer;
     final private int maxBufferSize;
     final private AtomicLong bufferSize = new AtomicLong();
     
     public RtspSessionListener(RtspSession mySession, int maxRtpBufferSize) {
         super();
-        this.rtsp = mySession;
+        this.consumer = mySession;
         this.maxBufferSize = maxRtpBufferSize;
     }
 
     private Channel channel() {
-        return rtsp.channel();
+        return consumer.channel();
     }
 
+    /**
+     * 初始化
+     * 
+     * @param producer 音视频数据源
+     */
+    public void init(RtspSession producer) {
+        InterLeavedRTPSession[] srcSessions = producer.getRTPSessions();
+        InterLeavedRTPSession[] dstSessions =  consumer.getRTPSessions();
+        
+        for (int i = 0; i < srcSessions.length; i++) {
+            InterLeavedRTPSession src = srcSessions[i];
+            InterLeavedRTPSession dst = dstSessions[i];
+            if (null == src || null == dst) {
+                continue;
+            }
+            
+            
+            
+            
+        }
+    }
+    
     public void fireExceptionCaught(Exception ex) {
-        rtsp.channelHandlerContext().fireExceptionCaught(ex);
+        consumer.channelHandlerContext().fireExceptionCaught(ex);
     }
     
     public <T> void on(RtpEvent<T> event) {
-        InterLeavedRTPSession rtp = rtsp.getRTPSessions()[event.getStreamIndex()];
+        InterLeavedRTPSession rtp = consumer.getRTPSessions()[event.getStreamIndex()];
         if (null == rtp) {
             return;
         }
@@ -110,7 +136,7 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         
         // 如果缓冲区没满，则可以发送
         if (!bufferIfFull(maxBufferSize, bufferSize.get())) {
-            sendFullRtpPkt(rtpSession, fullRtp, streamIndex);
+            sendFullRtpPkt(rtpSession, fullRtp.duplicate(), streamIndex);
             sent = true;
         }
         
@@ -120,19 +146,18 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
     }
 
     private void sendFullRtpPkt(InterLeavedRTPSession rtpSess, FullRtpPkt fullRtp, long maxRtpBufferSize) {
-        FullRtpPkt packet = fullRtp.duplicate(); // 支持多次读取
         AbstractParticipant p = findParticipant(rtpSess);
 
         // 统计流量
         rtpSess.sentPktCount ++;
-        rtpSess.sentOctetCount += packet.dataLength();
+        rtpSess.sentOctetCount += fullRtp.dataLength();
         
         
         
         // 依次发送  rtp 包
         int payloadLength;
         ByteBufAllocator alloc = channel().alloc();
-        for (RtpPkt rtpObj : packet.contents()) {
+        for (RtpPkt rtpObj : fullRtp.contents()) {
             payloadLength = rtpObj.content().readableBytes();
             
             rtpObj.setSsrc(rtpSess.ssrc());

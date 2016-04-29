@@ -1,8 +1,6 @@
-package com.sengled.cloud.mediaserver.rtsp.rtp;
+package com.sengled.cloud.mediaserver.rtsp.interleaved;
 
 import io.netty.buffer.ByteBuf;
-
-import com.sengled.cloud.mediaserver.rtsp.InterleavedFrame;
 
 /**
  * rtp 包

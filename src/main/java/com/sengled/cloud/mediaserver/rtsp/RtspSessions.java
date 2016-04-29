@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 
 public class RtspSessions {
     private static final Logger logger = LoggerFactory.getLogger(RtspSessions.class);
-    private static final RtspSessions instance = new RtspSessions();
     
     
     private final static String SDP_URL;
@@ -45,7 +44,8 @@ public class RtspSessions {
         SDP_URL = sdpUrl;
     }
     
-    
+
+    private static final RtspSessions instance = new RtspSessions();
     private Map<String, RtspSession> sessions = new ConcurrentHashMap<String, RtspSession>();
     private ConcurrentHashMap<String, List<RtspSessionListener>> dispatchers = new ConcurrentHashMap<String, List<RtspSessionListener>>();
     
@@ -112,6 +112,11 @@ public class RtspSessions {
         if (null != listener) {
             dispatchers.putIfAbsent(name, new CopyOnWriteArrayList<RtspSessionListener>());
             dispatchers.get(name).add(listener);
+            
+            RtspSession producer = sessions.get(name);
+            if (null != producer) {
+                listener.init(producer);
+            }
         }
     }
 

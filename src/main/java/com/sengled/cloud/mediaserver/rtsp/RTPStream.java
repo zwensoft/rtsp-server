@@ -1,4 +1,4 @@
-package com.sengled.cloud.mediaserver.rtsp.rtp;
+package com.sengled.cloud.mediaserver.rtsp;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

@@ -1,4 +1,4 @@
-package com.sengled.cloud.mediaserver.rtsp;
+package com.sengled.cloud.mediaserver.rtsp.interleaved;
 
 import io.netty.util.ReferenceCounted;
 
@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.sengled.cloud.mediaserver.rtsp.rtp.RtpPkt;
+import com.sengled.cloud.mediaserver.rtsp.InterLeaved;
 
 /**
  * 一个完整的音,视频帧

@@ -1,4 +1,5 @@
-package com.sengled.cloud.mediaserver.rtsp;
+package com.sengled.cloud.mediaserver.rtsp.event;
+
 
 /**
  * 流关闭了

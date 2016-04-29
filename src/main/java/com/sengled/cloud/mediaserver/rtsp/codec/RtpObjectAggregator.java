@@ -6,8 +6,8 @@ import io.netty.util.ReferenceCountUtil;
 
 import java.util.List;
 
-import com.sengled.cloud.mediaserver.rtsp.FullRtpPkt;
-import com.sengled.cloud.mediaserver.rtsp.rtp.RtpPkt;
+import com.sengled.cloud.mediaserver.rtsp.interleaved.FullRtpPkt;
+import com.sengled.cloud.mediaserver.rtsp.interleaved.RtpPkt;
 
 /**
  * 将多个 rtp 按时间戳合并成一个包

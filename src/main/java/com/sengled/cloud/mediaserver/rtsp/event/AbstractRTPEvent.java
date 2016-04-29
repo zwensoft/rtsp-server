@@ -1,4 +1,7 @@
-package com.sengled.cloud.mediaserver.rtsp;
+package com.sengled.cloud.mediaserver.rtsp.event;
+
+import com.sengled.cloud.mediaserver.rtsp.RtpEvent;
+
 
 
 public abstract class AbstractRTPEvent<T> implements RtpEvent<T>{

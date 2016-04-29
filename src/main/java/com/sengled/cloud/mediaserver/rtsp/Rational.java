@@ -1,4 +1,4 @@
-package com.sengled.cloud.mediaserver.rtsp.rtp;
+package com.sengled.cloud.mediaserver.rtsp;
 
 public class Rational {
     public static final Rational $_1_000 = new Rational(1, 1000);

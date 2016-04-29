@@ -16,8 +16,8 @@ import io.netty.util.internal.AppendableCharSequence;
 
 import java.util.List;
 
-import com.sengled.cloud.mediaserver.rtsp.rtp.RtpPkt;
-import com.sengled.cloud.mediaserver.rtsp.rtp.RtcpContent;
+import com.sengled.cloud.mediaserver.rtsp.interleaved.RtcpContent;
+import com.sengled.cloud.mediaserver.rtsp.interleaved.RtpPkt;
 
 /**
  * @see io.netty.handler.codec.rtsp.RtspObjectDecoder

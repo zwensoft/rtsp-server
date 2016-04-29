@@ -1,4 +1,6 @@
-package com.sengled.cloud.mediaserver.rtsp;
+package com.sengled.cloud.mediaserver.rtsp.event;
+
+import com.sengled.cloud.mediaserver.rtsp.NtpTime;
 
 /**
  * Ntp 时间
