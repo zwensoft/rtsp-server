@@ -4,6 +4,11 @@
 		<port>5454</port>
 	</ports>
 	<streams>
+        <stream>
+            <name>/D5F755CACDD0031671F6DF5C6A2A6CF8.sdp</name>
+            <url>rtsp://54.222.187.235/D5F755CACDD0031671F6DF5C6A2A6CF8.sdp</url>
+        </stream>
+    <!-- 
 		<stream>
 			<name>/dahua</name>
 			<url>rtsp://admin:admin@192.168.1.108</url>
@@ -13,5 +18,6 @@
             <name>/210360B871EECBD4D0AE1B9DCC24C568.sdp</name>
             <url>rtsp://darwin-server:554/210360B871EECBD4D0AE1B9DCC24C568.sdp</url>
         </stream>
+         -->
 	</streams>
 </media-server>
