@@ -50,7 +50,7 @@ public class RtspSessionDispatcher {
         if (null != event) {
             try {
                 if (session.isStreamSetup(event.getStreamIndex())) {
-                    Sessions.getInstance().dispatch(name(), event);
+                    RtspSessions.getInstance().dispatch(name(), event);
                 }
             } finally {
                 event.destroy();

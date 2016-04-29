@@ -282,7 +282,7 @@ public class RtspSession implements Serializable {
     }
     
     public RtspSession withMode(SessionMode newMode) {
-        Sessions sessions = Sessions.getInstance();
+        RtspSessions sessions = RtspSessions.getInstance();
         switch (newMode) {
             case PLAY:
                 this.sd = sessions.getSessionDescription(uri);
@@ -306,14 +306,14 @@ public class RtspSession implements Serializable {
     }
 
     public void play() {
-        Sessions sessions = Sessions.getInstance();
+        RtspSessions sessions = RtspSessions.getInstance();
         
         switch (mode) {
             case PUBLISH:
                 sessions.updateSession(name, this);
                 break;
             case PLAY:
-                Sessions.getInstance().register(name, listener);
+                RtspSessions.getInstance().register(name, listener);
                 break;
             default:
                 break;
@@ -321,7 +321,7 @@ public class RtspSession implements Serializable {
     }
 
     public void destroy(String reason) {
-        Sessions sessions = Sessions.getInstance();
+        RtspSessions sessions = RtspSessions.getInstance();
         
         switch (mode) {
             case PUBLISH:
@@ -329,7 +329,7 @@ public class RtspSession implements Serializable {
                 sessions.removeSession(name, this);
                 break;
             case PLAY:
-                Sessions.getInstance().unregister(name, listener);
+                RtspSessions.getInstance().unregister(name, listener);
             default:
                 break;
         }

@@ -17,9 +17,9 @@ import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class Sessions {
-    private static final Logger logger = LoggerFactory.getLogger(Sessions.class);
-    private static final Sessions instance = new Sessions();
+public class RtspSessions {
+    private static final Logger logger = LoggerFactory.getLogger(RtspSessions.class);
+    private static final RtspSessions instance = new RtspSessions();
     
     
     private final static String SDP_URL;
@@ -51,9 +51,9 @@ public class Sessions {
     
     private ExecutorService threads = Executors.newFixedThreadPool(1);
     
-    private Sessions(){}
+    private RtspSessions(){}
     
-    public static Sessions getInstance() {
+    public static RtspSessions getInstance() {
         return instance;
     }
     
