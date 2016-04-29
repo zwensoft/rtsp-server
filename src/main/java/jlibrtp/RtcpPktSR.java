@@ -24,6 +24,8 @@ import org.apache.commons.lang.time.DateFormatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.sengled.cloud.mediaserver.rtsp.NtpTime;
+
 /**
  * RTCP packets for Sender Reports 
  * 
@@ -96,7 +98,7 @@ public class RtcpPktSR extends RtcpPkt {
 	}
 	
 	public long getNTPTime() {
-	    return ntpTs1 * 1000 + ((ntpTs2 * 1000) >> 32);
+	    return NtpTime.getNtpTime(ntpTs1, ntpTs2);
 	}
 	
 	/**
@@ -128,14 +130,6 @@ public class RtcpPktSR extends RtcpPkt {
 		//Write the common header
 		super.writeHeaders();
 		
-		// Convert to NTP and chop up
-		long timeNow = System.currentTimeMillis();
-		ntpTs1 = 2208988800L + (timeNow/1000);
-		long ms = timeNow % 1000;
-		double tmp = ((double)ms) / 1000.0;
-		tmp = tmp * (double)4294967295L;
-		ntpTs2 = (long) tmp;
-		// rtpTs = System.currentTimeMillis();
 		
 		//Write SR stuff
 		byte[] someBytes;
