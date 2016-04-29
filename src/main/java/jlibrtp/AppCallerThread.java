@@ -38,7 +38,7 @@ public class AppCallerThread extends Thread {
 	private static final Logger logger = LoggerFactory.getLogger(AppCallerThread.class);
 	
 	/**  The parent RTP Session */
-	AbstractRTPSession rtpSession;
+	RTPSession rtpSession;
 	/**  The applications interface, where the callback methods are called */
 	RTPAppIntf appl;
 	
@@ -48,7 +48,7 @@ public class AppCallerThread extends Thread {
 	 * @param session the RTPSession with participants etc
 	 * @param rtpApp the interface to which data is given
 	 */
-	public AppCallerThread(AbstractRTPSession session, RTPAppIntf rtpApp) {
+	public AppCallerThread(RTPSession session, RTPAppIntf rtpApp) {
 		rtpSession = session;
 		appl = rtpApp;
 		logger.info("<-> AppCallerThread created");
@@ -75,10 +75,10 @@ public class AppCallerThread extends Thread {
 					catch (Exception e) { System.out.println("AppCallerThread:" + e.getMessage());}
 					
 		    	// Next loop over all participants and check whether they have anything for us.
-				Enumeration<AbstractParticipant> enu = rtpSession.partDb.getParticipants();
+				Enumeration<Participant> enu = rtpSession.partDb.getParticipants();
 				
 				while(enu.hasMoreElements()) {
-					AbstractParticipant p = enu.nextElement(); 
+					Participant p = enu.nextElement(); 
 					
 					boolean done = false;
 					//System.out.println(p.ssrc + " " + !done +" " + p.rtpAddress 
@@ -87,7 +87,7 @@ public class AppCallerThread extends Thread {
 					while(!done && (!p.unexpected || rtpSession.naiveReception) 
 							&& p.pktBuffer != null && p.pktBuffer.getLength() > 0) {
 
-						RtpPkt aFrame = p.pktBuffer.popOldestFrame();
+						IRtpPkt aFrame = p.pktBuffer.popOldestFrame();
 						if(aFrame == null) {
 							done = true;
 						} else {

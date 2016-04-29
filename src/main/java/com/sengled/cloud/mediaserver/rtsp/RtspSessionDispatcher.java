@@ -4,10 +4,11 @@ import io.netty.util.ReferenceCountUtil;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.Callable;
 
-import jlibrtp.AbstractParticipant;
-import jlibrtp.AbstractRtcpPkt;
-import jlibrtp.AbstractRtcpPktSDES;
+import jlibrtp.Participant;
+import jlibrtp.RtcpPkt;
+import jlibrtp.RtcpPktSDES;
 import jlibrtp.RtcpPktAPP;
 import jlibrtp.RtcpPktBYE;
 import jlibrtp.RtcpPktRR;
@@ -17,11 +18,13 @@ import jlibrtp.StaticProcs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.sengled.cloud.async.Task;
 import com.sengled.cloud.mediaserver.rtsp.event.FullRtpPktEvent;
 import com.sengled.cloud.mediaserver.rtsp.event.NtpTimeEvent;
 import com.sengled.cloud.mediaserver.rtsp.event.TearDownEvent;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.FullRtpPkt;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtcpContent;
+import com.sengled.cloud.mediaserver.rtsp.interleaved.RtpPkt;
 import com.sengled.cloud.mediaserver.rtsp.rtp.InterLeavedParticipant;
 import com.sengled.cloud.mediaserver.rtsp.rtp.InterLeavedRTPSession;
 import com.sengled.cloud.mediaserver.rtsp.rtp.RTCPCodec;
@@ -38,10 +41,24 @@ public class RtspSessionDispatcher {
     private String _name;
     private RtspSession session;
 
-    public RtspSessionDispatcher(RtspSession session) {
+    public RtspSessionDispatcher(final RtspSession session) {
         super();
         this.session = session;
         this._name = session.getName();
+        
+        Task.setInterval(new Callable<Boolean>() {
+            
+            @Override
+            public Boolean call() throws Exception {
+                if (session.isDestroyed()) {
+                    return true;
+                }
+                
+                sendRtcpPktRR();
+                return false;
+            }
+
+        }, 5000, 5000);
     }
 
     final public String name() {
@@ -62,6 +79,7 @@ public class RtspSessionDispatcher {
     }
 
 
+    
     /**
      * 视频流停止上传了
      */
@@ -88,6 +106,12 @@ public class RtspSessionDispatcher {
             rtpSess.sentPktCount += 1;
             rtpSess.sentOctetCount += pkt.dataLength();
             
+            Participant partition = findParticipant(rtpSess, pkt.ssrc());
+            for (RtpPkt rtp : pkt.contents()) {
+                partition.updateRRStats(rtp.contentLength(), rtp);
+            }
+            partition.lastRtpPkt = pkt.getTimestamp();
+            
             dispatch(new FullRtpPktEvent(streamIndex, pkt.retain()));
             logger.debug("dispatched: {}", pkt);
         } finally {
@@ -95,6 +119,25 @@ public class RtspSessionDispatcher {
         }
     }
 
+    
+
+    private void sendRtcpPktRR() {
+        InterLeavedRTPSession[] rtpSessions = session.getRTPSessions();
+        for (int i = 0; i < rtpSessions.length; i++) {
+            InterLeavedRTPSession rtpSess = rtpSessions[i];
+            if (null == rtpSess) {
+                continue;
+            }
+            
+            Participant part = findParticipant(rtpSess, rtpSess.ssrc());
+
+            RtcpPktRR rr = new RtcpPktRR(new Participant[]{part}, rtpSess.ssrc());
+            rr.encode();
+            byte[] rawPkt = rr.rawPkt;
+        }
+        
+    }
+    
     /**
      * 收到的 rtcp 包
      * 
@@ -115,8 +158,6 @@ public class RtspSessionDispatcher {
         }
     }
 
-    
-
 
     /**
      * Parse a received rtcp packet
@@ -129,16 +170,16 @@ public class RtspSessionDispatcher {
     private int onRtcpEvent(int streamIndex, InterLeavedRTPSession rtpSession, byte[] rawPkt) {
 
             // Parse the received compound RTCP (?) packet
-            List<AbstractRtcpPkt> rtcpPkts = RTCPCodec.decode(rtpSession, rawPkt, rawPkt.length);
+            List<RtcpPkt> rtcpPkts = RTCPCodec.decode(rtpSession, rawPkt, rawPkt.length);
             logger.debug("CompRtcp: {}.", rtcpPkts);
 
             //Loop over the information
-            Iterator<AbstractRtcpPkt> iter = rtcpPkts.iterator();
+            Iterator<RtcpPkt> iter = rtcpPkts.iterator();
 
             long curTime = System.currentTimeMillis();
 
             while(iter.hasNext()) {
-                AbstractRtcpPkt aPkt = (AbstractRtcpPkt) iter.next();
+                RtcpPkt aPkt = (RtcpPkt) iter.next();
 
                 // Our own packets should already have been filtered out.
                 if(aPkt.ssrc() == rtpSession.ssrc()) {
@@ -151,7 +192,7 @@ public class RtspSessionDispatcher {
                 if( aPkt instanceof RtcpPktRR) {
                     RtcpPktRR rrPkt = (RtcpPktRR) aPkt;
 
-                    AbstractParticipant p = findParticipant(rtpSession, rrPkt.ssrc());
+                    Participant p = findParticipant(rtpSession, rrPkt.ssrc());
                     p.lastRtcpPkt = curTime;
 
                     if(rtpSession.rtcpAppIntf() != null) {
@@ -164,7 +205,7 @@ public class RtspSessionDispatcher {
                 } else if(aPkt instanceof RtcpPktSR) {
                     RtcpPktSR srPkt = (RtcpPktSR) aPkt;
 
-                    AbstractParticipant p = findParticipant(rtpSession, srPkt.ssrc());
+                    Participant p = findParticipant(rtpSession, srPkt.ssrc());
                     p.lastRtcpPkt = curTime;
 
                     if(p != null) {
@@ -196,8 +237,8 @@ public class RtspSessionDispatcher {
                     logger.info("stream#{} dispatch {}", streamIndex, event);
 
                     /**        Source Descriptions       **/
-                } else if(aPkt instanceof AbstractRtcpPktSDES) {
-                    AbstractRtcpPktSDES sdesPkt = (AbstractRtcpPktSDES) aPkt;               
+                } else if(aPkt instanceof RtcpPktSDES) {
+                    RtcpPktSDES sdesPkt = (RtcpPktSDES) aPkt;               
 
                     // The the participant database is updated
                     // when the SDES packet is reconstructed by CompRtcpPkt 
@@ -210,7 +251,7 @@ public class RtspSessionDispatcher {
                     RtcpPktBYE byePkt = (RtcpPktBYE) aPkt;
 
                     long time = System.currentTimeMillis();
-                    AbstractParticipant[] partArray = new AbstractParticipant[byePkt.ssrcArray().length];
+                    Participant[] partArray = new Participant[byePkt.ssrcArray().length];
 
                     for(int i=0; i<byePkt.ssrcArray().length; i++) {
                         partArray[i] = rtpSession.partDb().getParticipant(byePkt.ssrcArray()[i]);
@@ -226,7 +267,7 @@ public class RtspSessionDispatcher {
                 } else if(aPkt instanceof RtcpPktAPP) {
                     RtcpPktAPP appPkt = (RtcpPktAPP) aPkt;
 
-                    AbstractParticipant part = findParticipant(rtpSession, appPkt.ssrc());
+                    Participant part = findParticipant(rtpSession, appPkt.ssrc());
                     
                     if(rtpSession.rtcpAppIntf() != null) {
                         rtpSession.rtcpAppIntf().APPPktReceived(part, appPkt.itemCount(), appPkt.pktName(), appPkt.pktData());
@@ -251,8 +292,8 @@ public class RtspSessionDispatcher {
      * @param packet the packet that notified us
      * @return the relevant participant, possibly newly created
      */
-    private AbstractParticipant findParticipant(InterLeavedRTPSession rtpSession, long ssrc) {
-        AbstractParticipant p = rtpSession.partDb().getParticipant(ssrc);
+    private Participant findParticipant(InterLeavedRTPSession rtpSession, long ssrc) {
+        Participant p = rtpSession.partDb().getParticipant(ssrc);
         if(p == null) {
             p = new InterLeavedParticipant(rtpSession, ssrc);
             rtpSession.partDb().addParticipant(2,p);

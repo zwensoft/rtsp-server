@@ -21,9 +21,9 @@ package jlibrtp.udp;
 import java.util.*;
 import java.net.*;
 
-import jlibrtp.AbstractParticipant;
-import jlibrtp.AbstractParticipantDatabase;
-import jlibrtp.AbstractRtcpPktSDES;
+import jlibrtp.Participant;
+import jlibrtp.ParticipantDatabase;
+import jlibrtp.RtcpPktSDES;
 import jlibrtp.RtcpPktBYE;
 import jlibrtp.RtcpPktRR;
 import jlibrtp.RtcpPktSR;
@@ -43,10 +43,10 @@ public class ValidateRtcpPkt {
 		UDPRTPSession rtpSession = new UDPRTPSession(rtpSock, rtcpSock);
 		
 		System.out.println("************************** SSRC: " + rtpSession.ssrc() + " **************************");
-		AbstractParticipantDatabase partDb = new UDPParticipantDatabase(rtpSession);
+		ParticipantDatabase partDb = new UDPParticipantDatabase(rtpSession);
 		//InetAddress test = InetAddress.getByName("127.0.0.1");
-		Participant part1 = new Participant("127.0.0.1",12, 34);
-		Participant part2 = new Participant("127.0.0.2",56, 78);
+		UDPParticipant part1 = new UDPParticipant("127.0.0.1",12, 34);
+		UDPParticipant part2 = new UDPParticipant("127.0.0.2",56, 78);
 		
 		part1.ssrc(123);
 		part2.ssrc(345);
@@ -72,7 +72,7 @@ public class ValidateRtcpPkt {
 		partDb.addParticipant(0,part1);
 		partDb.addParticipant(0,part2);
 		
-		AbstractParticipant[] partArray = new AbstractParticipant[2];
+		Participant[] partArray = new Participant[2];
 		partArray[0] = part1;
 		partArray[1] = part2;
 
@@ -125,7 +125,7 @@ public class ValidateRtcpPkt {
         System.out.println(byepkt2.toString());
 		
 		System.out.println("****************************** SDES *******************************");
-		AbstractRtcpPktSDES sdespkt = new UDPRtcpPktSDES(true,rtpSession,null);
+		RtcpPktSDES sdespkt = new UDPRtcpPktSDES(true,rtpSession,null);
 		rtpSession.CNAME( "cname123@localhost");
 		//rtpSession.loc = "right here";
 		sdespkt.encode();

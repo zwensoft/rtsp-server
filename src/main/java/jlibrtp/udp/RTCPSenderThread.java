@@ -22,10 +22,10 @@ import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
 import java.util.*;
 
-import jlibrtp.AbstractParticipant;
-import jlibrtp.AbstractRTPSession;
-import jlibrtp.AbstractRtcpPkt;
-import jlibrtp.AbstractRtcpPktSDES;
+import jlibrtp.Participant;
+import jlibrtp.RTPSession;
+import jlibrtp.RtcpPkt;
+import jlibrtp.RtcpPktSDES;
 import jlibrtp.RtcpPktAPP;
 import jlibrtp.RtcpPktBYE;
 import jlibrtp.RtcpPktRR;
@@ -62,7 +62,7 @@ public class RTCPSenderThread extends Thread {
 	protected RTCPSenderThread(UDPRTCPSession rtcpSession, UDPRTPSession rtpSession) {
 		this.rtpSession = rtpSession;
 		this.rtcpSession = rtcpSession;
-		if(AbstractRTPSession.rtpDebugLevel > 1) {
+		if(RTPSession.rtpDebugLevel > 1) {
 			System.out.println("<-> RTCPSenderThread created");
 		} 
 	}
@@ -97,10 +97,10 @@ public class RTCPSenderThread extends Thread {
 		if(rtpSession.mcSession()) {
 			mcSendCompRtcpPkt(compPkt);
 		} else {
-			Iterator<AbstractParticipant> iter = rtpSession.partDb().getUnicastReceivers();
+			Iterator<Participant> iter = rtpSession.partDb().getUnicastReceivers();
 		
 			while(iter.hasNext()) {
-				Participant part = (Participant) iter.next();
+				UDPParticipant part = (UDPParticipant) iter.next();
 				if(part.rtcpAddress != null)
 					sendCompRtcpPkt(compPkt, part);
 			}
@@ -128,7 +128,7 @@ public class RTCPSenderThread extends Thread {
 		}
 		
 		// Send packet
-		if(AbstractRTPSession.rtcpDebugLevel > 5) {
+		if(RTPSession.rtcpDebugLevel > 5) {
 			System.out.println("<-> RTCPSenderThread.SendCompRtcpPkt() multicast");
 		}
 		try {
@@ -155,14 +155,14 @@ public class RTCPSenderThread extends Thread {
 	 * @param part the socket address of the recipient
 	 * @return 0 is successful, -1 otherwise
 	 */
-	protected int sendCompRtcpPkt(CompRtcpPkt pkt, AbstractParticipant part) {
+	protected int sendCompRtcpPkt(CompRtcpPkt pkt, Participant part) {
 		byte[] pktBytes = pkt.encode();
 		DatagramPacket packet;
 		
 		//Create datagram
 		try {
 			//System.out.println("receiver: " + receiver);
-			packet = new DatagramPacket(pktBytes,pktBytes.length, ((Participant)part).rtcpAddress);
+			packet = new DatagramPacket(pktBytes,pktBytes.length, ((UDPParticipant)part).rtcpAddress);
 		} catch (Exception e) {
 			System.out.println("RCTPSenderThread.SendCompRtcpPkt() packet creation failed.");
 			e.printStackTrace();
@@ -191,7 +191,7 @@ public class RTCPSenderThread extends Thread {
 	 * @param ssrc SSRC of participant
 	 */
 	protected void reconsiderTiming(long ssrc) {
-		AbstractParticipant part =  this.rtpSession.partDb().getParticipant(ssrc);
+		Participant part =  this.rtpSession.partDb().getParticipant(ssrc);
 		
 		if( part != null && this.rtcpSession.fbSendImmediately()) {
 			CompRtcpPkt compPkt = preparePacket(part, false);
@@ -250,7 +250,7 @@ public class RTCPSenderThread extends Thread {
 	 * @param regular whether this is a regularly, or early scheduled RTCP packet
 	 * @return compound RTCP packet
 	 */
-	protected CompRtcpPkt preparePacket(AbstractParticipant part, boolean regular) {
+	protected CompRtcpPkt preparePacket(Participant part, boolean regular) {
 		/*********** Figure out what we are going to send ***********/
 		// Check whether this person has sent RTP packets since the last RR.
 		boolean incRR = false;
@@ -279,7 +279,7 @@ public class RTCPSenderThread extends Thread {
 			
 			
 			if(part.ssrc() > 0) {
-				AbstractRtcpPkt[] ar = this.rtcpSession.getFromFbQueue(part.ssrc());
+				RtcpPkt[] ar = this.rtcpSession.getFromFbQueue(part.ssrc());
 				if(ar != null) {
 					for(int i=0; i<ar.length; i++) {
 						compPkt.addPacket(ar[i]);
@@ -291,7 +291,7 @@ public class RTCPSenderThread extends Thread {
 		
 		//If we got anything from this participant since we sent the 2nd to last RtcpPkt
 		if(incRR || !incSR) {
-			AbstractParticipant[] partArray = {part};
+			Participant[] partArray = {part};
 			
 			if(part.receivedPkts < 1)
 				partArray = null;
@@ -300,7 +300,7 @@ public class RTCPSenderThread extends Thread {
 			compPkt.addPacket(rrPkt);
 			
 			if( !incSR && part.ssrc() > 0) {
-				AbstractRtcpPkt[] ar = this.rtcpSession.getFromFbQueue(part.ssrc());
+				RtcpPkt[] ar = this.rtcpSession.getFromFbQueue(part.ssrc());
 				if(ar != null) {
 					for(int i=0; i<ar.length; i++) {
 						compPkt.addPacket(ar[i]);
@@ -324,7 +324,7 @@ public class RTCPSenderThread extends Thread {
 		
 		// For now we'll stick the SDES on every time, and only for us
 		//if(regular) {
-			AbstractRtcpPktSDES sdesPkt = new UDPRtcpPktSDES(true, this.rtpSession, null);
+			RtcpPktSDES sdesPkt = new UDPRtcpPktSDES(true, this.rtpSession, null);
 			compPkt.addPacket(sdesPkt);
 		//}
 		
@@ -349,8 +349,8 @@ public class RTCPSenderThread extends Thread {
 		catch (Exception e) { logger.warn("RTCPSenderThread didn't get any initial rest."); }
 		
 		// Set up an iterator for the member list
-		Enumeration<AbstractParticipant> enu = null;
-		Iterator<AbstractParticipant> iter = null;
+		Enumeration<Participant> enu = null;
+		Iterator<Participant> iter = null;
 		
 		// TODO Change to rtcpReceivers
 		if(rtpSession.mcSession()) {
@@ -396,7 +396,7 @@ public class RTCPSenderThread extends Thread {
 			this.byesSent = false;
 						
 			//Grab the next person
-			Participant part = null;
+			UDPParticipant part = null;
 
 			//Multicast
 			if(this.rtpSession.mcSession()) {
@@ -404,7 +404,7 @@ public class RTCPSenderThread extends Thread {
 					enu = rtpSession.partDb().getParticipants();
 				
 				if( enu.hasMoreElements() ) {
-					part = (Participant) enu.nextElement();
+					part = (UDPParticipant) enu.nextElement();
 				} else {
 					continue;
 				}
@@ -417,7 +417,7 @@ public class RTCPSenderThread extends Thread {
 				
 				if(iter.hasNext() ) {
 					while( iter.hasNext() && (part == null || part.rtcpAddress == null)) {
-						part = (Participant) iter.next();
+						part = (UDPParticipant) iter.next();
 					}
 				}
 				
@@ -448,7 +448,7 @@ public class RTCPSenderThread extends Thread {
 		sendByes();
 		try { Thread.sleep(200);} catch(Exception e) {}
 		
-		if(AbstractRTPSession.rtcpDebugLevel > 0) {
+		if(RTPSession.rtcpDebugLevel > 0) {
 			System.out.println("<-> RTCPSenderThread terminating");
 		}
 	}

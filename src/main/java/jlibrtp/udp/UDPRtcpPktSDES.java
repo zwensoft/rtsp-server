@@ -20,11 +20,11 @@ package jlibrtp.udp;
 
 import java.net.InetSocketAddress;
 
-import jlibrtp.AbstractParticipant;
-import jlibrtp.AbstractParticipantDatabase;
-import jlibrtp.AbstractRTPSession;
-import jlibrtp.AbstractRtcpPktSDES;
-import jlibrtp.AbstractRtcpPktSDES.ParticipantFactory;
+import jlibrtp.Participant;
+import jlibrtp.ParticipantDatabase;
+import jlibrtp.RTPSession;
+import jlibrtp.RtcpPktSDES;
+import jlibrtp.RtcpPktSDES.ParticipantFactory;
 
 
 /**
@@ -32,7 +32,7 @@ import jlibrtp.AbstractRtcpPktSDES.ParticipantFactory;
  * 
  * @author Arne Kepp
  */
-public class UDPRtcpPktSDES extends AbstractRtcpPktSDES {
+public class UDPRtcpPktSDES extends RtcpPktSDES {
     
     /**
      * Constructor to create a new SDES packet
@@ -46,7 +46,7 @@ public class UDPRtcpPktSDES extends AbstractRtcpPktSDES {
      * @param rtpSession the session itself
      * @param additionalParticipants additional participants to include
      */
-    protected UDPRtcpPktSDES(boolean reportThisSession, AbstractRTPSession rtpSession, AbstractParticipant[] additionalParticipants) {
+    protected UDPRtcpPktSDES(boolean reportThisSession, RTPSession rtpSession, Participant[] additionalParticipants) {
         super(reportThisSession, rtpSession, additionalParticipants);
     }
     
@@ -58,12 +58,12 @@ public class UDPRtcpPktSDES extends AbstractRtcpPktSDES {
 	 * @param socket the address from which the packet was received
 	 * @param partDb the participant database
 	 */
-	protected UDPRtcpPktSDES(byte[] aRawPkt,int start, final InetSocketAddress socket, AbstractParticipantDatabase partDb) {
+	protected UDPRtcpPktSDES(byte[] aRawPkt,int start, final InetSocketAddress socket, ParticipantDatabase partDb) {
 		super(aRawPkt, start, partDb,new ParticipantFactory() {
             
             @Override
-            public AbstractParticipant newInstance(long SSRC) {
-                return new Participant(socket, socket, SSRC);
+            public Participant newInstance(long SSRC) {
+                return new UDPParticipant(socket, socket, SSRC);
             }
         });
 	}
@@ -76,7 +76,7 @@ public class UDPRtcpPktSDES extends AbstractRtcpPktSDES {
 		System.out.println("RtcpPktSDES.debugPrint() ");
 		if(participants != null) {
 			for(int i= 0; i<participants.length; i++) {
-				AbstractParticipant part = participants[i];
+				Participant part = participants[i];
 				System.out.println("     part.ssrc: " + part.ssrc() + "  part.cname: " + part.cname + " part.loc: " + part.loc);
 			}
 		} else {

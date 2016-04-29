@@ -7,21 +7,21 @@ import java.util.concurrent.ConcurrentHashMap;
 
 
 
-public abstract class AbstractParticipantDatabase {
+public abstract class ParticipantDatabase {
 
     public static interface ParticipantDatabaseFactory {
-        AbstractParticipantDatabase newInstance(AbstractRTPSession rtpSession);
+        ParticipantDatabase newInstance(RTPSession rtpSession);
     }
     
     /** The parent RTP Session */
-    public AbstractRTPSession rtpSession = null;
+    public RTPSession rtpSession = null;
 
     /**
      * Simple constructor
      * 
      * @param parent parent RTPSession
      */
-    protected AbstractParticipantDatabase(AbstractRTPSession parent) {
+    protected ParticipantDatabase(RTPSession parent) {
         rtpSession = parent;
     }
 
@@ -30,14 +30,14 @@ public abstract class AbstractParticipantDatabase {
      * In unicast mode this is the list used for RTP and RTCP transmission, 
      * in multicast it should not be in use. 
      */
-    protected LinkedList<AbstractParticipant> receivers = new LinkedList<AbstractParticipant>();
+    protected LinkedList<Participant> receivers = new LinkedList<Participant>();
     /** 
      * The hashtable holds participants added through received RTP and RTCP packets,
      * as well as participants that have been linked to an SSRC by ip address (in unicast mode).
      */
-    protected ConcurrentHashMap<Long, AbstractParticipant> ssrcTable = new ConcurrentHashMap<Long,AbstractParticipant>();
+    protected ConcurrentHashMap<Long, Participant> ssrcTable = new ConcurrentHashMap<Long,Participant>();
 
-    public AbstractParticipantDatabase() {
+    public ParticipantDatabase() {
         super();
     }
 
@@ -49,14 +49,14 @@ public abstract class AbstractParticipantDatabase {
      * @return 0 if okay, -1 if not 
      */
     public abstract int addParticipant(int cameFrom,
-                                              AbstractParticipant p);
+                                              Participant p);
     
     /**
      * Remove a participant from all tables
      * 
      * @param p the participant to be removed
      */
-    public void removeParticipant(AbstractParticipant p) {
+    public void removeParticipant(Participant p) {
     	if(! this.rtpSession.mcSession)
     		this.receivers.remove(p);
     	
@@ -69,8 +69,8 @@ public abstract class AbstractParticipantDatabase {
      * @param ssrc of the participant to be found
      * @return the participant, null if unknonw
      */
-    public AbstractParticipant getParticipant(long ssrc) {
-    	AbstractParticipant p = null;
+    public Participant getParticipant(long ssrc) {
+    	Participant p = null;
     	p = ssrcTable.get(ssrc);
     	return p; 
     }
@@ -82,7 +82,7 @@ public abstract class AbstractParticipantDatabase {
      * 
      * @return iterator for unicast participants
      */
-    public Iterator<AbstractParticipant> getUnicastReceivers() {
+    public Iterator<Participant> getUnicastReceivers() {
     	if(! this.rtpSession.mcSession) {
     		return this.receivers.iterator();
     	} else {
@@ -98,7 +98,7 @@ public abstract class AbstractParticipantDatabase {
      * 
      * @return enumerator with all the participants with known SSRCs
      */
-    public Enumeration<AbstractParticipant> getParticipants() {
+    public Enumeration<Participant> getParticipants() {
     	return this.ssrcTable.elements();
     }
 

@@ -23,9 +23,9 @@ package jlibrtp;
  * 
  * @author Arne Kepp
  */
-public class RtcpPktRR extends AbstractRtcpPkt {
+public class RtcpPktRR extends RtcpPkt {
 	/** Array of participants to send Receiver Reports to */
-	protected AbstractParticipant[] reportees = null;
+	protected Participant[] reportees = null;
 	/** SSRC of participants the reports are for */
 	public long[] reporteeSsrc = null;// -1; //32 bits
 	/** Fraction (over 256) of packets lost */
@@ -47,7 +47,7 @@ public class RtcpPktRR extends AbstractRtcpPkt {
 	 * @param reportees the participants on which to generate reports
 	 * @param ssrc the SSRC of the sender, from the RTPSession
 	 */
-	public RtcpPktRR(AbstractParticipant[] reportees, long ssrc) {
+	public RtcpPktRR(Participant[] reportees, long ssrc) {
 		super.packetType = 201;
 		// Fetch all the right stuff from the database
 		super.ssrc = ssrc;
@@ -71,7 +71,7 @@ public class RtcpPktRR extends AbstractRtcpPkt {
 		super.rawPkt = aRawPkt;
 		
 		if(rrCount < 0 && (!super.parseHeaders(start) || packetType != 201 || super.length < 1)) {
-			if(AbstractRTPSession.rtpDebugLevel > 2) {
+			if(RTPSession.rtpDebugLevel > 2) {
 				System.out.println(" <-> RtcpPktRR.parseHeaders() etc. problem: "+(!super.parseHeaders(start))+" "+packetType+" "+super.length);
 			}
 			super.problem = -201;
@@ -115,7 +115,7 @@ public class RtcpPktRR extends AbstractRtcpPkt {
 	 * CompRtcpPkt will call this automatically
 	 */
 	public void encode() {
-		if(AbstractRTPSession.rtpDebugLevel > 9) {
+		if(RTPSession.rtpDebugLevel > 9) {
 			System.out.println("  -> RtcpPktRR.encode()");
 		}
 		
@@ -139,7 +139,7 @@ public class RtcpPktRR extends AbstractRtcpPkt {
 		someBytes = StaticProcs.uIntLongToByteWord(super.ssrc);
 		System.arraycopy(someBytes, 0, super.rawPkt, 4, 4);
 		
-		if(AbstractRTPSession.rtpDebugLevel > 9) {
+		if(RTPSession.rtpDebugLevel > 9) {
 			System.out.println("  <- RtcpPktRR.encode()");
 		}
 		
@@ -153,9 +153,8 @@ public class RtcpPktRR extends AbstractRtcpPkt {
 	 * @return the encoded packets
 	 */
 	protected byte[] encodeRR() {
-		if(AbstractRTPSession.rtpDebugLevel > 10) {
-			System.out.println("   -> RtcpPktRR.encodeRR()");
-		}
+		logger.debug("   -> RtcpPktRR.encodeRR()");
+		
 		//assuming we will always create complete reports:
 		byte[] ret = new byte[24*reportees.length];
 		
@@ -197,9 +196,7 @@ public class RtcpPktRR extends AbstractRtcpPkt {
 			}
 			System.arraycopy(someBytes, 0, ret, 20 + offset, 4);
 		}
-		if(AbstractRTPSession.rtpDebugLevel > 10) {
-			System.out.println("   <- RtcpPktRR.encodeRR()");
-		}
+        logger.debug("   <- RtcpPktRR.encodeRR()");
 		return ret;
 	}
 	
@@ -211,7 +208,7 @@ public class RtcpPktRR extends AbstractRtcpPkt {
         if(null != reportees) {
             buf.append(", reportees:[");
             for(int i= 0; i<reportees.length; i++) {
-                AbstractParticipant part = reportees[i];
+                Participant part = reportees[i];
                 buf.append("{part.ssrc:").append( part.ssrc());
                 buf.append(", part.cname:").append(part.cname());
                 buf.append("}");

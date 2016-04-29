@@ -21,9 +21,9 @@ package com.sengled.cloud.mediaserver.rtsp.rtp;
 import java.util.Enumeration;
 import java.util.Iterator;
 
-import jlibrtp.AbstractParticipant;
-import jlibrtp.AbstractParticipantDatabase;
-import jlibrtp.AbstractRTPSession;
+import jlibrtp.Participant;
+import jlibrtp.ParticipantDatabase;
+import jlibrtp.RTPSession;
 
 /**
  * The participant database maintains three hashtables with participants.
@@ -40,12 +40,12 @@ import jlibrtp.AbstractRTPSession;
  * 
  * @author Arne Kepp
  */
-public class InterLeavedParticipantDatabase extends AbstractParticipantDatabase {
+public class InterLeavedParticipantDatabase extends ParticipantDatabase {
 
     public static final ParticipantDatabaseFactory FACTORY = new ParticipantDatabaseFactory() {
         
         @Override
-        public AbstractParticipantDatabase newInstance(AbstractRTPSession rtpSession) {
+        public ParticipantDatabase newInstance(RTPSession rtpSession) {
             return new InterLeavedParticipantDatabase((InterLeavedRTPSession)rtpSession);
         }
     };
@@ -62,14 +62,14 @@ public class InterLeavedParticipantDatabase extends AbstractParticipantDatabase 
 	 * @return 0 if okay, -1 if not 
 	 */
 	@Override
-    public int addParticipant(int cameFrom, AbstractParticipant p) {
+    public int addParticipant(int cameFrom, Participant p) {
 	    InterLeavedParticipant newPart = (InterLeavedParticipant)p;
 	    
         if(cameFrom == 0) {
             //Check whether there is a match in the ssrcTable
             boolean notDone = true;
             
-            Enumeration<AbstractParticipant> enu = this.ssrcTable.elements();
+            Enumeration<Participant> enu = this.ssrcTable.elements();
             while(notDone && enu.hasMoreElements()) {
                 InterLeavedParticipant part = (InterLeavedParticipant)enu.nextElement();
                 if(part.unexpected() && part.rtpChannel() == newPart.rtpChannel()) {
@@ -78,7 +78,7 @@ public class InterLeavedParticipantDatabase extends AbstractParticipantDatabase 
                     part.unexpected(false);
 
                     //Report the match back to the application
-                    AbstractParticipant[] partArray = {part};
+                    Participant[] partArray = {part};
                     this.rtpSession.appIntf().userEvent(5, partArray);
                     
                     notDone = false;
@@ -94,7 +94,7 @@ public class InterLeavedParticipantDatabase extends AbstractParticipantDatabase 
             //Check whether there's a match in the receivers table
             boolean notDone = true;
             //System.out.println("GOT " + p.cname);
-            Iterator<AbstractParticipant> iter = this.receivers.iterator();
+            Iterator<Participant> iter = this.receivers.iterator();
             
             while(notDone && iter.hasNext()) {
                 InterLeavedParticipant part = (InterLeavedParticipant)iter.next();
@@ -123,7 +123,7 @@ public class InterLeavedParticipantDatabase extends AbstractParticipantDatabase 
                     this.ssrcTable.put(part.ssrc(), part);
                     
                     //Report the match back to the application
-                    AbstractParticipant[] partArray = {part};
+                    Participant[] partArray = {part};
                     this.rtpSession.appIntf().userEvent(5, partArray);
                     return 0;
                 }

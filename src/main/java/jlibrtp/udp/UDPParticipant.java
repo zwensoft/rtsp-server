@@ -20,7 +20,7 @@ package jlibrtp.udp;
 
 import java.net.InetSocketAddress;
 
-import jlibrtp.AbstractParticipant;
+import jlibrtp.Participant;
 import jlibrtp.PktBuffer;
 
 import org.slf4j.Logger;
@@ -30,8 +30,8 @@ import org.slf4j.LoggerFactory;
  * A participant represents a peer in an RTPSession. Based on the information stored on 
  * these objects, packets are processed and statistics generated for RTCP.
  */
-public class Participant extends AbstractParticipant {
-	private static Logger logger = LoggerFactory.getLogger(Participant.class);
+public class UDPParticipant extends Participant {
+	private static Logger logger = LoggerFactory.getLogger(UDPParticipant.class);
 	
 	/** Where to send RTP packets (unicast)*/
 	protected InetSocketAddress rtpAddress = null; 
@@ -51,7 +51,7 @@ public class Participant extends AbstractParticipant {
 	 * @param rtpPort port on which peer expects RTP packets. Use 0 if this is a sender-only, or this is a multicast session.
 	 * @param rtcpPort port on which peer expects RTCP packets. Use 0 if this is a sender-only, or this is a multicast session.
 	 */
-	public Participant(String networkAddress, int rtpPort, int rtcpPort) {
+	public UDPParticipant(String networkAddress, int rtpPort, int rtcpPort) {
 		// RTP
 		if(rtpPort > 0) {
 			try {
@@ -79,7 +79,7 @@ public class Participant extends AbstractParticipant {
 	}
 	
 	// We got a packet, but we don't know this person yet.
-	protected Participant(InetSocketAddress rtpAdr, InetSocketAddress rtcpAdr, long SSRC) {
+	protected UDPParticipant(InetSocketAddress rtpAdr, InetSocketAddress rtcpAdr, long SSRC) {
 	    super(SSRC);
 		rtpReceivedFromAddress = rtpAdr;
 		rtcpReceivedFromAddress = rtcpAdr;

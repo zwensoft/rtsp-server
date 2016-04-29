@@ -4,7 +4,7 @@ import java.sql.Timestamp;
 
 
 
-public class AbstractParticipant {
+public class Participant {
 
     /** Whether the participant is unexpected, e.g. arrived through unicast with SDES */
     protected boolean unexpected = false;
@@ -73,11 +73,11 @@ public class AbstractParticipant {
     /** Unix time of second to last time we sent and RR to this user */
     public long secondLastRtcpRRPkt = -1;
 
-    public AbstractParticipant() {
+    public Participant() {
         super();
     }
 
-    public AbstractParticipant(long SSRC) {
+    public Participant(long SSRC) {
         ssrc = SSRC;
         unexpected = true;
     }
@@ -163,52 +163,51 @@ public class AbstractParticipant {
     	return this.ssrc;
     }
 
-    /** 
+    /**
      * Updates the participant with information for receiver reports.
      * 
      * @param packetLength to keep track of received octets
      * @param pkt the most recently received packet
      */
-    public void updateRRStats(int packetLength,
-                                    RtpPkt pkt) {
-                                    	int curSeqNum = pkt.getSeqNumber();
-                                    	
-                                    	if(firstSeqNumber < 0) {
-                                    		firstSeqNumber = curSeqNum;
-                                    	}
-                                    	
-                                    	receivedOctets += packetLength;
-                                    	receivedSinceLastSR++;
-                                    	receivedPkts++;
-                                    	
-                                    	long curTime =  System.currentTimeMillis();
-                                    	
-                                    	if( this.lastSeqNumber < curSeqNum ) {
-                                    		//In-line packet, best thing you could hope for
-                                    		this.lastSeqNumber = curSeqNum;
-                                    					
-                                    	} else if(this.lastSeqNumber - this.lastSeqNumber < -100) {
-                                    		//Sequence counter rolled over
-                                    		this.lastSeqNumber = curSeqNum;
-                                    		seqRollOverCount++;
-                                    		
-                                    	} else {
-                                    		//This was probably a duplicate or a late arrival.
-                                    	}
-                                    	
-                                    	// Calculate jitter
-                                    	if(this.lastRtpPkt > 0) {
-                                    		
-                                    		long D = (pkt.getTimeStamp() - curTime) - (this.lastRtpTimestamp - this.lastRtpPkt);
-                                    		if(D < 0)
-                                    			D = (-1)*D;
-                                    		
-                                    		this.interArrivalJitter += ((double)D - this.interArrivalJitter) / 16.0;
-                                    	}
-                                    
-                                    	lastRtpPkt = curTime;
-                                    	lastRtpTimestamp = pkt.getTimeStamp();
-                                    }
+    public void updateRRStats(int packetLength, IRtpPkt pkt) {
+        int curSeqNum = pkt.getSeqNumber();
+
+        if (firstSeqNumber < 0) {
+            firstSeqNumber = curSeqNum;
+        }
+
+        receivedOctets += packetLength;
+        receivedSinceLastSR++;
+        receivedPkts++;
+
+        long curTime = System.currentTimeMillis();
+
+        if (this.lastSeqNumber < curSeqNum) {
+            // In-line packet, best thing you could hope for
+            this.lastSeqNumber = curSeqNum;
+
+        } else if (this.lastSeqNumber - this.lastSeqNumber < -100) {
+            // Sequence counter rolled over
+            this.lastSeqNumber = curSeqNum;
+            seqRollOverCount++;
+
+        } else {
+            // This was probably a duplicate or a late arrival.
+        }
+
+        // Calculate jitter
+        if (this.lastRtpPkt > 0) {
+
+            long D = (pkt.getTimestamp() - curTime) - (this.lastRtpTimestamp - this.lastRtpPkt);
+            if (D < 0)
+                D = (-1) * D;
+
+            this.interArrivalJitter += ((double) D - this.interArrivalJitter) / 16.0;
+        }
+
+        lastRtpPkt = curTime;
+        lastRtpTimestamp = pkt.getTimestamp();
+    }
 
     /**
      * Calculates the extended highest sequence received by adding 

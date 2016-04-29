@@ -332,6 +332,9 @@ public class RtspSession implements Serializable {
         }
     }
     
+    public boolean isDestroyed() {
+        return null == ctx || !ctx.channel().isActive();
+    }
 
     
     public String getUri() {

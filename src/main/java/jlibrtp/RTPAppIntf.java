@@ -37,7 +37,7 @@ public interface RTPAppIntf {
 	 * @param aFrame the frame containing the data
 	 * @param participant the participant from which the data came
 	 */
-	public void receiveData(RtpPkt aFrame, AbstractParticipant participant);
+	public void receiveData(IRtpPkt aFrame, Participant participant);
 	
 	
 	/**
@@ -53,7 +53,7 @@ public interface RTPAppIntf {
 	 * @param type the type of event
 	 * @param participant the participants in question
 	 */
-	public void userEvent(int type, AbstractParticipant[] participant);
+	public void userEvent(int type, Participant[] participant);
 	
 	/**
 	 * The callback method through which the application can specify

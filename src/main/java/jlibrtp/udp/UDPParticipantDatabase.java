@@ -21,9 +21,9 @@ package jlibrtp.udp;
 import java.util.Enumeration;
 import java.util.Iterator;
 
-import jlibrtp.AbstractParticipant;
-import jlibrtp.AbstractParticipantDatabase;
-import jlibrtp.AbstractRTPSession;
+import jlibrtp.Participant;
+import jlibrtp.ParticipantDatabase;
+import jlibrtp.RTPSession;
 
 /**
  * The participant database maintains three hashtables with participants.
@@ -40,12 +40,12 @@ import jlibrtp.AbstractRTPSession;
  * 
  * @author Arne Kepp
  */
-public class UDPParticipantDatabase extends AbstractParticipantDatabase {
+public class UDPParticipantDatabase extends ParticipantDatabase {
 
     public static final ParticipantDatabaseFactory FACTORY = new ParticipantDatabaseFactory() {
         
         @Override
-        public AbstractParticipantDatabase newInstance(AbstractRTPSession rtpSession) {
+        public ParticipantDatabase newInstance(RTPSession rtpSession) {
             return new UDPParticipantDatabase((UDPRTPSession)rtpSession);
         }
     };
@@ -62,12 +62,12 @@ public class UDPParticipantDatabase extends AbstractParticipantDatabase {
 	 * @return 0 if okay, -1 if not 
 	 */
 	@Override
-    public int addParticipant(int cameFrom, AbstractParticipant p) {
+    public int addParticipant(int cameFrom, Participant p) {
 		//Multicast or not?
 		if(this.rtpSession.mcSession()) {
-			return this.addParticipantMulticast(cameFrom, (Participant)p);
+			return this.addParticipantMulticast(cameFrom, (UDPParticipant)p);
 		} else {
-			return this.addParticipantUnicast(cameFrom,  (Participant)p);
+			return this.addParticipantUnicast(cameFrom,  (UDPParticipant)p);
 		}
 		
 	}
@@ -79,7 +79,7 @@ public class UDPParticipantDatabase extends AbstractParticipantDatabase {
 	 * @param p the participant to add
 	 * @return 0 if okay, -2 if redundant, -1 if adding participant to multicast
 	 */
-	private int addParticipantMulticast(int cameFrom, Participant p) {
+	private int addParticipantMulticast(int cameFrom, UDPParticipant p) {
 		if( cameFrom == 0) {
 			System.out.println("ParticipantDatabase.addParticipant() doesnt expect" 
 					+ " application to add participants to multicast session.");
@@ -106,14 +106,14 @@ public class UDPParticipantDatabase extends AbstractParticipantDatabase {
 	 * @param p the participant to add
 	 * @return 0 if new, 1 if 
 	 */
-	private int addParticipantUnicast(int cameFrom, Participant p) {
+	private int addParticipantUnicast(int cameFrom, UDPParticipant p) {
 		if(cameFrom == 0) {
 			//Check whether there is a match in the ssrcTable
 			boolean notDone = true;
 			
-			Enumeration<AbstractParticipant> enu = this.ssrcTable.elements();
+			Enumeration<Participant> enu = this.ssrcTable.elements();
 			while(notDone && enu.hasMoreElements()) {
-				Participant part = (Participant)enu.nextElement();
+				UDPParticipant part = (UDPParticipant)enu.nextElement();
 				if(part.unexpected() && 
 						(part.rtcpReceivedFromAddress.equals(part.rtcpAddress.getAddress()) 
 						|| part.rtpReceivedFromAddress.equals(part.rtpAddress.getAddress()))) {
@@ -123,7 +123,7 @@ public class UDPParticipantDatabase extends AbstractParticipantDatabase {
 					part.unexpected(false);
 
 					//Report the match back to the application
-					AbstractParticipant[] partArray = {part};
+					Participant[] partArray = {part};
 					this.rtpSession.appIntf().userEvent(5, partArray);
 					
 					notDone = false;
@@ -139,10 +139,10 @@ public class UDPParticipantDatabase extends AbstractParticipantDatabase {
 			//Check whether there's a match in the receivers table
 			boolean notDone = true;
 			//System.out.println("GOT " + p.cname);
-			Iterator<AbstractParticipant> iter = this.receivers.iterator();
+			Iterator<Participant> iter = this.receivers.iterator();
 			
 			while(notDone && iter.hasNext()) {
-				Participant part = (Participant)iter.next();
+				UDPParticipant part = (UDPParticipant)iter.next();
 				
 				//System.out.println(part.rtpAddress.getAddress().toString()
 				//		+ " " + part.rtcpAddress.getAddress().toString() 
@@ -170,7 +170,7 @@ public class UDPParticipantDatabase extends AbstractParticipantDatabase {
 					this.ssrcTable.put(part.ssrc(), part);
 					
 					//Report the match back to the application
-					AbstractParticipant[] partArray = {part};
+					Participant[] partArray = {part};
 					this.rtpSession.appIntf().userEvent(5, partArray);
 					return 0;
 				}
@@ -184,17 +184,17 @@ public class UDPParticipantDatabase extends AbstractParticipantDatabase {
 	
 	protected void debugPrint() {
 		System.out.println("   ParticipantDatabase.debugPrint()");
-		Participant p;
+		UDPParticipant p;
 		Enumeration enu = ssrcTable.elements();
 		while(enu.hasMoreElements()) {
-			p = (Participant) enu.nextElement();
+			p = (UDPParticipant) enu.nextElement();
 			System.out.println("           ssrcTable ssrc:"+p.ssrc()+" cname:"+p.cname
 					+" loc:"+p.loc+" rtpAddress:"+p.rtpAddress+" rtcpAddress:"+p.rtcpAddress);
 		}
 		
-		Iterator<AbstractParticipant> iter = receivers.iterator();
+		Iterator<Participant> iter = receivers.iterator();
 		while(iter.hasNext()) {
-			p = (Participant)iter.next();
+			p = (UDPParticipant)iter.next();
 			System.out.println("           receivers: "+p.rtpAddress.toString());
 		}
 	}

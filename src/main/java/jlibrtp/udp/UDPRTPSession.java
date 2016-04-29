@@ -25,14 +25,14 @@ import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.util.Iterator;
 
-import jlibrtp.AbstractParticipant;
-import jlibrtp.AbstractRTPSession;
+import jlibrtp.Participant;
+import jlibrtp.RTPSession;
 import jlibrtp.AppCallerThread;
 import jlibrtp.DebugAppIntf;
 import jlibrtp.RTCPAVPFIntf;
 import jlibrtp.RTCPAppIntf;
 import jlibrtp.RTPAppIntf;
-import jlibrtp.RtpPkt;
+import jlibrtp.ByteArrayRtpPkt;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory;
  * 
  * @author Arne Kepp
  */
-public class UDPRTPSession extends AbstractRTPSession {
+public class UDPRTPSession extends RTPSession {
 	 static final Logger logger = LoggerFactory.getLogger(UDPRTPSession.class);
 	 
     /** Whether this session is a multicast session or not */
@@ -393,7 +393,7 @@ public class UDPRTPSession extends AbstractRTPSession {
                                          ret[i][1] = seqNumbers[i];
                                      }
                                      // Create a new RTP Packet
-                                     RtpPkt pkt = new RtpPkt(rtpTimestamp,this.ssrc,(int) ret[i][1],this.payloadType,buf);
+                                     ByteArrayRtpPkt pkt = new ByteArrayRtpPkt(rtpTimestamp,this.ssrc,(int) ret[i][1],this.payloadType,buf);
                             
                                      if(csrcArray != null)
                                          pkt.setCsrcs(csrcArray);
@@ -441,9 +441,9 @@ public class UDPRTPSession extends AbstractRTPSession {
                             
                                      } else {
                                          // Loop over recipients
-                                         Iterator<AbstractParticipant> iter = partDb.getUnicastReceivers();
+                                         Iterator<Participant> iter = partDb.getUnicastReceivers();
                                          while(iter.hasNext()) {            
-                                             InetSocketAddress receiver = ((Participant)iter.next()).rtpAddress;
+                                             InetSocketAddress receiver = ((UDPParticipant)iter.next()).rtpAddress;
                                              DatagramPacket packet = null;
                             
                                              logger.debug("   Sending to {}", receiver);

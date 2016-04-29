@@ -24,10 +24,10 @@ import java.net.InetSocketAddress;
 import java.util.Enumeration;
 import java.util.Iterator;
 
-import jlibrtp.AbstractParticipant;
-import jlibrtp.AbstractRTPSession;
-import jlibrtp.AbstractRtcpPkt;
-import jlibrtp.AbstractRtcpPktSDES;
+import jlibrtp.Participant;
+import jlibrtp.RTPSession;
+import jlibrtp.RtcpPkt;
+import jlibrtp.RtcpPktSDES;
 import jlibrtp.RtcpPktAPP;
 import jlibrtp.RtcpPktBYE;
 import jlibrtp.RtcpPktRR;
@@ -60,7 +60,7 @@ public class RTCPReceiverThread extends Thread {
 		this.rtpSession = rtpSession;
 		this.rtcpSession = rtcpSession;
 		
-		if(AbstractRTPSession.rtpDebugLevel > 1) {
+		if(RTPSession.rtpDebugLevel > 1) {
 			System.out.println("<-> RTCPReceiverThread created");
 		} 
 
@@ -77,12 +77,12 @@ public class RTCPReceiverThread extends Thread {
 	 * @param packet the packet that notified us
 	 * @return the relevant participant, possibly newly created
 	 */
-	private AbstractParticipant findParticipant(long ssrc, DatagramPacket packet) {
-	    AbstractParticipant p = rtpSession.partDb().getParticipant(ssrc);
+	private Participant findParticipant(long ssrc, DatagramPacket packet) {
+	    Participant p = rtpSession.partDb().getParticipant(ssrc);
 		if(p == null) {
-			Enumeration<AbstractParticipant> enu = rtpSession.partDb().getParticipants();
+			Enumeration<Participant> enu = rtpSession.partDb().getParticipants();
 			while(enu.hasMoreElements()) {
-				Participant tmp = (Participant) enu.nextElement();
+				UDPParticipant tmp = (UDPParticipant) enu.nextElement();
 				if(tmp.ssrc() < 0 && 
 						(tmp.rtcpAddress.getAddress().equals(packet.getAddress())
 						|| tmp.rtpAddress.getAddress().equals(packet.getAddress()))) {
@@ -98,7 +98,7 @@ public class RTCPReceiverThread extends Thread {
 			// Create an unknown sender
 			System.out.println("RTCPReceiverThread: Got an unexpected packet from SSRC:" 
 					+ ssrc  + " @" + packet.getAddress().toString() + ", was NOT able to match it." );
-			p = new Participant((InetSocketAddress) null, (InetSocketAddress) packet.getSocketAddress(), ssrc);
+			p = new UDPParticipant((InetSocketAddress) null, (InetSocketAddress) packet.getSocketAddress(), ssrc);
 			rtpSession.partDb().addParticipant(2,p);
 		}
 		return p;
@@ -116,7 +116,7 @@ public class RTCPReceiverThread extends Thread {
 	private int parsePacket(DatagramPacket packet) {
 
 		if(packet.getLength() % 4 != 0) {
-			if(AbstractRTPSession.rtcpDebugLevel > 2) {
+			if(RTPSession.rtcpDebugLevel > 2) {
 				System.out.println("RTCPReceiverThread.parsePacket got packet that had length " + packet.getLength());
 			}
 			return -1;
@@ -153,11 +153,11 @@ public class RTCPReceiverThread extends Thread {
 				}
 			}
 			
-			if(AbstractRTPSession.rtcpDebugLevel > 5) {
-				Iterator<AbstractRtcpPkt> iter = compPkt.rtcpPkts.iterator();
+			if(RTPSession.rtcpDebugLevel > 5) {
+				Iterator<RtcpPkt> iter = compPkt.rtcpPkts.iterator();
 				String str = " ";
 				while(iter.hasNext()) {
-					AbstractRtcpPkt aPkt = iter.next();
+					RtcpPkt aPkt = iter.next();
 					str += (aPkt.getClass().toString() + ":"+aPkt.itemCount()+ ", ");
 				}
 				System.out.println("<-> RTCPReceiverThread.parsePacket() from " + packet.getSocketAddress().toString() + str);
@@ -170,7 +170,7 @@ public class RTCPReceiverThread extends Thread {
 			long curTime = System.currentTimeMillis();
 
 			while(iter.hasNext()) {
-				AbstractRtcpPkt aPkt = (AbstractRtcpPkt) iter.next();
+				RtcpPkt aPkt = (RtcpPkt) iter.next();
 
 				// Our own packets should already have been filtered out.
 				if(aPkt.ssrc() == rtpSession.ssrc()) {
@@ -184,7 +184,7 @@ public class RTCPReceiverThread extends Thread {
 				if(	aPkt.getClass() == RtcpPktRR.class) {
 					RtcpPktRR rrPkt = (RtcpPktRR) aPkt;
 
-					AbstractParticipant p = findParticipant(rrPkt.ssrc(), packet);
+					Participant p = findParticipant(rrPkt.ssrc(), packet);
 					p.lastRtcpPkt = curTime;
 
 					if(rtpSession.rtcpAppIntf() != null) {
@@ -197,7 +197,7 @@ public class RTCPReceiverThread extends Thread {
 				} else if(aPkt.getClass() == RtcpPktSR.class) {
 					RtcpPktSR srPkt = (RtcpPktSR) aPkt;
 
-					AbstractParticipant p = findParticipant(srPkt.ssrc(), packet);
+					Participant p = findParticipant(srPkt.ssrc(), packet);
 					p.lastRtcpPkt = curTime;
 
 					if(p != null) {
@@ -206,7 +206,7 @@ public class RTCPReceiverThread extends Thread {
 							//Calculate gradient NTP vs RTP
 							long newTime = StaticProcs.undoNtpMess(srPkt.ntpTs1, srPkt.ntpTs2);
 							p.ntpGradient = ((double) (newTime - p.ntpOffset))/((double) srPkt.rtpTs - p.lastSRRtpTs);
-							if(AbstractRTPSession.rtcpDebugLevel > 4) {
+							if(RTPSession.rtcpDebugLevel > 4) {
 								System.out.println("RTCPReceiverThread calculated NTP vs RTP gradient: " + Double.toString(p.ntpGradient));
 							}
 						} else {
@@ -242,7 +242,7 @@ public class RTCPReceiverThread extends Thread {
 
 					/**        Source Descriptions       **/
 				} else if(aPkt.getClass() == UDPRtcpPktSDES.class) {
-					AbstractRtcpPktSDES sdesPkt = (AbstractRtcpPktSDES) aPkt;				
+					RtcpPktSDES sdesPkt = (RtcpPktSDES) aPkt;				
 
 					// The the participant database is updated
 					// when the SDES packet is reconstructed by CompRtcpPkt	
@@ -255,7 +255,7 @@ public class RTCPReceiverThread extends Thread {
 					RtcpPktBYE byePkt = (RtcpPktBYE) aPkt;
 
 					long time = System.currentTimeMillis();
-					AbstractParticipant[] partArray = new AbstractParticipant[byePkt.ssrcArray().length];
+					Participant[] partArray = new Participant[byePkt.ssrcArray().length];
 
 					for(int i=0; i<byePkt.ssrcArray().length; i++) {
 						partArray[i] = rtpSession.partDb().getParticipant(byePkt.ssrcArray()[i]);
@@ -271,7 +271,7 @@ public class RTCPReceiverThread extends Thread {
 				} else if(aPkt.getClass() == RtcpPktAPP.class) {
 					RtcpPktAPP appPkt = (RtcpPktAPP) aPkt;
 
-					AbstractParticipant part = findParticipant(appPkt.ssrc(), packet);
+					Participant part = findParticipant(appPkt.ssrc(), packet);
 					
 					if(rtpSession.rtcpAppIntf() != null) {
 						rtpSession.rtcpAppIntf().APPPktReceived(part, appPkt.itemCount(), appPkt.pktName(), appPkt.pktData());

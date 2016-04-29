@@ -7,16 +7,16 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import jlibrtp.AbstractParticipantDatabase.ParticipantDatabaseFactory;
-import jlibrtp.udp.Participant;
+import jlibrtp.ParticipantDatabase.ParticipantDatabaseFactory;
+import jlibrtp.udp.UDPParticipant;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
 
-public abstract class AbstractRTPSession {
-    private static final Logger logger = LoggerFactory.getLogger(AbstractRTPSession.class);
+public abstract class RTPSession {
+    private static final Logger logger = LoggerFactory.getLogger(RTPSession.class);
 
     /**
       * The debug level is final to avoid compilation of if-statements.</br>
@@ -67,11 +67,11 @@ public abstract class AbstractRTPSession {
     /** Maximum number of packets used for reordering */
     protected int pktBufBehavior = 3;
     /** Participant database */
-    final protected AbstractParticipantDatabase partDb;
+    final protected ParticipantDatabase partDb;
     /** Handle to application interface for RTP */
     protected RTPAppIntf appIntf = null;
     /** The RTCP session associated with this RTP Session */
-    protected AbstractRTCPSession rtcpSession = null;
+    protected RTCPSession rtcpSession = null;
     /** Lock to protect the packet buffers */
     public final Lock pktBufLock = new ReentrantLock();
     /** Condition variable, to tell the  */
@@ -107,7 +107,7 @@ public abstract class AbstractRTPSession {
     protected int fbMaxDelay = 1000;
     protected int rtcpBandwidth = -1;
 
-    public AbstractRTPSession(ParticipantDatabaseFactory factory) {
+    public RTPSession(ParticipantDatabaseFactory factory) {
         partDb = factory.newInstance(this);
     }
 
@@ -166,7 +166,7 @@ public abstract class AbstractRTPSession {
       *
       * @param p A participant.
       */
-    public int addParticipant(Participant p) {
+    public int addParticipant(UDPParticipant p) {
     	//For now we make all participants added this way persistent
     	p.unexpected = false;
     	return this.partDb.addParticipant(0, p);
@@ -177,15 +177,15 @@ public abstract class AbstractRTPSession {
       *
       * @param p A participant.
       */
-    public void removeParticipant(AbstractParticipant p) {
+    public void removeParticipant(Participant p) {
     	partDb.removeParticipant(p);
      }
 
-    public Iterator<AbstractParticipant> getUnicastReceivers() {
+    public Iterator<Participant> getUnicastReceivers() {
     	 return partDb.getUnicastReceivers();
      }
 
-    public Enumeration<AbstractParticipant> getParticipants() {
+    public Enumeration<Participant> getParticipants() {
     	 return partDb.getParticipants();
      }
 
@@ -627,7 +627,7 @@ public abstract class AbstractRTPSession {
         return debugAppIntf;
     }
 
-    public AbstractParticipantDatabase  partDb() {
+    public ParticipantDatabase  partDb() {
         return partDb;
     }
     

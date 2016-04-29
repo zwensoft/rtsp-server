@@ -2,17 +2,17 @@ package jlibrtp;
 
 
 
-public class AbstractRtcpPktSDES extends AbstractRtcpPkt {
+public class RtcpPktSDES extends RtcpPkt {
 
     /** Whether the RTP Session object should be inclduded */
     protected boolean reportSelf = true;
     /** The parent RTP Session object, holds participant database */
-    protected AbstractRTPSession rtpSession = null;
+    protected RTPSession rtpSession = null;
     /** The participants to create SDES packets for */
-    protected AbstractParticipant[] participants = null;
+    protected Participant[] participants = null;
 
     public static interface ParticipantFactory {
-        AbstractParticipant newInstance(long ssrc);
+        Participant newInstance(long ssrc);
     }
 
     
@@ -28,7 +28,7 @@ public class AbstractRtcpPktSDES extends AbstractRtcpPkt {
      * @param rtpSession the session itself
      * @param additionalParticipants additional participants to include
      */
-    protected AbstractRtcpPktSDES(boolean reportThisSession, AbstractRTPSession rtpSession, AbstractParticipant[] additionalParticipants) {
+    protected RtcpPktSDES(boolean reportThisSession, RTPSession rtpSession, Participant[] additionalParticipants) {
         super.packetType = 202;
         // Fetch all the right stuff from the database
         this.reportSelf = reportThisSession;
@@ -45,14 +45,14 @@ public class AbstractRtcpPktSDES extends AbstractRtcpPkt {
      * @param start where in the byte[] this packet starts
      * @param partDb the participant database
      */
-    protected AbstractRtcpPktSDES(byte[] aRawPkt,int start, AbstractParticipantDatabase partDb, ParticipantFactory factory) {
-        if(AbstractRTPSession.rtcpDebugLevel > 8) {
+    protected RtcpPktSDES(byte[] aRawPkt,int start, ParticipantDatabase partDb, ParticipantFactory factory) {
+        if(RTPSession.rtcpDebugLevel > 8) {
             System.out.println("  -> RtcpPktSDES(byte[], ParticipantDabase)");
         }
         rawPkt = aRawPkt;
 
         if(! super.parseHeaders(start) || packetType != 202 ) {
-            if(AbstractRTPSession.rtpDebugLevel > 2) {
+            if(RTPSession.rtpDebugLevel > 2) {
                 System.out.println(" <-> RtcpPktSDES.parseHeaders() etc. problem");
             }
             super.problem = -202;
@@ -65,14 +65,14 @@ public class AbstractRtcpPktSDES extends AbstractRtcpPkt {
             long ssrc;
             boolean endReached = false;
             boolean newPart;
-            this.participants = new AbstractParticipant[itemCount];
+            this.participants = new Participant[itemCount];
             
             // Loop over SSRC SDES chunks
             for(int i=0; i< itemCount; i++) {
                 ssrc = StaticProcs.bytesToUIntLong(aRawPkt, curPos);
-                AbstractParticipant part = partDb.getParticipant(ssrc);
+                Participant part = partDb.getParticipant(ssrc);
                 if(part == null) {
-                    if(AbstractRTPSession.rtcpDebugLevel > 1) {
+                    if(RTPSession.rtcpDebugLevel > 1) {
                         System.out.println("RtcpPktSDES(byte[], ParticipantDabase) adding new participant, ssrc:"+ssrc);
                     }
                     
@@ -139,7 +139,7 @@ public class AbstractRtcpPktSDES extends AbstractRtcpPkt {
                 //System.out.println("HEPPPPPP " + participants[i].cname );
             }
         }
-        if(AbstractRTPSession.rtcpDebugLevel > 8) {
+        if(RTPSession.rtcpDebugLevel > 8) {
             System.out.println("  <- RtcpPktSDES()");
         }
     }
@@ -206,7 +206,7 @@ public class AbstractRtcpPktSDES extends AbstractRtcpPkt {
 
 
 
-    public AbstractParticipant[] participants() {
+    public Participant[] participants() {
         return participants;
     }
 
@@ -217,7 +217,7 @@ public class AbstractRtcpPktSDES extends AbstractRtcpPkt {
         System.out.println("RtcpPktSDES.debugPrint() ");
         if(participants != null) {
             for(int i= 0; i<participants.length; i++) {
-                AbstractParticipant part = participants[i];
+                Participant part = participants[i];
                 System.out.println("     part.ssrc: " + part.ssrc + "  part.cname: " + part.cname + " part.loc: " + part.loc);
             }
         } else {
@@ -232,7 +232,7 @@ public class AbstractRtcpPktSDES extends AbstractRtcpPkt {
         if(participants != null) {
             buf.append(", parts:[");
             for(int i= 0; i<participants.length; i++) {
-                AbstractParticipant part = participants[i];
+                Participant part = participants[i];
                 buf.append("{");
                 buf.append("ssrc=").append(part.ssrc);
                 buf.append(", cname=").append(part.cname);

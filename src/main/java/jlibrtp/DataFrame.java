@@ -63,18 +63,18 @@ public class DataFrame {
 	 * The usual way to construct a frame is by giving it a PktBufNode,
 	 * which contains links to all the other pkts that make it up.
 	 */
-	protected DataFrame(PktBufNode aBufNode, AbstractParticipant p, int noPkts) {
-		if(AbstractRTPSession.rtpDebugLevel > 6) {
+	protected DataFrame(PktBufNode aBufNode, Participant p, int noPkts) {
+		if(RTPSession.rtpDebugLevel > 6) {
 			System.out.println("-> DataFrame(PktBufNode, noPkts = " + noPkts +")");
 		}
 		this.noPkts = noPkts;
-		RtpPkt aPkt = aBufNode.pkt;
+		ByteArrayRtpPkt aPkt = aBufNode.pkt;
 		int pktCount = aBufNode.pktCount;
 		firstSeqNum = aBufNode.pktCount;
 		
 		// All this data should be shared, so we just get it from the first one
 		this.rtpTimestamp = aBufNode.timeStamp;
-		SSRC = aPkt.getSsrc();
+		SSRC = aPkt.ssrc();
 		CSRCs = aPkt.getCsrcArray();
 		
 		// Check whether we can compute an NTPish timestamp? Requires two SR reports 
@@ -84,7 +84,7 @@ public class DataFrame {
 		}
 		
 		// Make data the right length
-		int payloadLength = aPkt.getPayloadLength();
+		int payloadLength = aPkt.dataLength();
 		//System.out.println("aBufNode.pktCount " + aBufNode.pktCount);
 		data = new byte[aBufNode.pktCount][payloadLength];
 		seqNum = new int[aBufNode.pktCount];
@@ -125,7 +125,7 @@ public class DataFrame {
 			isComplete = -1;
 		}
 		
-		if(AbstractRTPSession.rtpDebugLevel > 6) {
+		if(RTPSession.rtpDebugLevel > 6) {
 			System.out.println("<- DataFrame(PktBufNode, noPkt), data length: " + data.length);
 		}
 	}

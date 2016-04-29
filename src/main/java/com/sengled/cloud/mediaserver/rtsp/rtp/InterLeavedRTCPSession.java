@@ -1,13 +1,13 @@
 package com.sengled.cloud.mediaserver.rtsp.rtp;
 
-import jlibrtp.AbstractRTCPSession;
+import jlibrtp.RTCPSession;
 
 /**
  * RTCP sessions
  * @author 陈修恒
  * @date 2016年4月28日
  */
-public class InterLeavedRTCPSession extends AbstractRTCPSession{
+public class InterLeavedRTCPSession extends RTCPSession{
     private int rtcpChannel;
     
     public InterLeavedRTCPSession(int rtcpChannel) {

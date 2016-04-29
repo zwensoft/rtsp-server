@@ -1,5 +1,6 @@
 package com.sengled.cloud.mediaserver.rtsp.interleaved;
 
+import jlibrtp.IRtpPkt;
 import io.netty.buffer.ByteBuf;
 
 /**
@@ -8,7 +9,7 @@ import io.netty.buffer.ByteBuf;
  * @author 陈修恒
  * @date 2016年4月29日
  */
-public class RtpPkt extends InterleavedFrame {
+public class RtpPkt extends InterleavedFrame implements IRtpPkt {
     private int headerLength;
     
     public RtpPkt(int channel, ByteBuf payload) {
@@ -45,6 +46,8 @@ public class RtpPkt extends InterleavedFrame {
         return this;
     }
 
+    
+    
     public int getFlags() {
         return getUnsignedByte(0);
     }
@@ -57,10 +60,13 @@ public class RtpPkt extends InterleavedFrame {
         return (getUnsignedByte(1) & 0x7F);
     }
     
-    public int getSeqNo() {
+
+    public int getSeqNumber() {
         return getUnsignedShort(2);
     }
-    
+   
+ 
+
     public long getTimestamp() {
         return getUnsignedInt(4);
     }
@@ -74,7 +80,7 @@ public class RtpPkt extends InterleavedFrame {
         return getUnsignedInt(8);
     }
     
-    public void setSsrc(long ssrc) {
+    public void ssrc(long ssrc) {
         setUnsignedInt(8, ssrc);
     }
     
@@ -82,13 +88,16 @@ public class RtpPkt extends InterleavedFrame {
         int contentLength = content().readableBytes();
         return content().slice(headerLength(), contentLength - headerLength());
     }
-    
 
-    public long dataLength() {
+    public int contentLength() {
+        return  content().readableBytes();
+    }
+    
+    public int dataLength() {
         return  content().readableBytes() - headerLength();
     }
     
-    private int headerLength() {
+    public int headerLength() {
         return headerLength;
     }
 
@@ -99,7 +108,7 @@ public class RtpPkt extends InterleavedFrame {
         buf.append(", refCnt=").append(refCnt());
         buf.append(", channel=").append(channel());
         buf.append(", pType=").append(getPayloadType());
-        buf.append(", seq=").append(getSeqNo());
+        buf.append(", seq=").append(getSeqNumber());
         buf.append(", t=").append(getTimestamp());
         buf.append(", sc=0x").append(Long.toHexString(ssrc()));
         buf.append(", size=").append(content().readableBytes());

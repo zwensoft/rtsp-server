@@ -5,7 +5,7 @@ import io.netty.channel.Channel;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
-import jlibrtp.AbstractRTPSession;
+import jlibrtp.RTPSession;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
  * @author 陈修恒
  * @date 2016年4月28日
  */
-public class InterLeavedRTPSession extends AbstractRTPSession {
+public class InterLeavedRTPSession extends RTPSession {
     private static final Logger logger = LoggerFactory.getLogger(InterLeavedRTPSession.class);
     
     private Channel channel;

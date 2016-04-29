@@ -39,10 +39,10 @@ import org.slf4j.LoggerFactory;
  */
 public class PktBuffer {
 	private static Logger logger = LoggerFactory.getLogger(PktBuffer.class);
-	private static Comparator<RtpPkt> rtpPktComparator = new Comparator<RtpPkt>() {
+	private static Comparator<ByteArrayRtpPkt> rtpPktComparator = new Comparator<ByteArrayRtpPkt>() {
 		
 		@Override
-		public int compare(RtpPkt pkt1, RtpPkt pkt2) {
+		public int compare(ByteArrayRtpPkt pkt1, ByteArrayRtpPkt pkt2) {
 			long a = pkt1.getSeqNumber();
 			long b = pkt2.getSeqNumber();
 
@@ -64,15 +64,15 @@ public class PktBuffer {
 	};
 	
 	/** The RTPSession holds information common to all packetBuffers, such as max size */
-	private AbstractRTPSession rtpSession;
+	private RTPSession rtpSession;
 	/** SSRC of the the participant that this buffer is for */
 	private long SSRC;
 	/** The parent participant */
-	private AbstractParticipant p;
+	private Participant p;
 	
 	private boolean isStarted = false;
 	private long exceptSeqNumber = -1;
-	private TreeSet<RtpPkt> jitterBuffer = new TreeSet<RtpPkt>(rtpPktComparator);
+	private TreeSet<ByteArrayRtpPkt> jitterBuffer = new TreeSet<ByteArrayRtpPkt>(rtpPktComparator);
 	
 	/** 
 	 * Creates a new PktBuffer, a linked list of PktBufNode
@@ -81,10 +81,10 @@ public class PktBuffer {
 	 * @param p the participant to which this packetbuffer belongs.
 	 * @param aPkt The first RTP packet, to be added to the buffer 
 	 */
-	public PktBuffer(AbstractRTPSession rtpSession, AbstractParticipant p, RtpPkt aPkt) {
+	public PktBuffer(RTPSession rtpSession, Participant p, ByteArrayRtpPkt aPkt) {
 		this.rtpSession = rtpSession;
 		this.p = p;
-		SSRC = aPkt.getSsrc();
+		SSRC = aPkt.ssrc();
 		
 		addPkt(aPkt);
 	}
@@ -96,14 +96,14 @@ public class PktBuffer {
 	 * @param aPkt the packet to be added to the buffer.
 	 * @return integer, negative if operation failed (see code)
 	 */
-	public synchronized void addPkt(RtpPkt aPkt) {
+	public synchronized void addPkt(ByteArrayRtpPkt aPkt) {
 		if(aPkt == null) {
 			logger.warn("fail to add null to jitter buffer");
 			return;
 		}
 		
-		if (aPkt.getSsrc() != SSRC) {
-			logger.warn("SSRCs don't match, except = {}, but real is {}!", SSRC, aPkt.getSsrc());
+		if (aPkt.ssrc() != SSRC) {
+			logger.warn("SSRCs don't match, except = {}, but real is {}!", SSRC, aPkt.ssrc());
 			return;
 		}
 		
@@ -117,7 +117,7 @@ public class PktBuffer {
 		bufferedAddPkt(aPkt);
 	}
 	
-	private void bufferedAddPkt(RtpPkt aPkt) {
+	private void bufferedAddPkt(ByteArrayRtpPkt aPkt) {
 		
 		boolean success = jitterBuffer.add(aPkt);
 		if (!success) {
@@ -133,7 +133,7 @@ public class PktBuffer {
 	 * Checks the oldest frame, if there is one, sees whether it is complete.
 	 * @return Returns null if there are no complete frames available.
 	 */
-	public synchronized RtpPkt popOldestFrame() {
+	public synchronized IRtpPkt popOldestFrame() {
 		int maxBufferSize = 0;
 		if (jitterBuffer.size() > 0) {
 			maxBufferSize = getBufferSize();
@@ -148,7 +148,7 @@ public class PktBuffer {
 			if (-1 != exceptSeqNumber) {
 				while(!jitterBuffer.isEmpty() 
 						&& jitterBuffer.first().getSeqNumber() < exceptSeqNumber) {
-					RtpPkt pkt = jitterBuffer.pollFirst();
+					IRtpPkt pkt = jitterBuffer.pollFirst();
 					logger.info("ignore {}", pkt);
 				}
 
@@ -160,7 +160,7 @@ public class PktBuffer {
 			}
 		}
 		
-		RtpPkt pop = null;
+		IRtpPkt pop = null;
 		if (null == pop && exceptSeqNumber == jitterBuffer.first().getSeqNumber()){
 			pop = jitterBuffer.pollFirst();
 		}

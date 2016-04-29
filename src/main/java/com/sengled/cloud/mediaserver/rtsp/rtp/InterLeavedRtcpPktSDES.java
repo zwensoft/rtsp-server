@@ -1,9 +1,9 @@
 package com.sengled.cloud.mediaserver.rtsp.rtp;
 
-import jlibrtp.AbstractParticipant;
-import jlibrtp.AbstractRtcpPktSDES;
+import jlibrtp.Participant;
+import jlibrtp.RtcpPktSDES;
 
-public class InterLeavedRtcpPktSDES extends AbstractRtcpPktSDES {
+public class InterLeavedRtcpPktSDES extends RtcpPktSDES {
 
     /**
      * Constructor that parses a received packet
@@ -17,7 +17,7 @@ public class InterLeavedRtcpPktSDES extends AbstractRtcpPktSDES {
         super(aRawPkt, start, rtpSession.partDb(), new ParticipantFactory() {
             
             @Override
-            public AbstractParticipant newInstance(long SSRC) {
+            public Participant newInstance(long SSRC) {
                 return new InterLeavedParticipant(rtpSession, SSRC);
             }
         });

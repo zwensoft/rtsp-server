@@ -20,8 +20,8 @@ package jlibrtp.udp;
 
 import java.net.InetAddress;
 
-import jlibrtp.AbstractParticipantDatabase;
-import jlibrtp.AbstractRtcpPkt;
+import jlibrtp.ParticipantDatabase;
+import jlibrtp.RtcpPkt;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,8 +30,8 @@ import org.slf4j.LoggerFactory;
  *
  * @author Arne Kepp
  */
-public class RtcpPkt extends AbstractRtcpPkt {
-	static final Logger logger = LoggerFactory.getLogger(RtcpPkt.class);
+public class UDPRtcpPkt extends RtcpPkt {
+	static final Logger logger = LoggerFactory.getLogger(UDPRtcpPkt.class);
 	
 	
 	/**
@@ -43,13 +43,13 @@ public class RtcpPkt extends AbstractRtcpPkt {
 	 * @param partDb the participant database for the session
 	 * @return true if this packet came from the expected source
 	 */
-	protected boolean check(InetAddress adr, AbstractParticipantDatabase partDb) {
+	protected boolean check(InetAddress adr, ParticipantDatabase partDb) {
 		//Multicast -> We have to be naive
 		if (partDb.rtpSession.mcSession() && adr.equals(((UDPRTPSession)partDb.rtpSession).mcGroup))
 			return true;
 		
 		//See whether this participant is known
-		Participant part = (Participant)partDb.getParticipant(this.ssrc);
+		UDPParticipant part = (UDPParticipant)partDb.getParticipant(this.ssrc);
 		if(part != null && part.rtcpAddress.getAddress().equals(adr))
 			return true;
 		

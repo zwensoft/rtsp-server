@@ -23,7 +23,7 @@ import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
 
 import jlibrtp.PktBuffer;
-import jlibrtp.RtpPkt;
+import jlibrtp.ByteArrayRtpPkt;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -91,7 +91,7 @@ public class RTPReceiverThread extends Thread {
 			}
 
 			// Parse the received RTP (?) packet
-			RtpPkt pkt = new RtpPkt(rawPkt, packet.getLength());
+			ByteArrayRtpPkt pkt = new ByteArrayRtpPkt(rawPkt, packet.getLength());
 
 			// Check whether it was valid.
 			if(pkt == null) {
@@ -99,7 +99,7 @@ public class RTPReceiverThread extends Thread {
 				continue;
 			}
 			
-			long pktSsrc = pkt.getSsrc();
+			long pktSsrc = pkt.ssrc();
 			
 			// Check for loops and SSRC collisions
 			if( rtpSession.ssrc() == pktSsrc )
@@ -118,11 +118,11 @@ public class RTPReceiverThread extends Thread {
 			}
 			
 			//Find the participant in the database based on SSRC
-			Participant part = (Participant) rtpSession.partDb().getParticipant(pktSsrc);
+			UDPParticipant part = (UDPParticipant) rtpSession.partDb().getParticipant(pktSsrc);
 
 			if(part == null) {
 				InetSocketAddress nullSocket = null;
-				part = new Participant((InetSocketAddress) packet.getSocketAddress(), nullSocket, pkt.getSsrc());
+				part = new UDPParticipant((InetSocketAddress) packet.getSocketAddress(), nullSocket, pkt.ssrc());
 				part.unexpected(true);
 				rtpSession.partDb().addParticipant(1,part);
 			}
@@ -141,7 +141,7 @@ public class RTPReceiverThread extends Thread {
 				}
 			} else {
 				logger.info("Got an unexpected packet from {}, the sending ip-address was {}, we expected from ",
-								new Object[] { pkt.getSsrc(),
+								new Object[] { pkt.ssrc(),
 										packet.getAddress(), part.rtpAddress });
 			}
 

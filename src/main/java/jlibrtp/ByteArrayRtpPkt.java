@@ -38,8 +38,8 @@ import org.slf4j.LoggerFactory;
  * 
  * @author Arne Kepp
  */
-public class RtpPkt {
-	private static final Logger logger = LoggerFactory.getLogger(RtpPkt.class);
+public class ByteArrayRtpPkt implements IRtpPkt {
+	private static final Logger logger = LoggerFactory.getLogger(ByteArrayRtpPkt.class);
 	
 	/** Whether the packet has been changed since encode() */
 	private boolean rawPktCurrent = false;
@@ -76,7 +76,7 @@ public class RtpPkt {
 	 * @param plt Type of payload
 	 * @param pl Payload, the actual data
 	 */
-	public RtpPkt(long aTimeStamp, long syncSource, int seqNum, int plt, byte[] pl){
+	public ByteArrayRtpPkt(long aTimeStamp, long syncSource, int seqNum, int plt, byte[] pl){
 		int test = 0;
 		test += setTimeStamp(aTimeStamp);
 		test += setSsrc(syncSource);
@@ -94,7 +94,7 @@ public class RtpPkt {
 	 * @param aRawPkt The data-part of a UDP-packet believed to be RTP 
 	 * @param packetSize the number of valid octets in the packet, should be aRawPkt.length
 	 */
-	public RtpPkt(byte[] aRawPkt, int packetSize){
+	public ByteArrayRtpPkt(byte[] aRawPkt, int packetSize){
 		//Check size, need to have at least a complete header
 		if(aRawPkt == null) {
 			logger.error("RtpPkt(byte[]) Packet null");
@@ -142,7 +142,11 @@ public class RtpPkt {
 		//TODO include extension
 		return 12 + 4*getCsrcCount();
 	}
-	public int getPayloadLength() {
+	/* (non-Javadoc)
+     * @see jlibrtp.IRtpPkt#getPayloadLength()
+     */
+	@Override
+    public int dataLength() {
 		return payload.length;
 	}
 	//public int getPaddingLength() {
@@ -168,13 +172,25 @@ public class RtpPkt {
 		return payloadType;
 	}
 	
-	public int getSeqNumber() {
+	/* (non-Javadoc)
+     * @see jlibrtp.IRtpPkt#getSeqNumber()
+     */
+	@Override
+    public int getSeqNumber() {
 		return seqNumber;
 	}
-	public long getTimeStamp() {
+	/* (non-Javadoc)
+     * @see jlibrtp.IRtpPkt#getTimeStamp()
+     */
+	@Override
+    public long getTimestamp() {
 		return timeStamp;
 	}
-	public long getSsrc() {
+	/* (non-Javadoc)
+     * @see jlibrtp.IRtpPkt#getSsrc()
+     */
+	@Override
+    public long ssrc() {
 		return ssrc;
 	}
 	
@@ -289,7 +305,7 @@ public class RtpPkt {
 	 *********************************************************************************************************/
 	//Generate a bytebyffer representing the packet, store it.
 	private void writePkt() {
-		int bytes = getPayloadLength();
+		int bytes = dataLength();
 		int headerLen = getHeaderLength();
 		int csrcLen = getCsrcCount();
 		rawPkt = new byte[headerLen + bytes];
@@ -368,10 +384,10 @@ public class RtpPkt {
 	public String toString() {
 		StringBuilder buf = new StringBuilder();
 		buf.append("Rtp[").append(getPayloadType()).append("]");
-		buf.append(" ssrc=").append(getSsrc());
-		buf.append(", t=").append(getTimeStamp());
+		buf.append(" ssrc=").append(ssrc());
+		buf.append(", t=").append(getTimestamp());
 		buf.append(", seqNo=").append(getSeqNumber());
-		buf.append(", length=").append(getPayloadLength());
+		buf.append(", length=").append(dataLength());
 		
 		if (this.marker > 0) {
 			buf.append(" marker");

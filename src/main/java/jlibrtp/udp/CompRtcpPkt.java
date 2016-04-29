@@ -20,9 +20,9 @@ package jlibrtp.udp;
 import java.util.*;
 import java.net.InetSocketAddress;
 
-import jlibrtp.AbstractRTPSession;
-import jlibrtp.AbstractRtcpPkt;
-import jlibrtp.AbstractRtcpPktSDES;
+import jlibrtp.RTPSession;
+import jlibrtp.RtcpPkt;
+import jlibrtp.RtcpPktSDES;
 import jlibrtp.RtcpPktAPP;
 import jlibrtp.RtcpPktBYE;
 import jlibrtp.RtcpPktPSFB;
@@ -54,14 +54,14 @@ public class CompRtcpPkt {
 	/** Problem indicator, negative values denote packet type that cause problem */
 	protected int problem = 0;
 	/** Stores the different subclasses of RtcpPkt that make up the compound packet */
-	protected LinkedList<AbstractRtcpPkt> rtcpPkts = new LinkedList<AbstractRtcpPkt>();
+	protected LinkedList<RtcpPkt> rtcpPkts = new LinkedList<RtcpPkt>();
 	
 	/**
 	 * Instantiates an empty Compound RTCP packet to which you can add RTCP packets
 	 */
 	protected CompRtcpPkt() {
 		// Will have to add packets directly to rtcpPkts.
-		if(AbstractRTPSession.rtpDebugLevel > 7) {
+		if(RTPSession.rtpDebugLevel > 7) {
 			System.out.println("<-> CompRtcpPkt()");
 		}
 	}
@@ -73,8 +73,8 @@ public class CompRtcpPkt {
 	 * 
 	 * @param aPkt the packet to be added
 	 */
-	protected void addPacket(AbstractRtcpPkt aPkt) {
-		if(AbstractRTPSession.rtpDebugLevel > 11) {
+	protected void addPacket(RtcpPkt aPkt) {
+		if(RTPSession.rtpDebugLevel > 11) {
 			System.out.println("  <-> CompRtcpPkt.addPacket( "+ aPkt.getClass() + " )");
 		}
 		
@@ -100,7 +100,7 @@ public class CompRtcpPkt {
 	 * @param rtpSession the RTPSession with the participant database
 	 */
 	protected CompRtcpPkt(byte[] rawPkt, int packetSize, InetSocketAddress adr, UDPRTPSession rtpSession) {
-		if(AbstractRTPSession.rtcpDebugLevel > 7) {
+		if(RTPSession.rtcpDebugLevel > 7) {
 			System.out.println("-> CompRtcpPkt(" + rawPkt.getClass() + ", size " + packetSize + ", from " + adr.toString() + ", " + rtpSession.getClass() + ")");
 		}
 		//System.out.println("rawPkt.length:" + rawPkt.length + " packetSize:" + packetSize);
@@ -127,7 +127,7 @@ public class CompRtcpPkt {
 			if(start == 0) {
 				// Compound packets need to start with SR or RR
 				if(pktType != 200 && pktType != 201 ) {
-					if(AbstractRTPSession.rtcpDebugLevel > 3) {
+					if(RTPSession.rtcpDebugLevel > 3) {
 						System.out.println("!!!! CompRtcpPkt(rawPkt...) packet did not start with SR or RR");
 					}
 					this.problem = -1;
@@ -135,7 +135,7 @@ public class CompRtcpPkt {
 				
 				// Padding bit should be zero for the first packet
 				if(((rawPkt[start] & 0x20) >>> 5) == 1) {
-					if(AbstractRTPSession.rtcpDebugLevel > 3) {
+					if(RTPSession.rtcpDebugLevel > 3) {
 						System.out.println("!!!! CompRtcpPkt(rawPkt...) first packet was padded");
 					}
 					this.problem = -2;
@@ -166,11 +166,11 @@ public class CompRtcpPkt {
 			
 			start += length*4;
 			
-			if(AbstractRTPSession.rtcpDebugLevel > 12) {
+			if(RTPSession.rtcpDebugLevel > 12) {
 				System.out.println(" start:"+start+"  parsing pktType "+pktType+" length: "+length);
 			}
 		}
-		if(AbstractRTPSession.rtcpDebugLevel > 7) {
+		if(RTPSession.rtcpDebugLevel > 7) {
 			System.out.println("<- CompRtcpPkt(rawPkt....)");
 		}
 	}
@@ -184,17 +184,17 @@ public class CompRtcpPkt {
 	 * @return the trimmed byte[] representation of the packet, ready to go into a UDP packet.
 	 */
 	protected byte[] encode() {
-		if(AbstractRTPSession.rtpDebugLevel > 9) {
+		if(RTPSession.rtpDebugLevel > 9) {
 			System.out.println(" <- CompRtcpPkt.encode()");
 		}
 		
-		ListIterator<AbstractRtcpPkt>  iter = rtcpPkts.listIterator();
+		ListIterator<RtcpPkt>  iter = rtcpPkts.listIterator();
 
 		byte[] rawPkt = new byte[1500];
 		int index = 0;
 		
 		while(iter.hasNext()) {
-			AbstractRtcpPkt aPkt = (AbstractRtcpPkt) iter.next();
+			RtcpPkt aPkt = (RtcpPkt) iter.next();
 			
 			if(aPkt.packetType() == 200) {
 				RtcpPktSR pkt = (RtcpPktSR) aPkt;
@@ -207,7 +207,7 @@ public class CompRtcpPkt {
 				System.arraycopy(pkt.rawPkt, 0, rawPkt, index, pkt.rawPkt.length);
 				index += pkt.rawPkt.length;
 			} else if(aPkt.packetType() == 202) {
-				AbstractRtcpPktSDES pkt = (AbstractRtcpPktSDES) aPkt;
+				RtcpPktSDES pkt = (RtcpPktSDES) aPkt;
 				pkt.encode();
 				//System.out.println(" ENCODE SIZE: " + pkt.rawPkt.length);
 				System.arraycopy(pkt.rawPkt, 0, rawPkt, index, pkt.rawPkt.length);
@@ -242,7 +242,7 @@ public class CompRtcpPkt {
 		
 		System.arraycopy(rawPkt, 0, output, 0, index);
 
-		if(AbstractRTPSession.rtpDebugLevel > 9) {
+		if(RTPSession.rtpDebugLevel > 9) {
 			System.out.println(" -> CompRtcpPkt.encode()");
 		}
 		return output;

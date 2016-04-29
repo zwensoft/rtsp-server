@@ -8,7 +8,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import jlibrtp.AbstractParticipant;
+import jlibrtp.Participant;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -99,7 +99,7 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
     private void syncNtpTime(int streamIndex, 
                              InterLeavedRTPSession rtp,
                              NtpTimeEvent event) {
-        AbstractParticipant p = findParticipant(rtp);
+        Participant p = findParticipant(rtp);
         NtpTime ntp = event.getSource();
         
         p.lastRtpPkt = ntp.getRtpTime();
@@ -119,8 +119,8 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
      * @param rtpSession 
      * @return the relevant participant, possibly newly created
      */
-    private AbstractParticipant findParticipant(InterLeavedRTPSession rtpSession) {
-        AbstractParticipant p = rtpSession.partDb().getParticipant(rtpSession.ssrc());
+    private Participant findParticipant(InterLeavedRTPSession rtpSession) {
+        Participant p = rtpSession.partDb().getParticipant(rtpSession.ssrc());
         if(p == null) {
             p = new InterLeavedParticipant(rtpSession, rtpSession.ssrc());
             rtpSession.partDb().addParticipant(2,p);
@@ -146,7 +146,7 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
     }
 
     private void sendFullRtpPkt(InterLeavedRTPSession rtpSess, FullRtpPkt fullRtp, long maxRtpBufferSize) {
-        AbstractParticipant p = findParticipant(rtpSess);
+        Participant p = findParticipant(rtpSess);
 
         // 统计流量
         rtpSess.sentPktCount ++;
@@ -160,7 +160,7 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         for (RtpPkt rtpObj : fullRtp.contents()) {
             payloadLength = rtpObj.content().readableBytes();
             
-            rtpObj.setSsrc(rtpSess.ssrc());
+            rtpObj.ssrc(rtpSess.ssrc());
             
             ByteBuf payload = alloc.buffer(4 + payloadLength);
             payload.writeByte('$');

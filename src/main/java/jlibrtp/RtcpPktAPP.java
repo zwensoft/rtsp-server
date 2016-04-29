@@ -23,7 +23,7 @@ package jlibrtp;
  * 
  * @author Arne Kepp
  */
-public class RtcpPktAPP extends AbstractRtcpPkt {
+public class RtcpPktAPP extends RtcpPkt {
 	/** Name of packet, 4 bytes ASCII */
 	protected byte[] pktName = null;
 	/** Data of packet */
@@ -57,7 +57,7 @@ public class RtcpPktAPP extends AbstractRtcpPkt {
 		super.rawPkt = aRawPkt;
 		
 		if(!super.parseHeaders(start) || packetType != 204 ) {
-			if(AbstractRTPSession.rtpDebugLevel > 2) {
+			if(RTPSession.rtpDebugLevel > 2) {
 				System.out.println(" <-> RtcpPktAPP.parseHeaders() etc. problem");
 			}
 			super.problem = -204;

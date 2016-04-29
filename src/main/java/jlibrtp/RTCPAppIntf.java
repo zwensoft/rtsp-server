@@ -91,7 +91,7 @@ public interface RTCPAppIntf {
 	 * 
 	 * @param relevantParticipants participants mentioned in the SDES packet
 	 */
-	public void SDESPktReceived(AbstractParticipant[] relevantParticipants);
+	public void SDESPktReceived(Participant[] relevantParticipants);
 	
 	/**
 	 * This function is called whenever a Bye (BYE) packet is received.
@@ -103,7 +103,7 @@ public interface RTCPAppIntf {
 	 * @param relevantParticipants participants whose SSRC was in the packet
 	 * @param reason the reason provided in the packet
 	 */
-	public void BYEPktReceived(AbstractParticipant[] relevantParticipants, String reason);
+	public void BYEPktReceived(Participant[] relevantParticipants, String reason);
 	
 	
 	/**
@@ -114,5 +114,5 @@ public interface RTCPAppIntf {
 	 * @param name ASCII description of packet
 	 * @param data in the packet
 	 */
-	public void APPPktReceived(AbstractParticipant part, int subtype, byte[] name, byte[] data);
+	public void APPPktReceived(Participant part, int subtype, byte[] name, byte[] data);
 }

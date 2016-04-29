@@ -58,7 +58,7 @@ public class FullRtpPkt implements ReferenceCounted, InterLeaved {
     }
     
     public int getSeqNo() {
-        return first().getSeqNo();
+        return first().getSeqNumber();
     }
     
     public int numRtp() {
@@ -85,8 +85,8 @@ public class FullRtpPkt implements ReferenceCounted, InterLeaved {
     }
     
 
-    public long dataLength() {
-        long readableBytes = 0;
+    public int dataLength() {
+        int readableBytes = 0;
         for (RtpPkt rtpObject : contents) {
             readableBytes += rtpObject.dataLength();
         }

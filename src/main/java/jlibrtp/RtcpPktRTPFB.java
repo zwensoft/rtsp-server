@@ -27,7 +27,7 @@ import jlibrtp.udp.UDPRTPSession;
  * 
  * @author Arne Kepp
  */
-public class RtcpPktRTPFB extends AbstractRtcpPkt {
+public class RtcpPktRTPFB extends RtcpPkt {
 	/** If this packet was for a different SSRC */
 	protected boolean notRelevant = false;
 	/** SSRC we are sending feeback to */
@@ -61,14 +61,14 @@ public class RtcpPktRTPFB extends AbstractRtcpPkt {
 	 * @param rtpSession the session on which the callback interface resides
 	 */
 	public RtcpPktRTPFB(byte[] aRawPkt, int start, UDPRTPSession rtpSession) {		
-		if(AbstractRTPSession.rtpDebugLevel > 8) {
+		if(RTPSession.rtpDebugLevel > 8) {
 			System.out.println("  -> RtcpPktRTPFB(byte[], int start)");
 		}
 		
 		rawPkt = aRawPkt;
 
 		if(! super.parseHeaders(start) || packetType != 205 || super.length < 2) {
-			if(AbstractRTPSession.rtpDebugLevel > 2) {
+			if(RTPSession.rtpDebugLevel > 2) {
 				System.out.println(" <-> RtcpPktRTPFB.parseHeaders() etc. problem");
 			}
 			super.problem = -205;
@@ -98,7 +98,7 @@ public class RtcpPktRTPFB extends AbstractRtcpPkt {
 		
 
 		
-		if(AbstractRTPSession.rtpDebugLevel > 8) {
+		if(RTPSession.rtpDebugLevel > 8) {
 			System.out.println("  <- RtcpPktRTPFB()");
 		}
 	}

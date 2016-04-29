@@ -8,10 +8,10 @@ import java.util.ListIterator;
 
 
 
-public abstract class AbstractRTCPSession {
+public abstract class RTCPSession {
 
     /** Parent session */
-    protected AbstractRTPSession rtpSession = null;
+    protected RTPSession rtpSession = null;
 
     public abstract void sendByes();
 
@@ -35,7 +35,7 @@ public abstract class AbstractRTCPSession {
     /** Whether next RTCP packet can be sent early */
     protected boolean fbAllowEarly = false;
     /** Feedback queue , index is SSRC of target */
-    protected Hashtable<Long, LinkedList<AbstractRtcpPkt>> fbQueue = null;
+    protected Hashtable<Long, LinkedList<RtcpPkt>> fbQueue = null;
     /** APP queue , index is SSRC of target */
     protected Hashtable<Long, LinkedList<RtcpPktAPP>> appQueue = null;
     /** Are we just starting up? */
@@ -43,7 +43,7 @@ public abstract class AbstractRTCPSession {
     /** Is there a feedback packet waiting? SSRC of destination */
     public long fbWaiting = -1;
 
-    public AbstractRTCPSession() {
+    public RTCPSession() {
         super();
     }
 
@@ -72,9 +72,9 @@ public abstract class AbstractRTCPSession {
     		double randDouble =  ((double) 1000 + rand)/1000.0;
     		
     		
-    		Enumeration<AbstractParticipant> enu = rtpSession.partDb.getParticipants();
+    		Enumeration<Participant> enu = rtpSession.partDb.getParticipants();
     		while(enu.hasMoreElements()) {
-    			AbstractParticipant part = enu.nextElement();
+    			Participant part = enu.nextElement();
     			if(part.lastRtpPkt > this.prevTime)
     				senderCount++;
     		}
@@ -203,7 +203,7 @@ public abstract class AbstractRTCPSession {
     		while(enu.hasMoreElements()) {
     			ListIterator<RtcpPktAPP> li = enu.nextElement().listIterator();
     			while(li.hasNext()) {
-    				AbstractRtcpPkt aPkt = li.next();
+    				RtcpPkt aPkt = li.next();
     				//Remove after 60 seconds
     				if(curTime - aPkt.time > 60000) {
     					li.remove();
@@ -221,21 +221,21 @@ public abstract class AbstractRTCPSession {
      * @return 0 if the packet was added, 1 if it was dropped
      */
     protected synchronized int addToFbQueue(long targetSsrc,
-                                                AbstractRtcpPkt aPkt) {
+                                                RtcpPkt aPkt) {
                                                 	if(this.fbQueue == null)
-                                                		this.fbQueue = new Hashtable<Long, LinkedList<AbstractRtcpPkt>>();
+                                                		this.fbQueue = new Hashtable<Long, LinkedList<RtcpPkt>>();
                                                 	
-                                                	LinkedList<AbstractRtcpPkt> ll = this.fbQueue.get(targetSsrc);
+                                                	LinkedList<RtcpPkt> ll = this.fbQueue.get(targetSsrc);
                                                 	if(ll == null) {
                                                 		// No list, create and add
-                                                		ll = new LinkedList<AbstractRtcpPkt>();
+                                                		ll = new LinkedList<RtcpPkt>();
                                                 		ll.add(aPkt);
                                                 		this.fbQueue.put(targetSsrc, ll);
                                                 	} else {
                                                 		// Check for matching packets, else add to end
-                                                		ListIterator<AbstractRtcpPkt> li = ll.listIterator();
+                                                		ListIterator<RtcpPkt> li = ll.listIterator();
                                                 		while(li.hasNext()) {
-                                                			AbstractRtcpPkt tmp = li.next();
+                                                			RtcpPkt tmp = li.next();
                                                 			if(equivalent(tmp, aPkt))
                                                 				return -1;
                                                 		}
@@ -251,16 +251,16 @@ public abstract class AbstractRTCPSession {
      * @param ssrc of the participant we are notifying
      * @return all relevant feedback packets, or null
      */
-    public synchronized AbstractRtcpPkt[] getFromFbQueue(long ssrc) {
+    public synchronized RtcpPkt[] getFromFbQueue(long ssrc) {
     	if(this.fbQueue == null)
     		return null;
     	
-    	LinkedList<AbstractRtcpPkt> ll = this.fbQueue.get(ssrc);
+    	LinkedList<RtcpPkt> ll = this.fbQueue.get(ssrc);
     	
     	if(ll == null)
     		return null;
     	
-    	ListIterator<AbstractRtcpPkt> li = ll.listIterator();
+    	ListIterator<RtcpPkt> li = ll.listIterator();
     	if(li.hasNext()) {
     		long curTime = System.currentTimeMillis();
     		long maxDelay = curTime - rtpSession.fbMaxDelay;
@@ -271,7 +271,7 @@ public abstract class AbstractRTCPSession {
     		
     		// Clean out what we dont want and count what we want
     		while(li.hasNext()) {
-    			AbstractRtcpPkt aPkt = li.next();
+    			RtcpPkt aPkt = li.next();
     			if(aPkt.received) {
     				//This is a packet received, we keep these for
     				// 2000ms to avoid redundant feedback
@@ -290,10 +290,10 @@ public abstract class AbstractRTCPSession {
     		// Gather what we want to return
     		if(count != 0) {
     			li = ll.listIterator();
-    			AbstractRtcpPkt[] ret = new AbstractRtcpPkt[count];
+    			RtcpPkt[] ret = new RtcpPkt[count];
     	
     			while(count > 0) {
-    			    AbstractRtcpPkt aPkt = li.next();
+    			    RtcpPkt aPkt = li.next();
     				if(! aPkt.received) {
     					ret[ret.length - count] = aPkt; 
     					count--;
@@ -319,15 +319,15 @@ public abstract class AbstractRTCPSession {
     	if(ssrc > 0) {
     		this.fbQueue.remove(ssrc);
     	} else { 
-    		Enumeration<LinkedList<AbstractRtcpPkt>> enu = this.fbQueue.elements();
+    		Enumeration<LinkedList<RtcpPkt>> enu = this.fbQueue.elements();
     		long curTime = System.currentTimeMillis();
     		long maxDelay = curTime - rtpSession.fbMaxDelay;
     		long keepDelay =  curTime - 2000;
     
     		while(enu.hasMoreElements()) {
-    			ListIterator<AbstractRtcpPkt> li = enu.nextElement().listIterator();
+    			ListIterator<RtcpPkt> li = enu.nextElement().listIterator();
     			while(li.hasNext()) {
-    				AbstractRtcpPkt aPkt = li.next();
+    				RtcpPkt aPkt = li.next();
     				if(aPkt.received) {
     					//This is a packet received, we keep these for
     					// 2000ms to avoid redundant feedback
@@ -379,8 +379,8 @@ public abstract class AbstractRTCPSession {
      * @param two packet
      * @return true if they are equivalent, false otherwise 
      */
-    private boolean equivalent(AbstractRtcpPkt one,
-                               AbstractRtcpPkt two) {
+    private boolean equivalent(RtcpPkt one,
+                               RtcpPkt two) {
                             	// Cheap checks
                             	if(one.packetType != two.packetType)
                             		return false;

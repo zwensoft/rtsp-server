@@ -23,7 +23,7 @@ package jlibrtp;
  * 
  * @author Arne Kepp
  */
-public class RtcpPktBYE extends AbstractRtcpPkt {
+public class RtcpPktBYE extends RtcpPkt {
 	/** SSRCs saying bye, 32xn bits, n<16 */
 	protected long[] ssrcArray = null;
 	/** Optional reason */
@@ -42,7 +42,7 @@ public class RtcpPktBYE extends AbstractRtcpPkt {
 	public RtcpPktBYE(byte[] aRawPkt, int start) {
 		rawPkt = aRawPkt;
 		if(!super.parseHeaders(start) || packetType != 203 ) {
-			if(AbstractRTPSession.rtpDebugLevel > 2) {
+			if(RTPSession.rtpDebugLevel > 2) {
 				System.out.println(" <-> RtcpPktBYE.parseHeaders() etc. problem");
 			}
 			super.problem = -203;

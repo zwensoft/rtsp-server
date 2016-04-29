@@ -5,12 +5,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
 
-import jlibrtp.AbstractRtcpPkt;
+import jlibrtp.RtcpPkt;
 import jlibrtp.RtcpPktBYE;
 import jlibrtp.RtcpPktRR;
 import jlibrtp.RtcpPktSR;
 import jlibrtp.StaticProcs;
-import jlibrtp.udp.RtcpPkt;
+import jlibrtp.udp.UDPRtcpPkt;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory;
 public class RTCPCodec {
     private static final Logger logger = LoggerFactory.getLogger(RTCPCodec.class);
 
-    public static List<AbstractRtcpPkt> decode(InterLeavedRTPSession rtpSession, ByteBuffer rawPktBuf) {
+    public static List<RtcpPkt> decode(InterLeavedRTPSession rtpSession, ByteBuffer rawPktBuf) {
         final byte[] rawPkt = new byte[rawPktBuf.remaining()];
         final int packetSize = rawPktBuf.remaining();
         rawPktBuf.get(rawPkt);
@@ -27,10 +27,10 @@ public class RTCPCodec {
     }
 
 
-    public static List<AbstractRtcpPkt> decode(InterLeavedRTPSession rtpSessions,
+    public static List<RtcpPkt> decode(InterLeavedRTPSession rtpSessions,
                                         final byte[] rawPkt,
                                         final int packetSize) {
-        List<AbstractRtcpPkt> pkts = new ArrayList<AbstractRtcpPkt>();
+        List<RtcpPkt> pkts = new ArrayList<RtcpPkt>();
         try {
             doDecode(rtpSessions, rawPkt, packetSize, pkts);
         } catch (Exception e) {
@@ -43,7 +43,7 @@ public class RTCPCodec {
     private static void doDecode(InterLeavedRTPSession rtpSessions,
                                  final byte[] rawPkt,
                                  final int packetSize,
-                                 List<AbstractRtcpPkt> out) {
+                                 List<RtcpPkt> out) {
         // Chop it up
         int start = 0;
         int problem = 0;
@@ -100,14 +100,14 @@ public class RTCPCodec {
     } 
     
     
-    public static byte[] encode(List<RtcpPkt> rtcpPkts) {
-        ListIterator<RtcpPkt>  iter = rtcpPkts.listIterator();
+    public static byte[] encode(List<UDPRtcpPkt> rtcpPkts) {
+        ListIterator<UDPRtcpPkt>  iter = rtcpPkts.listIterator();
 
         byte[] rawPkt = new byte[1500];
         int index = 0;
         
         while(iter.hasNext()) {
-            AbstractRtcpPkt aPkt = (AbstractRtcpPkt) iter.next();
+            RtcpPkt aPkt = (RtcpPkt) iter.next();
             
             if(aPkt.packetType() == 200) {
                 RtcpPktSR pkt = (RtcpPktSR) aPkt;

@@ -18,13 +18,13 @@
  */
 package com.sengled.cloud.mediaserver.rtsp.rtp;
 
-import jlibrtp.AbstractParticipant;
+import jlibrtp.Participant;
 
 /**
  * A participant represents a peer in an RTPSession. Based on the information stored on 
  * these objects, packets are processed and statistics generated for RTCP.
  */
-public class InterLeavedParticipant extends AbstractParticipant {
+public class InterLeavedParticipant extends Participant {
     private InterLeavedRTPSession session;
     
     

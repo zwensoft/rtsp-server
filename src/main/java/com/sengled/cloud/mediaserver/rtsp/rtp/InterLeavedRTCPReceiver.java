@@ -3,9 +3,9 @@ package com.sengled.cloud.mediaserver.rtsp.rtp;
 import java.util.Iterator;
 import java.util.List;
 
-import jlibrtp.AbstractParticipant;
-import jlibrtp.AbstractRtcpPkt;
-import jlibrtp.AbstractRtcpPktSDES;
+import jlibrtp.Participant;
+import jlibrtp.RtcpPkt;
+import jlibrtp.RtcpPktSDES;
 import jlibrtp.RtcpPktAPP;
 import jlibrtp.RtcpPktBYE;
 import jlibrtp.RtcpPktRR;
@@ -50,8 +50,8 @@ public class InterLeavedRTCPReceiver {
      * @param packet the packet that notified us
      * @return the relevant participant, possibly newly created
      */
-    private AbstractParticipant findParticipant(long ssrc) {
-        AbstractParticipant p = rtpSession.partDb().getParticipant(ssrc);
+    private Participant findParticipant(long ssrc) {
+        Participant p = rtpSession.partDb().getParticipant(ssrc);
         if(p == null) {
             p = new InterLeavedParticipant(rtpSession, ssrc);
             rtpSession.partDb().addParticipant(2,p);
@@ -70,16 +70,16 @@ public class InterLeavedRTCPReceiver {
     public int parsePacket(byte[] rawPkt) {
 
             // Parse the received compound RTCP (?) packet
-            List<AbstractRtcpPkt> rtcpPkts = RTCPCodec.decode(rtpSession, rawPkt, rawPkt.length);
+            List<RtcpPkt> rtcpPkts = RTCPCodec.decode(rtpSession, rawPkt, rawPkt.length);
             logger.info("CompRtcp: {}.", rtcpPkts);
 
             //Loop over the information
-            Iterator<AbstractRtcpPkt> iter = rtcpPkts.iterator();
+            Iterator<RtcpPkt> iter = rtcpPkts.iterator();
 
             long curTime = System.currentTimeMillis();
 
             while(iter.hasNext()) {
-                AbstractRtcpPkt aPkt = (AbstractRtcpPkt) iter.next();
+                RtcpPkt aPkt = (RtcpPkt) iter.next();
 
                 // Our own packets should already have been filtered out.
                 if(aPkt.ssrc() == rtpSession.ssrc()) {
@@ -92,7 +92,7 @@ public class InterLeavedRTCPReceiver {
                 if( aPkt.getClass() == RtcpPktRR.class) {
                     RtcpPktRR rrPkt = (RtcpPktRR) aPkt;
 
-                    AbstractParticipant p = findParticipant(rrPkt.ssrc());
+                    Participant p = findParticipant(rrPkt.ssrc());
                     p.lastRtcpPkt = curTime;
 
                     if(rtpSession.rtcpAppIntf() != null) {
@@ -105,7 +105,7 @@ public class InterLeavedRTCPReceiver {
                 } else if(aPkt.getClass() == RtcpPktSR.class) {
                     RtcpPktSR srPkt = (RtcpPktSR) aPkt;
 
-                    AbstractParticipant p = findParticipant(srPkt.ssrc());
+                    Participant p = findParticipant(srPkt.ssrc());
                     p.lastRtcpPkt = curTime;
 
                     if(p != null) {
@@ -146,7 +146,7 @@ public class InterLeavedRTCPReceiver {
 
                     /**        Source Descriptions       **/
                 } else if(aPkt.getClass() == UDPRtcpPktSDES.class) {
-                    AbstractRtcpPktSDES sdesPkt = (AbstractRtcpPktSDES) aPkt;               
+                    RtcpPktSDES sdesPkt = (RtcpPktSDES) aPkt;               
 
                     // The the participant database is updated
                     // when the SDES packet is reconstructed by CompRtcpPkt 
@@ -159,7 +159,7 @@ public class InterLeavedRTCPReceiver {
                     RtcpPktBYE byePkt = (RtcpPktBYE) aPkt;
 
                     long time = System.currentTimeMillis();
-                    AbstractParticipant[] partArray = new AbstractParticipant[byePkt.ssrcArray().length];
+                    Participant[] partArray = new Participant[byePkt.ssrcArray().length];
 
                     for(int i=0; i<byePkt.ssrcArray().length; i++) {
                         partArray[i] = rtpSession.partDb().getParticipant(byePkt.ssrcArray()[i]);
@@ -175,7 +175,7 @@ public class InterLeavedRTCPReceiver {
                 } else if(aPkt.getClass() == RtcpPktAPP.class) {
                     RtcpPktAPP appPkt = (RtcpPktAPP) aPkt;
 
-                    AbstractParticipant part = findParticipant(appPkt.ssrc());
+                    Participant part = findParticipant(appPkt.ssrc());
                     
                     if(rtpSession.rtcpAppIntf() != null) {
                         rtpSession.rtcpAppIntf().APPPktReceived(part, appPkt.itemCount(), appPkt.pktName(), appPkt.pktData());

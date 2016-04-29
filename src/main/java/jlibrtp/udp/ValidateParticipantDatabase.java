@@ -21,7 +21,7 @@ package jlibrtp.udp;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 
-import jlibrtp.AbstractRTPSession;
+import jlibrtp.RTPSession;
 
 public class ValidateParticipantDatabase {
 
@@ -41,9 +41,9 @@ public class ValidateParticipantDatabase {
 		
 		UDPParticipantDatabase partDb = new UDPParticipantDatabase(rtpSession);
 		
-		Participant part0 = new Participant("127.0.0.1", 4545, 4555);
-		Participant part1 = new Participant("127.0.0.1", 4546, 4556);
-		Participant part2 = new Participant("127.0.0.1", 4547, 4556);
+		UDPParticipant part0 = new UDPParticipant("127.0.0.1", 4545, 4555);
+		UDPParticipant part1 = new UDPParticipant("127.0.0.1", 4546, 4556);
+		UDPParticipant part2 = new UDPParticipant("127.0.0.1", 4547, 4556);
 		
 		partDb.addParticipant(0,part0);
 		partDb.addParticipant(0,part1);

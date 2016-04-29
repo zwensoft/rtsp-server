@@ -42,15 +42,15 @@ public class PktBufNode {
 	/** The sequence number associated with this node */
 	protected int seqNum;
 	/** The payload, a parsed RTP Packet */
-	protected RtpPkt pkt = null;
+	protected ByteArrayRtpPkt pkt = null;
 	
 	/**
 	 * Create a new packet buffer node based on a packet
 	 * @param aPkt the packet
 	 */
-	protected PktBufNode(RtpPkt aPkt) {
+	protected PktBufNode(ByteArrayRtpPkt aPkt) {
 		pkt = aPkt;
-		timeStamp = aPkt.getTimeStamp();
+		timeStamp = aPkt.getTimestamp();
 		seqNum = aPkt.getSeqNumber();
 		pktCount = 1;
 	}

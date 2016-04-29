@@ -22,7 +22,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 
-import jlibrtp.AbstractRTCPSession;
+import jlibrtp.RTCPSession;
 
 
 /**
@@ -32,7 +32,7 @@ import jlibrtp.AbstractRTCPSession;
  * @author Arne Kepp
  *
  */
-public class UDPRTCPSession extends AbstractRTCPSession {
+public class UDPRTCPSession extends RTCPSession {
 	/** Unicast socket */
 	protected DatagramSocket rtcpSock = null;
 	/** Multicast socket */

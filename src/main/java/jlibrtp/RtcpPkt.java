@@ -5,8 +5,8 @@ import org.slf4j.LoggerFactory;
 
 
 
-public class AbstractRtcpPkt {
-    static final Logger logger = LoggerFactory.getLogger(AbstractRtcpPkt.class);
+public class RtcpPkt {
+    static final Logger logger = LoggerFactory.getLogger(RtcpPkt.class);
     
     /** Whether a problem has been encountered during parsing */
     public int problem = 0;
@@ -29,7 +29,7 @@ public class AbstractRtcpPkt {
     /** Only used for feedback message: Whether this packet was received */
     protected boolean received = false;
 
-    public AbstractRtcpPkt() {
+    public RtcpPkt() {
         super();
     }
 

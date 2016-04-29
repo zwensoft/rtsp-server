@@ -18,7 +18,7 @@
  */
 package jlibrtp;
 
-import jlibrtp.udp.RtcpPkt;
+import jlibrtp.udp.UDPRtcpPkt;
 
 import org.apache.commons.lang.time.DateFormatUtils;
 import org.slf4j.Logger;
@@ -31,7 +31,7 @@ import com.sengled.cloud.mediaserver.rtsp.NtpTime;
  * 
  * @author Arne Kepp
  */
-public class RtcpPktSR extends RtcpPkt {
+public class RtcpPktSR extends UDPRtcpPkt {
 	private static final Logger logger = LoggerFactory.getLogger(RtcpPktSR.class);
 	
 	/** NTP timestamp, MSB */
