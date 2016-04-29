@@ -47,8 +47,8 @@ public class Task {
         @Override
         public void run() {
             try {
-                boolean cancle = task.call();
-                if(autoCancle || cancle) {
+                Boolean cancle = task.call();
+                if(autoCancle || (null != cancle && cancle)) {
                     cancel();
                 }
             } catch(Exception e) {
