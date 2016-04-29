@@ -1,13 +1,5 @@
 package com.sengled.cloud.mediaserver.rtsp.codec;
 
-import java.util.List;
-
-
-
-
-import com.sengled.cloud.mediaserver.rtsp.rtp.RTCPContent;
-import com.sengled.cloud.mediaserver.rtsp.rtp.RTPContent;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -22,12 +14,19 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.AppendableCharSequence;
 
+import java.util.List;
+
+import com.sengled.cloud.mediaserver.rtsp.rtp.RtpPkt;
+import com.sengled.cloud.mediaserver.rtsp.rtp.RtcpContent;
+
 /**
  * @see io.netty.handler.codec.rtsp.RtspObjectDecoder
  * @author 陈修恒
  * @date 2016年4月15日
  */
 public abstract class RtspObjectDecoder extends ByteToMessageDecoder {
+
+    public static final String NAME = "RTSP-DECODER";
     private static org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(RtspObjectDecoder.class);
     
     enum STATE {
@@ -136,11 +135,11 @@ public abstract class RtspObjectDecoder extends ByteToMessageDecoder {
                 if (rtpChannle % 2 ==0) {
                     ByteBuf rtpContent = in.alloc().buffer(rtpLength);
                     in.readBytes(rtpContent);
-                    out.add(new RTPContent(rtpChannle, rtpContent));
+                    out.add(new RtpPkt(rtpChannle, rtpContent));
                 } else {
-                    ByteBuf rtpContent = in.alloc().buffer(rtpLength);
-                    in.readBytes(rtpContent);
-                    out.add(new RTCPContent(rtpChannle, rtpContent));
+                    byte[] rtcp = new byte[rtpLength];
+                    in.readBytes(rtcp);
+                    out.add(new RtcpContent(rtpChannle, rtcp));
                 }
 
                 state(STATE.READ_FIRST_BYTE, remains);

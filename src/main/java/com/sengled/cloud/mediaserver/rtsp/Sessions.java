@@ -1,7 +1,5 @@
 package com.sengled.cloud.mediaserver.rtsp;
 
-import io.netty.util.ReferenceCountUtil;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -18,9 +16,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.sengled.cloud.mediaserver.event.Listener;
-import com.sengled.cloud.mediaserver.rtsp.rtp.RtpEvent;
 
 public class Sessions {
     private static final Logger logger = LoggerFactory.getLogger(Sessions.class);
@@ -52,7 +47,7 @@ public class Sessions {
     
     
     private Map<String, RtspSession> sessions = new ConcurrentHashMap<String, RtspSession>();
-    private ConcurrentHashMap<String, List<Listener>> dispatchers = new ConcurrentHashMap<String, List<Listener>>();
+    private ConcurrentHashMap<String, List<RtspSessionListener>> dispatchers = new ConcurrentHashMap<String, List<RtspSessionListener>>();
     
     private ExecutorService threads = Executors.newFixedThreadPool(1);
     
@@ -113,35 +108,37 @@ public class Sessions {
         return oldSession;
     }
 
-    public void register(String name, Listener listener) {
+    public void register(String name, RtspSessionListener listener) {
         if (null != listener) {
-            dispatchers.putIfAbsent(name, new CopyOnWriteArrayList<Listener>());
+            dispatchers.putIfAbsent(name, new CopyOnWriteArrayList<RtspSessionListener>());
             dispatchers.get(name).add(listener);
         }
     }
 
-    public void unregister(String uri, Listener listener) {
+    public void unregister(String uri, RtspSessionListener listener) {
         if (null != listener) {
-            dispatchers.putIfAbsent(uri, new CopyOnWriteArrayList<Listener>());
+            dispatchers.putIfAbsent(uri, new CopyOnWriteArrayList<RtspSessionListener>());
             dispatchers.get(uri).remove(listener);
         }
     }
     
-    public void dispatch(String name, RtpEvent msg) {
-        try {
-            List<Listener> listen = dispatchers.get(name);
-            if (null != listen) {
-                logger.trace("dispatch {} to {} listener(s) ", msg, listen.size());
+    public <T> void dispatch(String name, RtpEvent<T> event) {
+        List<RtspSessionListener> listens = dispatchers.get(name);
+        if (null != listens) {
+            logger.trace("dispatch {} to {} listener(s) ", event, listens.size());
 
-                for (Listener rtspListener : listen) {
-                    rtspListener.on(msg.duplicate().retain());
+            for (RtspSessionListener rtspListener : listens) {
+                try{
+                    rtspListener.on(event);
+                } catch(Exception ex){
+                    // 独立 Listener 的异常不能传播到其他 listener
+                    logger.warn("{}#on({}) Failed.", rtspListener, event, ex);
+                    rtspListener.fireExceptionCaught(ex);
                 }
-
-            } else {
-                logger.trace("NO Listeners For {}", name);
             }
-        } finally {
-            ReferenceCountUtil.release(msg);
+
+        } else {
+            logger.trace("NO Listeners For {}", name);
         }
     }
     

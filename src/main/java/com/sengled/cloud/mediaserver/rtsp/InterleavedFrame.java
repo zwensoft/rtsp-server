@@ -1,19 +1,31 @@
-package com.sengled.cloud.mediaserver.rtsp.codec;
+package com.sengled.cloud.mediaserver.rtsp;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
 
-public class DefaultInterleavedFrame extends DefaultByteBufHolder implements InterleavedFrame  {
+/**
+ * Rtsp Interleaved Frame
+ * <p>
+ * RTP Over TCP
+ * 
+ * @author 陈修恒
+ * @date 2016年4月29日
+ */
+public class InterleavedFrame extends DefaultByteBufHolder implements InterLeaved  {
     private int channel;
     
-    public DefaultInterleavedFrame(int channel, ByteBuf payload) {
+    public InterleavedFrame(int channel, ByteBuf payload) {
         super(payload);
         this.channel = channel;
     }
     
     protected long getUnsignedInt(int offset) {
-        ByteBuf content = content();
-        return content.getUnsignedInt(content.readerIndex() + offset);
+        try {
+            ByteBuf content = content();
+            return content.getUnsignedInt(content.readerIndex() + offset);
+        } catch(Exception e){
+            throw new IllegalArgumentException(e);
+        }
     }
     
     protected void setUnsignedInt(int offset, long value) {
@@ -38,36 +50,40 @@ public class DefaultInterleavedFrame extends DefaultByteBufHolder implements Int
     }
     
     
-    
     /* (non-Javadoc)
-     * @see com.sengled.cloud.mediaserver.codec.rtsp.InterleavedFrame#getChannel()
+     * @see com.sengled.cloud.mediaserver.rtsp.codec.IInterLeavedFrame#getChannel()
      */
     @Override
-    public int getChannel() {
+    public int channel() {
         return channel;
     }
 
     /* (non-Javadoc)
-     * @see com.sengled.cloud.mediaserver.codec.rtsp.InterleavedFrame#copy()
+     * @see com.sengled.cloud.mediaserver.rtsp.codec.IInterLeavedFrame#content()
      */
     @Override
-    public DefaultInterleavedFrame copy() {
-        return new DefaultInterleavedFrame(channel, content().copy());
+    public ByteBuf content() {
+        return super.content();
+    }
+    
+    @Override
+    public InterleavedFrame copy() {
+        return new InterleavedFrame(channel, content().copy());
     }
     
     /* (non-Javadoc)
      * @see com.sengled.cloud.mediaserver.codec.rtsp.InterleavedFrame#duplicate()
      */
     @Override
-    public DefaultInterleavedFrame duplicate() {
-        return new DefaultInterleavedFrame(channel, content().duplicate());
+    public InterleavedFrame duplicate() {
+        return new InterleavedFrame(channel, content().duplicate());
     }
     
     /* (non-Javadoc)
      * @see com.sengled.cloud.mediaserver.codec.rtsp.InterleavedFrame#retain()
      */
     @Override
-    public DefaultInterleavedFrame retain() {
+    public InterleavedFrame retain() {
         content().retain();
         return this;
     }
@@ -76,7 +92,7 @@ public class DefaultInterleavedFrame extends DefaultByteBufHolder implements Int
      * @see com.sengled.cloud.mediaserver.codec.rtsp.InterleavedFrame#retain(int)
      */
     @Override
-    public DefaultInterleavedFrame retain(int increment) {
+    public InterleavedFrame retain(int increment) {
         content().retain(increment);
         return this;
     }

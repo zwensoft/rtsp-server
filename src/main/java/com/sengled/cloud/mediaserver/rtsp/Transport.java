@@ -55,6 +55,10 @@ public class Transport {
         return values;
     }
     
+    public void setSsrc(long ssrc) {
+        this.parameters.put("ssrc", Long.toHexString(ssrc));
+    }
+    
     public void setParameter(String name, String value) {
         this.parameters.put(name, value);
     }
@@ -98,12 +102,18 @@ public class Transport {
         
         String key;
         
-        key = INTERLEAVED;
+        key = "interleaved";
         if (parameters.containsKey(key)) {
             buf.append(";").append(key).append("=").append(parameters.get(key));
         }
         
         key = "mode";
+        if (parameters.containsKey(key)) {
+            buf.append(";").append(key).append("=").append(parameters.get(key));
+        }
+        
+        
+        key = "ssrc";
         if (parameters.containsKey(key)) {
             buf.append(";").append(key).append("=").append(parameters.get(key));
         }

@@ -5,7 +5,8 @@ import gov.nist.javax.sdp.SessionDescriptionImpl;
 import gov.nist.javax.sdp.fields.SDPField;
 import gov.nist.javax.sdp.parser.ParserFactory;
 import gov.nist.javax.sdp.parser.SDPParser;
-import io.netty.util.ReferenceCountUtil;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 
 import java.io.Serializable;
 import java.text.ParseException;
@@ -20,21 +21,23 @@ import javax.sdp.SdpParseException;
 import javax.sdp.SessionDescription;
 import javax.sip.TransportNotSupportedException;
 
+import jlibrtp.tcp.InterLeavedRTPSession;
+
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.sengled.cloud.mediaserver.event.Listener;
-import com.sengled.cloud.mediaserver.rtsp.rtp.RTPContent;
 import com.sengled.cloud.mediaserver.rtsp.rtp.RTPStream;
+import com.sengled.cloud.mediaserver.rtsp.rtp.RtcpContent;
+import com.sengled.cloud.mediaserver.rtsp.rtp.RtpPkt;
 
 /**
  * 一个 rtsp 会话。
  * 
  * <p>
  * <ul>
- * <li>1、通过 {@link #dispatch(RTPContent)} 把流数据分发给他的监听者</li>
+ * <li>1、通过 {@link #onRtcpEvent(RtpPkt)} 把流数据分发给他的监听者</li>
  * <li>2、通过 {@link #getSessionDescription()} 获取 SDP 信息</li>
  * </ul>
  * @author 陈修恒
@@ -58,27 +61,39 @@ public class RtspSession implements Serializable {
     private String name;
     private String uri;
     private SessionMode mode = SessionMode.OTHERS;
-    private Listener listener;
+    final private ChannelHandlerContext ctx;
 
     private SessionDescription sd;
     private RTPStream[] streams;
+    private InterLeavedRTPSession[] rtpSessions = null;
     
-    public RtspSession(String url) {
-        this(getUri(url), RandomStringUtils.random(16, false, true));
+    private RtspSessionListener listener;
+    private RtspSessionDispatcher dispatcher;
+    
+    public RtspSession(ChannelHandlerContext ctx, String url) {
+        this(ctx, getUri(url), RandomStringUtils.random(16, false, true));
     }
     
-    public RtspSession(String url, String sessionId) {
-        this(url, sessionId, getUri(url));
+    public RtspSession(ChannelHandlerContext ctx, String url, String sessionId) {
+        this(ctx, url, sessionId, getUri(url));
     }
 
-    public RtspSession(String url, String sessionId, String name) {
+    public RtspSession(ChannelHandlerContext ctx, String url, String sessionId, String name) {
+        this.ctx = ctx;
         this.id = sessionId;
         this.uri = getUri(url);
         this.name = name;
     }
     
+    public Channel channel() {
+        return ctx.channel();
+    }
     
-    public String setupStream(String url, String transport) throws TransportNotSupportedException {
+    public ChannelHandlerContext channelHandlerContext() {
+        return ctx;
+    }
+    
+    public Transport setupStream(String url, String transport) throws TransportNotSupportedException {
         Transport t = Transport.parse(transport);
         if (!StringUtils.equals(Transport.RTP_AVP_TCP, t.getTranport())) {
             throw new TransportNotSupportedException(t.getTranport());
@@ -99,7 +114,8 @@ public class RtspSession implements Serializable {
             try {
                 if (StringUtils.endsWith(uri, getUri(dm.getAttribute("control")))) {
                     streams[mediaIndex] = new RTPStream(mediaIndex, dm, interleaved[0], interleaved[1]);
-                    return t.toString();
+                    rtpSessions[mediaIndex] = new InterLeavedRTPSession(ctx.channel(), interleaved[0], interleaved[1]);
+                    return t;
                 }
             } catch (SdpParseException ex) {
                 logger.warn("{}", ex.getMessage(), ex);
@@ -132,6 +148,14 @@ public class RtspSession implements Serializable {
         return null;
     }
     
+    public RTPStream[] getStreams() {
+        return streams;
+    }
+    
+    public InterLeavedRTPSession[] getRTPSessions() {
+        return rtpSessions;
+    }
+    
     public int getStreamIndex(String url) {
         String uri = getUri(url);
         int mediaIndex = 0;
@@ -139,6 +163,58 @@ public class RtspSession implements Serializable {
             try {
                 if (StringUtils.endsWith(uri, getUri(dm.getAttribute("control")))) {
                     return mediaIndex;
+                }
+            } catch (SdpParseException ex) {
+                logger.warn("{}", ex.getMessage(), ex);
+            }
+            
+            mediaIndex ++;
+        }
+        
+        throw new IllegalArgumentException("stream[" + url + "] Not Found IN " + sd);
+    }
+    
+    
+    
+    public InterLeavedRTPSession getRTPSessionByChannel(int channel) {
+        for (int i = 0; i < streams.length; i++) {
+            if (null == streams[i] ) {
+                continue;
+            }
+
+            if (streams[i].getRtcpChannel() == channel
+                    || streams[i].getRtpChannel() == channel) {
+                return rtpSessions[i];
+            }
+        }
+        
+        
+        return null;
+    }
+    
+    public int getStreamIndex(InterLeaved interLeaved) {
+        int channel = interLeaved.channel();
+
+        for (int i = 0; i < streams.length; i++) {
+            if (null == streams[i] ) {
+                continue;
+            }
+
+            if (streams[i].getRtcpChannel() == channel
+                    || streams[i].getRtpChannel() == channel) {
+                return i;
+            }
+        }
+        
+        return -1;
+    }
+    public RTPStream getStream(String url) {
+        String uri = getUri(url);
+        int mediaIndex = 0;
+        for (MediaDescription dm : getMediaDescriptions(sd)) {
+            try {
+                if (StringUtils.endsWith(uri, getUri(dm.getAttribute("control")))) {
+                    return streams[mediaIndex];
                 }
             } catch (SdpParseException ex) {
                 logger.warn("{}", ex.getMessage(), ex);
@@ -201,16 +277,7 @@ public class RtspSession implements Serializable {
 
         this.sd = sd;
         this.streams = new RTPStream[mediaDescripts.size()];
-        return this;
-    }
-
-    
-    public RtspSession withListener(Listener listener) {
-        // remove old
-        Sessions.getInstance().unregister(uri, this.listener);
-        
-        // use new
-        this.listener = listener;
+        this.rtpSessions = new InterLeavedRTPSession[mediaDescripts.size()];
         return this;
     }
     
@@ -220,8 +287,11 @@ public class RtspSession implements Serializable {
             case PLAY:
                 this.sd = sessions.getSessionDescription(uri);
                 this.streams = new RTPStream[getMediaDescriptions(sd).size()];
+                this.rtpSessions = new InterLeavedRTPSession[getMediaDescriptions(sd).size()];
+                this.listener = new RtspSessionListener(this, 128 * 1024); 
                 break;
             case PUBLISH:
+                this.dispatcher = new RtspSessionDispatcher(this);
                 break;
             default:
                 break;
@@ -250,11 +320,12 @@ public class RtspSession implements Serializable {
         }
     }
 
-    public void destroy() {
+    public void destroy(String reason) {
         Sessions sessions = Sessions.getInstance();
         
         switch (mode) {
             case PUBLISH:
+                dispatcher().teardown(reason);
                 sessions.removeSession(name, this);
                 break;
             case PLAY:
@@ -265,42 +336,6 @@ public class RtspSession implements Serializable {
     }
     
 
-    public void dispatch(RTPContent msg) {
-        try {
-            if (mode == SessionMode.PUBLISH && streams.length > 0) {
-                int channel = msg.getChannel();
-    
-                // 分发
-                for (int streamIndex = 0; null != streams && streamIndex < streams.length; streamIndex++) {
-                    if (streams[streamIndex].getRtpChannel() == channel) {
-                        streams[streamIndex].dispatch(name, streamIndex, msg.retain());
-                        break;
-                    }
-                }
-                
-                /* 匹配时间戳
-                int numStreams = numStreams();
-                if (numStreams == 2 
-                        && null != streams[0] && streams[0].isStarted() 
-                        && null != streams[1] && streams[1].isStarted()) {
-                    long t0 = streams[0].getTimestampMillis();
-                    long t1 = streams[1].getTimestampMillis();
-                    long delay = t0 - t1;
-                    if (delay > 500) {
-                        logger.info(" stream#0 fast {}ms then stream#1", delay);
-                        streams[1].setTimestampMillis(t0);
-                    } else if(delay < - 500) {
-                        logger.info(" stream#0 late {}ms then stream#1", -delay);
-                        streams[0].setTimestampMillis(t1);
-                    } else {
-                        logger.trace("delay is {}ms between stream#0 and stream#1", delay);
-                    }
-                }*/
-            }
-        } finally {
-            ReferenceCountUtil.release(msg);
-        }
-    }
     
     public String getUri() {
         return uri;
@@ -323,6 +358,10 @@ public class RtspSession implements Serializable {
         return id;
     }
 
+    public String getName() {
+        return name;
+    }
+    
     public boolean isStreamSetup(int streamIndex) {
         return null != streams[streamIndex];
     }
@@ -340,6 +379,48 @@ public class RtspSession implements Serializable {
     public SessionMode getMode() {
         return mode;
     }
+ 
+    public int getStreamIndex(int channel) {
+        for (int i = 0; i < rtpSessions.length; i++) {
+            InterLeavedRTPSession s = rtpSessions[i];
+            if (null != s && s.rtpChannel() == channel) {
+                return i;
+            }
+            
+            if (null != s && s.rtcpChannel() == channel) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+
+    public void onRtcpEvent(RtcpContent event) {
+        if (SessionMode.PUBLISH == mode) {
+            dispatcher().onRtcpEvent(event);
+        } else { 
+            listener().onRtcpEvent(event);
+        }
+    }
+    
+    public RtspSessionDispatcher dispatcher() {
+        if (SessionMode.PUBLISH == mode) {
+            return dispatcher;
+        } else {
+            throw new UnsupportedOperationException("SessionMode[" + mode + "] dont supporte Dispatcher");
+        }
+    }
+    
+    
+    public RtspSessionListener listener() {
+        if (SessionMode.PLAY == mode) {
+            return listener;
+        } else {
+            throw new UnsupportedOperationException("SessionMode[" + mode + "] dont supporte Dispatcher");
+        }
+    }
+    
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
