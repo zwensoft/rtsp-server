@@ -1,8 +1,8 @@
 package com.sengled.cloud.async;
 
-import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.Callable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,58 +20,41 @@ public class Task {
     
     private static final Timer timer = new Timer(true);
     
-    public static TimerTask setTimeout(final Runnable task, long delay) {
-        final TimerTask timerTask = new TimerTask() {
-            @Override
-            public void run() {
-                try {
-                    task.run();
-                } catch(Exception e) {
-                    logger.warn("fail execute timeout task '{}'", task, e);
-                    cancel();
-                }
-            }
-        };
+    public static TimerTask setTimeout(final Callable<Boolean> task, long delay) {
+        final TimerTask timerTask = new TimerWraper(task, true);
 
         timer.schedule(timerTask, delay);
         return timerTask;
     }
     
-    public static TimerTask setInterval(final Runnable task, long delay, long period) {
-        final TimerTask timerTask = new TimerTask() {
-            @Override
-            public void run() {
-                try {
-                    task.run();
-                } catch(Exception e) {
-                    logger.warn("fail execute interval task '{}'", task, e);
-                    cancel();
-                }
-            }
-        };
+    public static TimerTask setInterval(final Callable<Boolean> task, long delay, long period) {
+        final TimerTask timerTask = new TimerWraper(task, false);
 
         timer.scheduleAtFixedRate(timerTask, delay, period);
         return timerTask;
     }
     
-    
-    public static void main(String[] args) throws IOException {
-        Task.setTimeout(new Runnable() {
-            
-            @Override
-            public void run() {
-                System.out.println("<<heloo");
-            }
-        }, 25);
+    private static class TimerWraper extends TimerTask {
+        private Callable<Boolean> task;
+        private boolean autoCancle = false;
         
-        Task.setInterval(new Runnable() {
-            
-            @Override
-            public void run() {
-                System.out.println(2);
-            }
-        }, 250, 1200);
+        public TimerWraper(Callable<Boolean> task, boolean autoCancle) {
+            super();
+            this.task = task;
+            this.autoCancle = autoCancle;
+        }
 
-        System.in.read();
+        @Override
+        public void run() {
+            try {
+                boolean cancle = task.call();
+                if(autoCancle || cancle) {
+                    cancel();
+                }
+            } catch(Exception e) {
+                logger.warn("fail execute interval task '{}'", task, e);
+                cancel();
+            }
+        }
     }
 }
