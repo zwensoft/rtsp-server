@@ -33,11 +33,13 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.sengled.cloud.mediaserver.rtsp.FullRtpPkt;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession.SessionMode;
 import com.sengled.cloud.mediaserver.rtsp.Transport;
-import com.sengled.cloud.mediaserver.rtsp.rtp.RTCPContent;
-import com.sengled.cloud.mediaserver.rtsp.rtp.RTPContent;
+import com.sengled.cloud.mediaserver.rtsp.codec.RtpObjectAggregator;
+import com.sengled.cloud.mediaserver.rtsp.codec.RtspObjectDecoder;
+import com.sengled.cloud.mediaserver.rtsp.rtp.RtcpContent;
 import com.sengled.cloud.mediaserver.url.URLObject;
 
 /**
@@ -213,12 +215,12 @@ public class RtspClient implements Closeable {
         public void channelRead(ChannelHandlerContext ctx,
                                 Object msg) throws Exception {
             try {
-                if (msg instanceof FullHttpResponse) {
+                if (msg instanceof FullRtpPkt) {
+                    handleRtpPacket(((FullRtpPkt)msg));
+                } else if (msg instanceof RtcpContent) {
+                    handleRtcpPacket(((RtcpContent)msg));
+                } else if (msg instanceof FullHttpResponse) {
                     handleHttpResponse(ctx, ((FullHttpResponse) msg));
-                } else if (msg instanceof RTPContent) {
-                    handleRtpPacket(((RTPContent)msg));
-                } else if (msg instanceof RTCPContent) {
-                    logger.debug("{}", msg);
                 } else {
                     logger.warn("what's this '{}'?", msg);
                 }
@@ -227,9 +229,15 @@ public class RtspClient implements Closeable {
             }
         }
 
-        private void handleRtpPacket(Object msg) {
+        private void handleRtcpPacket(RtcpContent rtcpContent) {
             if (null != session) {
-                session.dispatch(((RTPContent) msg).retain());
+                session.dispatcher().onRtcpEvent(rtcpContent);
+            }
+        }
+
+        private void handleRtpPacket(FullRtpPkt msg) {
+            if (null != session) {
+                session.dispatcher().dispatch(msg.retain());
             }
         }
 
@@ -241,7 +249,7 @@ public class RtspClient implements Closeable {
             HttpRequest request = null;
             if (200 == code) {
                 logger.info("{}, {} {}", response.getStatus(), requestMethod, requestUrl);
-                request = nextRequest(response);
+                request = nextRequest(ctx, response);
             } else if (RtspResponseStatuses.UNAUTHORIZED.equals(response.getStatus())) {
                 if (isAuth) {
                     throw new AuthorizedException(urlObj.getUser(), urlObj.getPassword());
@@ -277,8 +285,7 @@ public class RtspClient implements Closeable {
         }
 
  
-        private HttpRequest nextRequest(FullHttpResponse response
-                                            )
+        private HttpRequest nextRequest(ChannelHandlerContext ctx, FullHttpResponse response)
                 throws TransportNotSupportedException {
             final HttpMethod requestMethod = getRequestMethod();
             final String requestUrl = getRequestUrl();
@@ -296,26 +303,27 @@ public class RtspClient implements Closeable {
                 }
             } else if (RtspMethods.DESCRIBE.equals(requestMethod)) {
                 String sessionId = response.headers().get(RtspHeaders.Names.SESSION);
-                session = new RtspSession(urlObj.getUrl(), sessionId, name);
+                session = new RtspSession(ctx, urlObj.getUrl(), sessionId, name);
                 session.withMode(SessionMode.PUBLISH)
                         .withSdp(response.content().toString(Charset.forName("UTF-8")));
 
-                request = setupStream(0);
+                request = setupStreamRequest(0);
             } else if (RtspMethods.SETUP.equals(requestMethod)) {
                 int streamIndex = session.getStreamIndex(requestUrl);
                 String transport = response.headers().get(RtspHeaders.Names.TRANSPORT);
 
-                session.setupStream(requestUrl, transport);
-                session.setId(response.headers().get(RtspHeaders.Names.SESSION));
+                Transport t = session.setupStream(requestUrl, transport);
+                ctx.pipeline().addAfter(RtspObjectDecoder.NAME, "rtp-rtp-" + t.getInterleaved()[0], new RtpObjectAggregator(t.getInterleaved()[0]));
 
-                request = setupStream(streamIndex + 1);
+                session.setId(response.headers().get(RtspHeaders.Names.SESSION));
+                request = setupStreamRequest(streamIndex + 1);
             } else if (RtspMethods.PLAY.equals(requestMethod)) {
                 session.play();
                 connectOrFail.release(); // 握手成功
                 isConnected = true;
             } else if (RtspMethods.TEARDOWN.equals(requestMethod)) {
                 if (null != session) {
-                    session.destroy();
+                    session.destroy("client teardown");
                 }
             } else if (RtspMethods.GET_PARAMETER.equals(requestMethod)) {
                 
@@ -323,7 +331,7 @@ public class RtspClient implements Closeable {
             return request;
         }
 
-        private HttpRequest setupStream(int streamIndex) {
+        private HttpRequest setupStreamRequest(int streamIndex) {
             HttpRequest request;
             if (streamIndex < session.numStreams()) {
                 logger.info("setup stream {}/{}", streamIndex, session.numStreams());

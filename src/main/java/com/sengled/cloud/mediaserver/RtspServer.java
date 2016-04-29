@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession.SessionMode;
+import com.sengled.cloud.mediaserver.rtsp.codec.RtspObjectDecoder;
 import com.sengled.cloud.mediaserver.rtsp.codec.RtspRequestDecoder;
 
 /**
@@ -55,9 +56,9 @@ public class RtspServer {
     }
     
     public RtspServer(boolean preferDirect) {
-        this.bootstrap = makeServerBosststrap();
         this.allocator = new PooledByteBufAllocator(preferDirect);
         this.rtspHandlerClass = RtspServerInboundHandler.class;
+        this.bootstrap = makeServerBosststrap();
     }
     
     public RtspServer withHandlerClass(Class<? extends ChannelHandler> rtspHandlerClass) {
@@ -119,10 +120,10 @@ public class RtspServer {
         ServerBootstrap b = new ServerBootstrap();
 
         // server socket
-        b.group(bossGroup, workerGroup)
-         .channel(NioServerSocketChannel.class)
-         .option(ChannelOption.ALLOCATOR, allocator)
-         .option(ChannelOption.SO_BACKLOG, 0); // 服务端处理线程全忙后，允许多少个新请求进入等待。 
+        b.group(bossGroup, workerGroup);
+        b.channel(NioServerSocketChannel.class);
+        b.option(ChannelOption.ALLOCATOR, allocator);
+        b.option(ChannelOption.SO_BACKLOG, 0); // 服务端处理线程全忙后，允许多少个新请求进入等待。 
         
         // accept socket
         b.childOption(ChannelOption.SO_KEEPALIVE, true)
@@ -139,7 +140,7 @@ public class RtspServer {
                 ch.pipeline().addLast("rtspEncoder", new RtspEncoder());
         
                 // server端接收到的是httpRequest，所以要使用HttpRequestDecoder进行解码
-                ch.pipeline().addLast("rtspDecoder", new RtspRequestDecoder());
+                ch.pipeline().addLast(RtspObjectDecoder.NAME, new RtspRequestDecoder());
                 ch.pipeline().addLast("rtsp", rtspHandlerClass.newInstance());
             }
          });
