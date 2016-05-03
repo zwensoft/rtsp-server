@@ -69,7 +69,10 @@ public class RstpSessionRedisLogger implements InitializingBean {
         if (null == outerHost) {
             outerHost = InetAddress.getLocalHost().getHostName();
         }
+
+        logger.warn("inner host is '{}'.", innerHost);
         logger.warn("outer host is '{}'.", outerHost);
+        logger.warn("rtsp port is '{}'.", RtspServer.getPort());
 
         KEY_MEDIA_LIST = "resource:media:list".getBytes();
         KEY_MEDIA_INFO = ("resource:media:" + innerHost + ":info").getBytes();
