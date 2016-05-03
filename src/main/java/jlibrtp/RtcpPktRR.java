@@ -115,10 +115,6 @@ public class RtcpPktRR extends RtcpPkt {
 	 * CompRtcpPkt will call this automatically
 	 */
 	public void encode() {
-		if(RTPSession.rtpDebugLevel > 9) {
-			System.out.println("  -> RtcpPktRR.encode()");
-		}
-		
 		byte[] rRs = null;
 		//Gather up the actual receiver reports
 		if(this.reportees != null) {
@@ -138,11 +134,6 @@ public class RtcpPktRR extends RtcpPkt {
 		byte[] someBytes;
 		someBytes = StaticProcs.uIntLongToByteWord(super.ssrc);
 		System.arraycopy(someBytes, 0, super.rawPkt, 4, 4);
-		
-		if(RTPSession.rtpDebugLevel > 9) {
-			System.out.println("  <- RtcpPktRR.encode()");
-		}
-		
 	}
 	
 	/**
