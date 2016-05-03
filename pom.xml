@@ -11,6 +11,13 @@
         <metrics.version>3.1.2</metrics.version>
     </properties>
     <dependencies>
+        <!-- Google-Guava-EventBus -->
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>19.0</version>
+        </dependency>
+
 
         <dependency>
             <groupId>dom4j</groupId>
@@ -102,6 +109,12 @@
             <artifactId>spring-data-redis</artifactId>
             <version>1.0.2.RELEASE</version>
         </dependency>
+        <dependency>
+          <groupId>org.aspectj</groupId>
+          <artifactId>aspectjrt</artifactId>
+          <version>1.8.9</version>
+        </dependency>
+
 
         <dependency>
             <groupId>junit</groupId>
@@ -122,6 +135,7 @@
             </plugin>
 
 
+            <!-- 生成独立运行的 jar 包 -->
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <configuration>
@@ -140,11 +154,18 @@
                 </configuration>
                 <executions>
                     <execution>
-                        <id>make-assembly</id> <!-- this is used for inheritance merges -->
-                        <phase>package</phase> <!-- 指定在打包节点执行jar包合并操作 -->
+                        <id>make-zip</id>
+                        <!-- 绑定到package生命周期阶段上 -->
+                        <phase>package</phase>
                         <goals>
+                            <!-- 绑定到package生命周期阶段上 -->
                             <goal>single</goal>
                         </goals>
+                        <configuration>
+                            <descriptors> <!--描述文件路径 -->
+                                <descriptor>src/assembly/assembly.xml</descriptor>
+                            </descriptors>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
