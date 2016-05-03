@@ -9,7 +9,13 @@
         <file>
             <source>${project.basedir}\src\main\resources\config\server.xml</source>
             <destName>server.xml</destName>
-            <outputDirectory>\config</outputDirectory></file>
+            <outputDirectory>\config</outputDirectory>
+        </file>
+        <file>
+            <source>${project.basedir}\src\main\resources\log4j.properties</source>
+            <destName>log4j.properties</destName>
+            <outputDirectory>\config</outputDirectory>
+        </file>
     </files>
     <fileSets>
         <fileSet>
