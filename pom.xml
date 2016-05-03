@@ -145,12 +145,21 @@
                             <mainClass>com.sengled.cloud.MediaServer</mainClass>
                         </manifest>
                         <manifestEntries>
-                            <Class-Path>.</Class-Path>
+                            <Class-Path>./lib</Class-Path>
+                            <Class-Path>./</Class-Path>
                         </manifestEntries>
                     </archive>
                     <descriptorRefs>
                         <descriptorRef>jar-with-dependencies</descriptorRef>
                     </descriptorRefs>
+
+                    <binFileExtensions>
+                        <unix>.sh</unix>
+                    </binFileExtensions>
+                    <platforms>
+                        <platform>windows</platform>
+                        <platform>unix</platform>
+                    </platforms>
                 </configuration>
                 <executions>
                     <execution>

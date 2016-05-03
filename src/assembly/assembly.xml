@@ -13,7 +13,7 @@
     </files>
     <fileSets>
         <fileSet>
-            <directory>${project.basedir}\src\bin</directory>
+            <directory>${project.basedir}\bin</directory>
             <outputDirectory>\bin</outputDirectory>
         </fileSet>
     </fileSets>
