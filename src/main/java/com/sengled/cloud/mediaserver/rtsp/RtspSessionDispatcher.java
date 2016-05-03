@@ -235,7 +235,7 @@ public class RtspSessionDispatcher {
                     NtpTimeEvent event = new NtpTimeEvent(streamIndex, new NtpTime(srPkt.ntpTs1, srPkt.ntpTs2, srPkt.rtpTs, timeUnit));
                     dispatch(event);
                     
-                    logger.info("stream#{} dispatch {}", streamIndex, event);
+                    logger.debug("stream#{} dispatch {}", streamIndex, event);
 
                     /**        Source Descriptions       **/
                 } else if(aPkt instanceof RtcpPktSDES) {

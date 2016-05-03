@@ -105,7 +105,7 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         p.lastRtpPkt = ntp.getRtpTime();
         p.lastNtpTs1 = ntp.getNtpTs1();
         p.lastNtpTs2 = ntp.getNtpTs2();
-        logger.info("stream#{}, {}", streamIndex, ntp);
+        logger.debug("stream#{}, {}", streamIndex, ntp);
     }
 
 
