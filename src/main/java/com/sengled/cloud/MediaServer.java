@@ -8,6 +8,7 @@ import java.net.ConnectException;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.log4j.PropertyConfigurator;
 import org.dom4j.DocumentException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +32,6 @@ public class MediaServer {
         if (null == configDir) {
             System.exit(-1);
         }
-        
         
         MediaServerConfigs configs;
         InputStream in = null;
@@ -76,7 +76,10 @@ public class MediaServer {
             if (null != serverConfigUrl && new File(serverConfigUrl).exists()) {
                 configDir = new File(serverConfigUrl).getAbsoluteFile().getParentFile();
             }
+        } else {  // log4j 配置文件
+            PropertyConfigurator.configure(new File(configDir , "log4j.properties").getAbsolutePath());
         }
+
         if (null == configDir) {
             logger.error("cant load configs");
             System.out.println("Usage: " + MediaServer.class.getCanonicalName() + " ./config");
