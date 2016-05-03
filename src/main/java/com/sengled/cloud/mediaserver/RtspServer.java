@@ -1,6 +1,7 @@
 package com.sengled.cloud.mediaserver;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -14,6 +15,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.rtsp.RtspEncoder;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.concurrent.DefaultThreadFactory;
 
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +41,11 @@ import com.sengled.cloud.mediaserver.rtsp.codec.RtspRequestDecoder;
 public class RtspServer {
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(RtspServer.class);
     
+    private static int port;
+    public static int getPort() {
+        return port;
+    }
+    
     final private PooledByteBufAllocator allocator;
 
     final private ServerBootstrap bootstrap;
@@ -46,8 +53,8 @@ public class RtspServer {
     private ChannelGroup channels = new DefaultChannelGroup("rtsp-server", null);
     
     
-    private NioEventLoopGroup bossGroup = new NioEventLoopGroup(Math.max(1, Runtime.getRuntime().availableProcessors() * 2));
-    private NioEventLoopGroup workerGroup = new NioEventLoopGroup();
+    private NioEventLoopGroup bossGroup = new NioEventLoopGroup(1, new DefaultThreadFactory("netty-boss-group"));
+    private NioEventLoopGroup workerGroup = new NioEventLoopGroup(Math.max(1, Runtime.getRuntime().availableProcessors() * 2), new DefaultThreadFactory("netty-worker-group"));
     
     private Class<? extends ChannelHandler> rtspHandlerClass;
     
@@ -58,7 +65,7 @@ public class RtspServer {
     public RtspServer(boolean preferDirect) {
         this.allocator = new PooledByteBufAllocator(preferDirect);
         this.rtspHandlerClass = RtspServerInboundHandler.class;
-        this.bootstrap = makeServerBosststrap();
+        this.bootstrap = makeServerBosststrap(this.allocator);
     }
     
     public RtspServer withHandlerClass(Class<? extends ChannelHandler> rtspHandlerClass) {
@@ -74,9 +81,22 @@ public class RtspServer {
         Channel channel = future.channel();
 
         channels.add(channel);
+        this.port = port;
         logger.info("listen: {}", channel.localAddress()); 
     }
-
+    
+    public void listen(int port,
+                       String host) throws InterruptedException {
+        ensureHandlerOK();
+        
+        ChannelFuture future = bootstrap.bind(host, port).sync();
+        
+        Channel channel = future.channel();
+        channels.add(channel);
+        this.port = port;
+        logger.info("listen: {}", channel.localAddress()); 
+    }
+    
     private void ensureHandlerOK() {
         if (null == rtspHandlerClass) {
             throw new IllegalArgumentException("rtsp handler is UNKNOWN");
@@ -89,17 +109,7 @@ public class RtspServer {
         }
     }
 
-    public void listen(int port,
-                       String host) throws InterruptedException {
-        ensureHandlerOK();
-        
-        ChannelFuture future = bootstrap.bind(host, port).sync();
-        
-        Channel channel = future.channel();
-        channels.add(channel);
-        logger.info("listen: {}", channel.localAddress()); 
-    }
-    
+
     public void shutdown() {
         // close channel
         for (Channel channel : channels) {
@@ -116,7 +126,7 @@ public class RtspServer {
         bootstrap.childGroup().shutdownGracefully();
     }
 
-    private ServerBootstrap makeServerBosststrap() {
+    private ServerBootstrap makeServerBosststrap(ByteBufAllocator allocator) {
         ServerBootstrap b = new ServerBootstrap();
 
         // server socket
