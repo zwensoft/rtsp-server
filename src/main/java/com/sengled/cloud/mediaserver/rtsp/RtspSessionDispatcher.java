@@ -18,7 +18,7 @@ import jlibrtp.StaticProcs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.sengled.cloud.async.Task;
+import com.sengled.cloud.async.TimeoutExecutor;
 import com.sengled.cloud.mediaserver.rtsp.event.FullRtpPktEvent;
 import com.sengled.cloud.mediaserver.rtsp.event.NtpTimeEvent;
 import com.sengled.cloud.mediaserver.rtsp.event.TearDownEvent;
@@ -37,7 +37,8 @@ import com.sengled.cloud.mediaserver.rtsp.rtp.RTCPCodec;
  */
 public class RtspSessionDispatcher {
     private static Logger logger = LoggerFactory.getLogger(RtspSessionDispatcher.class);
-
+    final private static TimeoutExecutor tasker = new TimeoutExecutor();
+    
     private String _name;
     private RtspSession session;
 
@@ -46,7 +47,7 @@ public class RtspSessionDispatcher {
         this.session = session;
         this._name = session.getName();
         
-        Task.setInterval(new Callable<Boolean>() {
+        tasker.setInterval(new Callable<Boolean>() {
             
             @Override
             public Boolean call() throws Exception {
@@ -55,7 +56,7 @@ public class RtspSessionDispatcher {
                 }
                 
                 sendRtcpPktRR();
-                return false;
+                return null;
             }
 
         }, 5000, 5000);

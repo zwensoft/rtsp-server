@@ -1,55 +1,32 @@
 package com.sengled.cloud.mediaserver.rtsp;
 
-import java.io.File;
-import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import javax.sdp.SessionDescription;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class RtspSessions {
-    private static final Logger logger = LoggerFactory.getLogger(RtspSessions.class);
-    
-    
-    private final static String SDP_URL;
-    static {
-        String tmpDir = System.getProperty("java.io.tmpdir");
-        String sdpUrl = FilenameUtils.normalize(tmpDir + "/sengled/media/sdps");
-        
-        File directory = new File(sdpUrl);
-        try {
-            FileUtils.deleteDirectory(directory);
-        } catch (IOException e) {
-            logger.warn("{} on delete dir {}", e.getMessage(), sdpUrl);
-        }
-        
-        directory.mkdirs();
-        
-        if (directory.exists()) {
-            logger.info("use {} to save sdp(s)", sdpUrl);
-        } else {
-            sdpUrl = ".";
-        }
-        
-        SDP_URL = sdpUrl;
-    }
-    
+import com.google.common.eventbus.AsyncEventBus;
+import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionRemovedEvent;
+import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionUpdatedEvent;
 
+public class RtspSessions {
+    
+    private static final Logger logger = LoggerFactory.getLogger(RtspSessions.class);
     private static final RtspSessions instance = new RtspSessions();
+    
+    private final AsyncEventBus sessionEventBus = new AsyncEventBus(Executors.newSingleThreadExecutor());
+    
+    
     private Map<String, RtspSession> sessions = new ConcurrentHashMap<String, RtspSession>();
     private ConcurrentHashMap<String, List<RtspSessionListener>> dispatchers = new ConcurrentHashMap<String, List<RtspSessionListener>>();
-    
-    private ExecutorService threads = Executors.newFixedThreadPool(1);
+   
     
     private RtspSessions(){}
     
@@ -57,6 +34,9 @@ public class RtspSessions {
         return instance;
     }
     
+    public AsyncEventBus sessionEventBus() {
+        return sessionEventBus;
+    }
     
     public SessionDescription getSessionDescription(String uri) {
         RtspSession session = getInstance().sessions.get(uri);
@@ -70,19 +50,9 @@ public class RtspSessions {
             oldSession = getInstance().sessions.remove(name);
         }
         
-        // delete sdp
-        final File file = getSdpFile(name);
-        threads.submit(new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
-                logger.info("delete sdp '{}'", file.getAbsolutePath());
-
-                File newFile = new File(file.getParentFile(), file.getName() + ".deleted");
-                newFile.delete();
-                file.renameTo(newFile);
-                return null;
-            }
-        });
+        if (null != oldSession) {
+            sessionEventBus.post(new RtspSessionRemovedEvent(oldSession));
+        }
         
         logger.info("{} rtsp session(s) online", sessions.size());
         return oldSession;
@@ -93,17 +63,9 @@ public class RtspSessions {
     public RtspSession updateSession(final String name, final RtspSession session) {
         RtspSession oldSession = getInstance().sessions.put(name, session);
         
-        // save sdp
-        final File file = getSdpFile(name);
-        threads.submit(new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
-                FileUtils.write(file, session.getSDP());
-                logger.info("update sdp '{}'", file.getAbsolutePath());
-                return null;
-            }
-        });
+        sessionEventBus.post(new RtspSessionUpdatedEvent(session));
         
+       
         logger.info("{} rtsp session(s) online", sessions.size());
         return oldSession;
     }
@@ -146,21 +108,11 @@ public class RtspSessions {
             logger.trace("NO Listeners For {}", name);
         }
     }
-    
-    
-    
-    private static File getSdpFile(String uri) {
-        String tmpUrl = SDP_URL + (uri.startsWith("/") ? uri : ("/" + uri));
-        if (tmpUrl.contains("?")) {
-            tmpUrl = tmpUrl.substring(0, tmpUrl.indexOf("?"));
-        }
-        
-        File tmpFile = new File(tmpUrl);
-        File parent = tmpFile.getAbsoluteFile().getParentFile();
-        if (!parent.exists() && !parent.mkdirs()) {
-            logger.warn("fail create tmp dir '{}'", parent.getAbsolutePath());
-        }
 
-        return tmpFile;
+    public Collection<String> sessionNames() {
+        return sessions.keySet();
     }
+    
+    
+   
 }

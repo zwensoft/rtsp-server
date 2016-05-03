@@ -1,10 +1,16 @@
 package com.sengled.cloud.mediaserver.rtsp;
 
-import com.sengled.cloud.mediaserver.event.Event;
 
 
 
-public interface RtpEvent<T> extends Event  {
+/**
+ * RTP 事件
+ * 
+ * @author 陈修恒
+ * @date 2016年5月3日
+ * @param <T>
+ */
+public interface RtpEvent<T> {
     public int getStreamIndex();
 
     public T getSource();
