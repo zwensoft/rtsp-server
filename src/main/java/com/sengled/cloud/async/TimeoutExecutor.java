@@ -15,19 +15,27 @@ import org.slf4j.LoggerFactory;
  * @author 陈修恒
  * @date 2016年4月28日
  */
-public class Task {
-    private static final Logger logger = LoggerFactory.getLogger(Task.class);
+public class TimeoutExecutor {
+    private static final Logger logger = LoggerFactory.getLogger(TimeoutExecutor.class);
     
-    private static final Timer timer = new Timer(true);
+    private final Timer timer;
     
-    public static TimerTask setTimeout(final Callable<Boolean> task, long delay) {
+    public TimeoutExecutor() {
+        timer = new Timer(true);
+    }
+    
+    public TimeoutExecutor(String name) {
+        timer = new Timer(name, true);
+    }
+    
+    public TimerTask setTimeout(final Callable<Boolean> task, long delay) {
         final TimerTask timerTask = new TimerWraper(task, true);
 
         timer.schedule(timerTask, delay);
         return timerTask;
     }
     
-    public static TimerTask setInterval(final Callable<Boolean> task, long delay, long period) {
+    public TimerTask setInterval(final Callable<Boolean> task, long delay, long period) {
         final TimerTask timerTask = new TimerWraper(task, false);
 
         timer.scheduleAtFixedRate(timerTask, delay, period);
