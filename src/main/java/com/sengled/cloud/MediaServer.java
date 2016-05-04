@@ -47,7 +47,7 @@ public class MediaServer {
             try {
                 rtsp.listen(ports[i], "0.0.0.0");
             } catch(Exception e) {
-                logger.error("fail listen port[{}] for {}", ports[i], e);
+                logger.error("can't listen port[{}]", ports[i], e);
             }
         }
 
