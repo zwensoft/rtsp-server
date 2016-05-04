@@ -65,13 +65,8 @@ public class InterleavedFrame extends DefaultByteBufHolder implements InterLeave
         return channel;
     }
 
-    /* (non-Javadoc)
-     * @see com.sengled.cloud.mediaserver.rtsp.codec.IInterLeavedFrame#content()
-     */
-    @Override
-    public ByteBuf content() {
-        return super.content();
-    }
+    
+    
     
     @Override
     public InterleavedFrame copy() {

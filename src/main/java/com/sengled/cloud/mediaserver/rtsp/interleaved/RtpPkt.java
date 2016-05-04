@@ -28,10 +28,13 @@ public class RtpPkt extends InterleavedFrame implements IRtpPkt {
         }
     }
     
+    
+    
     @Override
     public RtpPkt duplicate() {
         return new RtpPkt(channel(), content().duplicate());
     }
+    
     
     @Override
     public RtpPkt retain() {
@@ -88,9 +91,10 @@ public class RtpPkt extends InterleavedFrame implements IRtpPkt {
         setUnsignedInt(8, ssrc);
     }
     
-    public ByteBuf payload() {
-        int contentLength = content().readableBytes();
-        return content().slice(headerLength(), contentLength - headerLength());
+    public ByteBuf data() {
+        ByteBuf content = content();
+		int contentLength = content.readableBytes();
+        return content.slice(content.readerIndex() + headerLength(), contentLength - headerLength());
     }
 
     public int contentLength() {
@@ -100,6 +104,7 @@ public class RtpPkt extends InterleavedFrame implements IRtpPkt {
     public int dataLength() {
         return  content().readableBytes() - headerLength();
     }
+    
     
     public int headerLength() {
         return headerLength;

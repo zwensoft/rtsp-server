@@ -4,6 +4,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.ReferenceCountUtil;
 
+import java.io.IOException;
 import java.util.List;
 
 import com.sengled.cloud.mediaserver.rtsp.interleaved.FullRtpPkt;
@@ -18,7 +19,8 @@ import com.sengled.cloud.mediaserver.rtsp.interleaved.RtpPkt;
 public class RtpObjectAggregator extends MessageToMessageDecoder<RtpPkt> {
 
     private int channel;
-
+    private int maxFullRtpPktSize = 2 * 1024 * 1024;
+    
     private FullRtpPkt group = null;
     
     
@@ -58,6 +60,14 @@ public class RtpObjectAggregator extends MessageToMessageDecoder<RtpPkt> {
         } else {
             out.add(group);
             group = new FullRtpPkt(msg.retain());
+        }
+        
+		if (group.dataLength() > maxFullRtpPktSize) {
+			Exception ex = new IOException("AVPacket's size " + group.dataLength() + " > " + maxFullRtpPktSize);
+        	group.release();
+        	group = null;
+        	
+        	throw ex;
         }
     }
 

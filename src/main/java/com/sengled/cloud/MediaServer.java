@@ -51,7 +51,7 @@ public class MediaServer {
         RtspServer.getInstance().start();
 
         // 启动 spring 容器
-        new SpringStarter(configDir).start();
+        //new SpringStarter(configDir).start();
         
         
         for (StreamSourceDef def : configs.getStreamSources()) {

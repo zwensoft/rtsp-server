@@ -30,7 +30,7 @@ public class FullRtpPkt implements ReferenceCounted, InterLeaved {
     }
 
 
-    private RtpPkt first() {
+    public RtpPkt first() {
         return contents.get(0);
     }
     

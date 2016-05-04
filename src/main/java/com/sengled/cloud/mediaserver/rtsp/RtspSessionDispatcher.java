@@ -1,5 +1,7 @@
 package com.sengled.cloud.mediaserver.rtsp;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.util.ReferenceCountUtil;
 
 import java.util.Iterator;
@@ -15,6 +17,7 @@ import jlibrtp.RtcpPktSDES;
 import jlibrtp.RtcpPktSR;
 import jlibrtp.StaticProcs;
 
+import org.apache.commons.lang.time.DateFormatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -103,6 +106,7 @@ public class RtspSessionDispatcher {
                 return;
             }
 
+            RTPStream stream = session.getStreams()[streamIndex];
             InterLeavedRTPSession rtpSess = session.getRTPSessions()[streamIndex];
             rtpSess.sentPktCount += 1;
             rtpSess.sentOctetCount += pkt.dataLength();
@@ -112,6 +116,30 @@ public class RtspSessionDispatcher {
                 partition.updateRRStats(rtp.contentLength(), rtp);
             }
             partition.lastRtpPkt = pkt.getTimestamp();
+            
+            // h264
+            if ("h264".equalsIgnoreCase(stream.getCodec())) {
+            	ByteBuf buf = pkt.first().data();
+            	long timestamp = Rational.$_1_000.convert(pkt.getTimestamp(), stream.getTimeUnit());
+            	
+            	int firstByte =  buf.readByte();
+            	switch (firstByte & 0x1F) {
+            	case 1:
+            		logger.info("av_new_packet");
+            		break;
+            	case 28:
+            		int fu_indicator  = firstByte;
+            		int fu_header     = buf.readByte();
+            		int start_bit     = fu_header >> 7;
+            		int nal_type      = fu_header & 0x1f;
+            		int nal           = fu_indicator & 0xe0 | nal_type;
+            		
+            		logger.info("nalType: {}, nal = {}, t = {}, {}", nal_type, nal, DateFormatUtils.format(timestamp, "HH:mm:ss.SSS"), pkt.dataLength());
+            		break;
+            	default:
+            		logger.info("nalType:{}", firstByte & 0x1F);
+            	}
+            }
             
             dispatch(new FullRtpPktEvent(streamIndex, pkt.retain()));
             logger.debug("dispatched: {}", pkt);
