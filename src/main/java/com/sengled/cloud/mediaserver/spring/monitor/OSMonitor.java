@@ -40,7 +40,7 @@ public class OSMonitor  implements InitializingBean {
                     cpuUseRate = CpuUseRate.calculate();
                 } finally {
                     // 3s 后重新检测
-                    monitorTaskExecutor.setTimeout(getTaskCallable(), 5 * 1000);
+                    monitorTaskExecutor.setTimeout(getTaskCallable(), 10 * 1000);
                 }
 
                 return null;

@@ -42,15 +42,17 @@ public class MediaServer {
             IOUtils.closeQuietly(in);
         }
     	int[] ports = configs.getPorts();
-        RtspServer rtsp = new RtspServer();
         for (int i = 0; i < ports.length; i++) {
-            try {
-                rtsp.listen(ports[i], "0.0.0.0");
-            } catch(Exception e) {
-                logger.error("can't listen port[{}]", ports[i], e);
-            }
+            RtspServer.getInstance().setPort(ports[i]);
         }
 
+        
+        // 启动 rtsp server
+        RtspServer.getInstance().start();
+
+        // 启动 spring 容器
+        new SpringStarter(configDir).start();
+        
         
         for (StreamSourceDef def : configs.getStreamSources()) {
         	try {
@@ -61,8 +63,6 @@ public class MediaServer {
             }
 		}
         
-        // 启动 spring 容器
-        new SpringStarter(configDir).start();
     }
 
     private static File getConfigDir(String[] args) {

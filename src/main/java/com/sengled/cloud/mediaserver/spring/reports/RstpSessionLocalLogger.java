@@ -3,8 +3,6 @@ package com.sengled.cloud.mediaserver.spring.reports;
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -13,10 +11,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
 
 import com.google.common.eventbus.Subscribe;
+import com.sengled.cloud.async.TimeoutExecutor;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.RtspSessions;
-import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionUpdatedEvent;
 import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionRemovedEvent;
+import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionUpdatedEvent;
 
 /**
  * 把 {@link RtspSession}的 sdp 保存到本地， 以便查日志
@@ -26,7 +25,7 @@ import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionRemovedEvent;
  */
 public class RstpSessionLocalLogger implements InitializingBean {
     private static Logger logger = LoggerFactory.getLogger(RstpSessionLocalLogger.class);
-    private ExecutorService threads = Executors.newFixedThreadPool(1);
+    private TimeoutExecutor executor = new TimeoutExecutor("write-rtsp-session-at-local");
     
     private final static String SDP_URL;
     static {
@@ -44,14 +43,14 @@ public class RstpSessionLocalLogger implements InitializingBean {
         
         // save sdp
         final File file = getSdpFile(session);
-        threads.submit(new Callable<Void>() {
+        executor.setTimeout(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
                 FileUtils.write(file, session.getSDP());
                 logger.info("update sdp '{}'", file.getAbsolutePath());
                 return null;
             }
-        });
+        }, 0);
     }
     
     
@@ -61,7 +60,7 @@ public class RstpSessionLocalLogger implements InitializingBean {
         
         // delete sdp
         final File file = getSdpFile(session);
-        threads.submit(new Callable<Void>() {
+        executor.setTimeout(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
                 logger.info("delete sdp '{}'", file.getAbsolutePath());
@@ -71,7 +70,7 @@ public class RstpSessionLocalLogger implements InitializingBean {
                 file.renameTo(newFile);
                 return null;
             }
-        });
+        }, 0);
     }
     
     private File getSdpFile(RtspSession session) {

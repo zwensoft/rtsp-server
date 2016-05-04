@@ -28,25 +28,25 @@ public class TimeoutExecutor {
         timer = new Timer(name, true);
     }
     
-    public TimerTask setTimeout(final Callable<Boolean> task, long delay) {
-        final TimerTask timerTask = new TimerWraper(task, true);
+    public <T> TimerTask setTimeout(final Callable<T> task, long delay) {
+        final TimerTask timerTask = new TimerWraper<T>(task, true);
 
         timer.schedule(timerTask, delay);
         return timerTask;
     }
     
     public TimerTask setInterval(final Callable<Boolean> task, long delay, long period) {
-        final TimerTask timerTask = new TimerWraper(task, false);
+        final TimerTask timerTask = new TimerWraper<Boolean>(task, false);
 
         timer.scheduleAtFixedRate(timerTask, delay, period);
         return timerTask;
     }
     
-    private static class TimerWraper extends TimerTask {
-        private Callable<Boolean> task;
+    private static class TimerWraper<T> extends TimerTask {
+        private Callable<T> task;
         private boolean autoCancle = false;
         
-        public TimerWraper(Callable<Boolean> task, boolean autoCancle) {
+        public TimerWraper(Callable<T> task, boolean autoCancle) {
             super();
             this.task = task;
             this.autoCancle = autoCancle;
@@ -55,8 +55,14 @@ public class TimeoutExecutor {
         @Override
         public void run() {
             try {
-                Boolean cancle = task.call();
-                if(autoCancle || (null != cancle && cancle)) {
+                T cancle = task.call();
+                
+                boolean cancleIt = autoCancle;
+                if(!cancleIt && cancle instanceof Boolean) {
+                    cancleIt = (Boolean)cancle;
+                }
+                
+                if(cancleIt) {
                     cancel();
                 }
             } catch(Exception e) {

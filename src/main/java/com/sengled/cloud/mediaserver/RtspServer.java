@@ -40,29 +40,22 @@ import com.sengled.cloud.mediaserver.rtsp.codec.RtspRequestDecoder;
  */
 public class RtspServer {
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(RtspServer.class);
+    private static final RtspServer instance = new RtspServer(true);
     
-    private static int port;
-    public static int getPort() {
-        return port;
-    }
     
-    final private PooledByteBufAllocator allocator;
-
-    final private ServerBootstrap bootstrap;
-    
+    private PooledByteBufAllocator allocator;
+    private ServerBootstrap bootstrap;
     private ChannelGroup channels = new DefaultChannelGroup("rtsp-server", null);
-    
-    
     private NioEventLoopGroup bossGroup = new NioEventLoopGroup(1, new DefaultThreadFactory("netty-boss-group"));
     private NioEventLoopGroup workerGroup = new NioEventLoopGroup(Math.max(1, Runtime.getRuntime().availableProcessors() * 2), new DefaultThreadFactory("netty-worker-group"));
     
     private Class<? extends ChannelHandler> rtspHandlerClass;
+    private int port = -1;
     
-    public RtspServer() {
-        this(true);
+    public static RtspServer getInstance() {
+        return instance;
     }
-    
-    public RtspServer(boolean preferDirect) {
+    private RtspServer(boolean preferDirect) {
         this.allocator = new PooledByteBufAllocator(preferDirect);
         this.rtspHandlerClass = RtspServerInboundHandler.class;
         this.bootstrap = makeServerBosststrap(this.allocator);
@@ -74,19 +67,15 @@ public class RtspServer {
         return this;
     }
     
-    public void listen(int port) throws InterruptedException {
-        ensureHandlerOK();
-        
-        ChannelFuture future = bootstrap.bind(port).sync();
-        Channel channel = future.channel();
-
-        channels.add(channel);
-        this.port = port;
-        logger.info("listen: {}", channel.localAddress()); 
+    public void start() throws InterruptedException {
+        listen(getPort());
     }
     
-    public void listen(int port,
-                       String host) throws InterruptedException {
+    private void listen(int port) throws InterruptedException {
+        listen(port, "0.0.0.0"); 
+    }
+
+    private void listen(int port, String host) throws InterruptedException {
         ensureHandlerOK();
         
         ChannelFuture future = bootstrap.bind(host, port).sync();
@@ -157,4 +146,19 @@ public class RtspServer {
 
         return b;
     }
+    
+    
+    public int getPort() {
+        if (port < 0) {
+            throw new IllegalAccessError("Rtsp Server Port Not Init");
+        }
+        
+        return port;
+    }
+    
+    public void setPort(int port) {
+        this.port = port;
+    }
+  
+    
 }

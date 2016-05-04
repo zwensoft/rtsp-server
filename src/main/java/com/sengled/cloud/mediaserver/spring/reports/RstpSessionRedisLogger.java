@@ -72,7 +72,7 @@ public class RstpSessionRedisLogger implements InitializingBean {
 
         logger.warn("inner host is '{}'.", innerHost);
         logger.warn("outer host is '{}'.", outerHost);
-        logger.warn("rtsp port is '{}'.", RtspServer.getPort());
+        logger.warn("rtsp port is '{}'.", RtspServer.getInstance().getPort());
 
         KEY_MEDIA_LIST = "resource:media:list".getBytes();
         KEY_MEDIA_INFO = ("resource:media:" + innerHost + ":info").getBytes();
@@ -216,7 +216,7 @@ public class RstpSessionRedisLogger implements InitializingBean {
 
 
     private String getRtspServerPort() {
-        return String.valueOf(RtspServer.getPort());
+        return String.valueOf(RtspServer.getInstance().getPort());
     }
 
     protected void updateSessionList() {
