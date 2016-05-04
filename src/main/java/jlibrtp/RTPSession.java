@@ -635,6 +635,10 @@ public abstract class RTPSession {
         return ssrc;
     }
     
+    public void ssrc(long ssrc) {
+        this.ssrc = ssrc;
+    }
+    
     public boolean conflict() {
         return conflict;
     }

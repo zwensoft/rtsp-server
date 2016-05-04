@@ -27,7 +27,7 @@ public class Participant {
     /** SDES A priv string, loosely defined */
     public String priv = null;
     /** RR First sequence number */
-    protected int firstSeqNumber = -1;
+    public int firstSeqNumber = -1;
     /** RR Last sequence number */
     public int lastSeqNumber = 0;
     /** RR Number of times sequence number has rolled over */
