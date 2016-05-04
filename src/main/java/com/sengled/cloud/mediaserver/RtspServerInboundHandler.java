@@ -205,7 +205,8 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
                 Transport transport = session.setupStream(request.getUri(), exceptTransport);
 
                 int rtpChannel = transport.getInterleaved()[0];
-                InterLeavedRTPSession rtpSession = session.getRTPSessionByChannel(rtpChannel);
+                int streamIndex = session.getStreamIndex(rtpChannel);
+                InterLeavedRTPSession rtpSession = session.getRTPSessions()[streamIndex];
                 transport.setSsrc(rtpSession.ssrc());
                 
                 response = makeResponse(request, session);

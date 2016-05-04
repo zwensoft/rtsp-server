@@ -110,7 +110,7 @@ public class RtspSession implements Serializable {
         for (MediaDescription dm : getMediaDescriptions(sd)) {
             try {
                 if (StringUtils.endsWith(uri, getUri(dm.getAttribute("control")))) {
-                    streams[mediaIndex] = new RTPStream(mediaIndex, dm, interleaved[0], interleaved[1]);
+                    streams[mediaIndex] = new RTPStream(mediaIndex, dm);
                     rtpSessions[mediaIndex] = new InterLeavedRTPSession(ctx.channel(), interleaved[0], interleaved[1]);
                     return t;
                 }
@@ -171,34 +171,20 @@ public class RtspSession implements Serializable {
         throw new IllegalArgumentException("stream[" + url + "] Not Found IN " + sd);
     }
     
-    
-    
-    public InterLeavedRTPSession getRTPSessionByChannel(int channel) {
-        for (int i = 0; i < streams.length; i++) {
-            if (null == streams[i] ) {
-                continue;
-            }
-
-            if (streams[i].getRtcpChannel() == channel
-                    || streams[i].getRtpChannel() == channel) {
-                return rtpSessions[i];
-            }
-        }
-        
-        
-        return null;
-    }
-    
     public int getStreamIndex(InterLeaved interLeaved) {
         int channel = interLeaved.channel();
 
-        for (int i = 0; i < streams.length; i++) {
-            if (null == streams[i] ) {
+        return getStreamIndex(channel);
+    }
+
+    public int getStreamIndex(int channel) {
+        for (int i = 0; i < rtpSessions.length; i++) {
+            if (null == rtpSessions[i] ) {
                 continue;
             }
 
-            if (streams[i].getRtcpChannel() == channel
-                    || streams[i].getRtpChannel() == channel) {
+            if (rtpSessions[i].rtcpChannel() == channel
+                    || rtpSessions[i].rtpChannel() == channel) {
                 return i;
             }
         }
@@ -366,10 +352,6 @@ public class RtspSession implements Serializable {
         return null != streams[streamIndex];
     }
 
-    public int getStreamRTPChannel(int streamIndex)  {
-        return streams[streamIndex].getRtpChannel();
-    }
-    
 
     public void setId(String id) {
         this.id = id;
@@ -378,21 +360,6 @@ public class RtspSession implements Serializable {
     
     public SessionMode getMode() {
         return mode;
-    }
- 
-    public int getStreamIndex(int channel) {
-        for (int i = 0; i < rtpSessions.length; i++) {
-            InterLeavedRTPSession s = rtpSessions[i];
-            if (null != s && s.rtpChannel() == channel) {
-                return i;
-            }
-            
-            if (null != s && s.rtcpChannel() == channel) {
-                return i;
-            }
-        }
-
-        return -1;
     }
 
 

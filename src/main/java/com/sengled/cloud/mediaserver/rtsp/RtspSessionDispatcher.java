@@ -8,10 +8,10 @@ import java.util.concurrent.Callable;
 
 import jlibrtp.Participant;
 import jlibrtp.RtcpPkt;
-import jlibrtp.RtcpPktSDES;
 import jlibrtp.RtcpPktAPP;
 import jlibrtp.RtcpPktBYE;
 import jlibrtp.RtcpPktRR;
+import jlibrtp.RtcpPktSDES;
 import jlibrtp.RtcpPktSR;
 import jlibrtp.StaticProcs;
 
@@ -182,13 +182,6 @@ public class RtspSessionDispatcher {
             while(iter.hasNext()) {
                 RtcpPkt aPkt = (RtcpPkt) iter.next();
 
-                // Our own packets should already have been filtered out.
-                if(aPkt.ssrc() == rtpSession.ssrc()) {
-                    logger.warn("received RTCP packet with conflicting SSRC from channel[{}]", rtpSession.rtpChannel());
-                    rtpSession.resolveSsrcConflict();
-                    return -1;
-                }
-
                 /**        Receiver Reports        **/
                 if( aPkt instanceof RtcpPktRR) {
                     RtcpPktRR rrPkt = (RtcpPktRR) aPkt;
@@ -206,23 +199,15 @@ public class RtspSessionDispatcher {
                 } else if(aPkt instanceof RtcpPktSR) {
                     RtcpPktSR srPkt = (RtcpPktSR) aPkt;
 
-                    Participant p = findParticipant(rtpSession, srPkt.ssrc());
+                    Participant p = rtpSession.findParticipant();
                     p.lastRtcpPkt = curTime;
 
                     if(p != null) {
-
-                        if(p.ntpGradient < 0 && p.lastNtpTs1 > -1) {
-                            //Calculate gradient NTP vs RTP
-                            long newTime = StaticProcs.undoNtpMess(srPkt.ntpTs1, srPkt.ntpTs2);
-                            p.ntpGradient = ((double) (newTime - p.ntpOffset))/((double) srPkt.rtpTs - p.lastSRRtpTs);
-                            logger.debug("calculated NTP vs RTP gradient:  {}", p.ntpGradient);
-                        } else {
-                            // Calculate sum of ntpTs1 and ntpTs2 in milliseconds
-                            p.ntpOffset = StaticProcs.undoNtpMess(srPkt.ntpTs1, srPkt.ntpTs2);
-                            p.lastNtpTs1 = srPkt.ntpTs1;
-                            p.lastNtpTs2 = srPkt.ntpTs2;
-                            p.lastSRRtpTs = srPkt.rtpTs;
-                        }
+                        // Calculate sum of ntpTs1 and ntpTs2 in milliseconds
+                        p.ntpOffset = StaticProcs.undoNtpMess(srPkt.ntpTs1, srPkt.ntpTs2);
+                        p.lastNtpTs1 = srPkt.ntpTs1;
+                        p.lastNtpTs2 = srPkt.ntpTs2;
+                        p.lastSRRtpTs = srPkt.rtpTs;
 
                         // For the next RR
                         p.timeReceivedLSR = curTime;

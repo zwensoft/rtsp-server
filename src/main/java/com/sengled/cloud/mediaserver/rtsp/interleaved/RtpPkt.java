@@ -64,6 +64,10 @@ public class RtpPkt extends InterleavedFrame implements IRtpPkt {
     public int getSeqNumber() {
         return getUnsignedShort(2);
     }
+    
+    public void setSeqNumber(int seq) {
+        setUnsignedShort(2, seq);
+    }
    
  
 

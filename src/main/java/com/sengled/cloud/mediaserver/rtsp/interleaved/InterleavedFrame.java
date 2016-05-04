@@ -35,6 +35,11 @@ public class InterleavedFrame extends DefaultByteBufHolder implements InterLeave
         content.setInt(content.readerIndex() + offset, (int)(value & 0xFFFFFFFFL));
     }
     
+    protected void setUnsignedShort(int offset, int value) {
+        ByteBuf content = content();
+        content.setShort(content.readerIndex() + offset, (int)(value & 0xFFFF));
+    }
+    
     
     protected int getUnsignedMedium(int offset) {
         ByteBuf content = content();

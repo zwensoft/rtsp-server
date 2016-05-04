@@ -9,7 +9,9 @@ import io.netty.util.concurrent.GenericFutureListener;
 import java.util.concurrent.atomic.AtomicLong;
 
 import jlibrtp.Participant;
+import jlibrtp.RtcpPktSR;
 
+import org.apache.commons.lang.time.DateFormatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,24 +21,23 @@ import com.sengled.cloud.mediaserver.rtsp.event.TearDownEvent;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.FullRtpPkt;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtcpContent;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtpPkt;
-import com.sengled.cloud.mediaserver.rtsp.rtp.InterLeavedParticipant;
 import com.sengled.cloud.mediaserver.rtsp.rtp.InterLeavedRTPSession;
 
 public class RtspSessionListener implements GenericFutureListener<Future<? super Void>> {
     private static final Logger logger = LoggerFactory.getLogger(RtspSessionListener.class);
     
-    final private RtspSession consumer;
+    final private RtspSession session;
     final private int maxBufferSize;
     final private AtomicLong bufferSize = new AtomicLong();
     
     public RtspSessionListener(RtspSession mySession, int maxRtpBufferSize) {
         super();
-        this.consumer = mySession;
+        this.session = mySession;
         this.maxBufferSize = maxRtpBufferSize;
     }
 
     private Channel channel() {
-        return consumer.channel();
+        return session.channel();
     }
 
     /**
@@ -46,36 +47,37 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
      */
     public void init(RtspSession producer) {
         InterLeavedRTPSession[] srcSessions = producer.getRTPSessions();
-        InterLeavedRTPSession[] dstSessions =  consumer.getRTPSessions();
+        InterLeavedRTPSession[] dstSessions =  session.getRTPSessions();
         
         for (int i = 0; i < srcSessions.length; i++) {
+            RTPStream stream = session.getStreams()[i];
             InterLeavedRTPSession src = srcSessions[i];
             InterLeavedRTPSession dst = dstSessions[i];
             if (null == src || null == dst) {
                 continue;
             }
             
+            Participant p = src.findParticipant();
             
-            
-            
+            syncNtpTime(new NtpTimeEvent(i, new NtpTime(p.lastNtpTs1, p.lastNtpTs2, p.lastRtpPkt, stream.getTimeUnit())));
         }
     }
     
     public void fireExceptionCaught(Exception ex) {
-        consumer.channelHandlerContext().fireExceptionCaught(ex);
+        session.channelHandlerContext().fireExceptionCaught(ex);
     }
     
     public <T> void on(RtpEvent<T> event) {
-        InterLeavedRTPSession rtp = consumer.getRTPSessions()[event.getStreamIndex()];
+        InterLeavedRTPSession rtp = session.getRTPSessions()[event.getStreamIndex()];
         if (null == rtp) {
             return;
         }
         
         if(event instanceof FullRtpPktEvent) {
-            onFullRtpPktEvent(rtp, ((FullRtpPktEvent)event));
+            onFullRtpPktEvent(((FullRtpPktEvent)event));
         } else if (event instanceof NtpTimeEvent) {
             // 同步视频时间
-            syncNtpTime(event.getStreamIndex(), rtp, (NtpTimeEvent)event);
+            syncNtpTime((NtpTimeEvent)event);
             
         }else if (event instanceof TearDownEvent) {
             TearDownEvent tearDown = (TearDownEvent)event;
@@ -92,51 +94,67 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
 
     /**
      * 同步 ntp 时间. 以发送端的时间为准
-     * 
-     * @param rtp
      * @param event
      */
-    private void syncNtpTime(int streamIndex, 
-                             InterLeavedRTPSession rtp,
-                             NtpTimeEvent event) {
-        Participant p = findParticipant(rtp);
+    private void syncNtpTime(NtpTimeEvent event) {
+        InterLeavedRTPSession rtp = session.getRTPSessions()[event.getStreamIndex()];
+        Participant p = rtp.findParticipant();
         NtpTime ntp = event.getSource();
         
         p.lastRtpPkt = ntp.getRtpTime();
         p.lastNtpTs1 = ntp.getNtpTs1();
         p.lastNtpTs2 = ntp.getNtpTs2();
-        logger.debug("stream#{}, {}", streamIndex, ntp);
+        logger.debug("stream#{}, {}", event.getStreamIndex(), ntp);
+        
+        sendRtcpPktSR(event.getStreamIndex(), rtp);
     }
 
 
-    /**
-     * Find out whether a participant with this SSRC is known.
-     * 
-     * If the user is unknown, and the system is operating in unicast mode,
-     * try to match the ip-address of the sender to the ip address of a
-     * previously unmatched target
-     * 
-     * @param rtpSession 
-     * @return the relevant participant, possibly newly created
-     */
-    private Participant findParticipant(InterLeavedRTPSession rtpSession) {
-        Participant p = rtpSession.partDb().getParticipant(rtpSession.ssrc());
-        if(p == null) {
-            p = new InterLeavedParticipant(rtpSession, rtpSession.ssrc());
-            rtpSession.partDb().addParticipant(2,p);
+
+    protected void sendRtcpPktSR(int streamIndex, InterLeavedRTPSession dst) {
+        if (bufferIfFull()) {
+            return;
         }
-        return p;
+
+        Participant p = dst.findParticipant();
+        if (p.lastNtpTs1 < 0) {
+            return;
+        } 
+        
+        
+        // TODO
+        logger.warn("忽略了 RtcpPktSR");
+
+        /**
+        
+        RtcpPktSR sr = new RtcpPktSR(dst.ssrc(), dst.sentPktCount, dst.sentOctetCount, null);
+        sr.ntpTs1 = p.lastNtpTs1;
+        sr.ntpTs2 = p.lastNtpTs2;
+        sr.rtpTs = p.lastRtpPkt;
+        
+        sr.encode();
+        byte[] rawByte = sr.rawPkt;
+        int rtcpChannel = dst.rtcpChannel();
+
+        ByteBufAllocator alloc = channel().alloc();
+        ByteBuf payload = alloc.buffer(4 + rawByte.length);
+        payload.writeByte('$');
+        payload.writeByte(rtcpChannel);
+        payload.writeShort(rawByte.length);
+        payload.writeBytes(rawByte);
+        channel().writeAndFlush(payload);
+        */
     }
     
-    private void onFullRtpPktEvent(InterLeavedRTPSession rtpSession, FullRtpPktEvent rtpEvent) {
+    private void onFullRtpPktEvent(FullRtpPktEvent rtpEvent) {
         boolean sent = false;
         int streamIndex = rtpEvent.getStreamIndex();
         FullRtpPkt fullRtp = rtpEvent.getSource();
         
         
         // 如果缓冲区没满，则可以发送
-        if (!bufferIfFull(maxBufferSize, bufferSize.get())) {
-            sendFullRtpPkt(rtpSession, fullRtp.duplicate(), streamIndex);
+        if (!bufferIfFull()) {
+            sendFullRtpPkt(streamIndex, fullRtp.duplicate());
             sent = true;
         }
         
@@ -145,13 +163,35 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         }
     }
 
-    private void sendFullRtpPkt(InterLeavedRTPSession rtpSess, FullRtpPkt fullRtp, long maxRtpBufferSize) {
-        Participant p = findParticipant(rtpSess);
-
+    private void sendFullRtpPkt(int streamIndex, FullRtpPkt fullRtp) {
+        InterLeavedRTPSession rtpSess = session.getRTPSessions()[streamIndex];
+        
         // 统计流量
         rtpSess.sentPktCount ++;
         rtpSess.sentOctetCount += fullRtp.dataLength();
+        Participant participant = rtpSess.findParticipant();
         
+       
+        RTPStream stream = session.getStreams()[streamIndex];
+        if (participant.lastRtpPkt > 0 && participant.lastRtpPkt < fullRtp.getTimestamp()) {
+            long ptsOffset = stream.getTimestampMills(fullRtp.getTimestamp()  - participant.lastRtpPkt);
+            long ntpTime = NtpTime.getNtpTime(participant.lastNtpTs1, participant.lastNtpTs2);
+            long ptsMills = ntpTime + ptsOffset;
+            logger.debug("stream#{} {} dataLength = {}, ntp-pts = {}, {} rtp(s)", 
+                    streamIndex, 
+                    stream.getCodec(),
+                    fullRtp.dataLength(), 
+                    DateFormatUtils.format(ptsMills, "yyyy-MM-dd HH:mm:ss.SSS"), 
+                    fullRtp.numRtp());
+        } else {
+            long ptsMills = stream.getTimestampMills(fullRtp.getTimestamp());
+            logger.debug("stream#{} {} dataLength = {}, raw-pts = {}, {} rtp(s)", 
+                    streamIndex, 
+                    stream.getCodec(),
+                    fullRtp.dataLength(), 
+                    DateFormatUtils.format(ptsMills, "HH:mm:ss.SSS"), 
+                    fullRtp.numRtp());
+        }
         
         
         // 依次发送  rtp 包
@@ -160,8 +200,15 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         for (RtpPkt rtpObj : fullRtp.contents()) {
             payloadLength = rtpObj.content().readableBytes();
             
+            int nextSeqNo = 0xFFFF & (participant.lastSeqNumber + 1);
+            participant.lastSeqNumber = nextSeqNo;
             rtpObj.ssrc(rtpSess.ssrc());
-            
+            rtpObj.setSeqNumber(nextSeqNo);
+
+            if (participant.firstSeqNumber < 0) {
+                participant.firstSeqNumber  = nextSeqNo;
+            }
+
             ByteBuf payload = alloc.buffer(4 + payloadLength);
             payload.writeByte('$');
             payload.writeByte(rtpSess.rtpChannel());
@@ -174,8 +221,8 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
     }
     
     
-    private boolean bufferIfFull(long maxRtpBufferSize,long bufferSize) {
-        return maxRtpBufferSize > 0 && bufferSize > maxRtpBufferSize;
+    private boolean bufferIfFull() {
+        return maxBufferSize > 0 && bufferSize.get() > maxBufferSize;
     }
 
 

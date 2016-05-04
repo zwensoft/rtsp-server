@@ -14,37 +14,30 @@ public class RTPStream {
 
     private static final Logger logger = LoggerFactory.getLogger(RTPStream.class);
     
-    private int rtpChannel;
-    private int rtcpChannel;
     private MediaDescription md;
     private int streamIndex;
-    private long ssrc = SSRC_UNKNOWN;
     
-    private boolean isAudio;
-    private boolean isVideo;
+    private MediaType mediaType = MediaType.UNKOWN;
     private String codec;
     private Rational timeUnit;
     private int channels;
 
     
-    public RTPStream(int streamIndex, MediaDescription md, int rtpChannel, int rtcpChannel) {
+    public RTPStream(int streamIndex, MediaDescription md) {
         this.md = md;
         this.streamIndex = streamIndex;
-        this.rtcpChannel = rtcpChannel;
-        this.rtpChannel = rtpChannel;
         
         this.timeUnit = Rational.$_1_000;
         this.channels = 1;
         try {
             Media media = md.getMedia();
             if (null != media) {
-                isAudio = "audio".equals(media.getMediaType());
-                isVideo = "video".equals(media.getMediaType());
+                mediaType = MediaType.typeOf(media.getMediaType());
             }
-            if (isAudio) {
+            if (mediaType.isAudio()) {
                 channels = 1;
                 timeUnit = Rational.$_8_000;
-            } else if (isVideo) {
+            } else if (mediaType.isVideo()) {
                 channels = 0;
                 timeUnit = Rational.$90_000;
             }
@@ -69,9 +62,6 @@ public class RTPStream {
         }
     }
 
-    public void setSsrc(long ssrc) {
-        this.ssrc = ssrc;
-    }
 
     public Rational getTimeUnit() {
         return timeUnit;
@@ -80,25 +70,13 @@ public class RTPStream {
     public MediaDescription getMediaDescription() {
         return md;
     }
-
-    public int getRtcpChannel() {
-        return rtcpChannel;
-    }
-
-    public int getRtpChannel() {
-        return rtpChannel;
-    }
     
     public boolean isAudio() {
-        return isAudio;
-    }
-
-    public long getSsrc() {
-        return ssrc;
+        return mediaType.isAudio();
     }
 
     public boolean isVideo() {
-        return isVideo;
+        return mediaType.isVideo();
     }
 
 
@@ -123,4 +101,14 @@ public class RTPStream {
            .append("}");
         return buf.toString();
     }
+
+    public long getTimestampMills(long timestamp) {
+        return Rational.$_1_000.convert(timestamp, timeUnit);
+    }
+
+    public MediaType getMediaType() {
+        return mediaType;
+    }
+    
+    
 }

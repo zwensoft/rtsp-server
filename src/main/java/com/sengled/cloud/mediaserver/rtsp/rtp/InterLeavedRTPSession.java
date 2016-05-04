@@ -5,6 +5,7 @@ import io.netty.channel.Channel;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
+import jlibrtp.Participant;
 import jlibrtp.RTPSession;
 
 import org.slf4j.Logger;
@@ -25,6 +26,7 @@ public class InterLeavedRTPSession extends RTPSession {
         super(InterLeavedParticipantDatabase.FACTORY);
         
         this.channel = channel;
+        this.rtpChannel = rtpChannel;
         this.generateCNAME();
         this.generateSsrc();
         
@@ -78,5 +80,27 @@ public class InterLeavedRTPSession extends RTPSession {
         return (InterLeavedRTCPSession)rtcpSession;
     }
     
+    
+    
+    /**
+     * Find out whether a participant with this SSRC is known.
+     * 
+     * If the user is unknown, and the system is operating in unicast mode,
+     * try to match the ip-address of the sender to the ip address of a
+     * previously unmatched target
+     * 
+     * @param ssrc the SSRC of the participant
+     * @param packet the packet that notified us
+     * @return the relevant participant, possibly newly created
+     */
+    public Participant findParticipant() {
+        Participant p = partDb().getParticipant(ssrc);
+        if(p == null) {
+            p = new InterLeavedParticipant(this, ssrc);
+            partDb().addParticipant(2,p);
+        }
+        return p;
+    }
 
+    
 }
