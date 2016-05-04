@@ -148,6 +148,7 @@ public class RstpSessionRedisLogger implements InitializingBean {
         HashMap<byte[], byte[]> tokenInfo = new HashMap<byte[], byte[]>();
         tokenInfo.put(filed, innerHost.getBytes());
         
+        connection.expire(key_token, getDeviceInfoExpiredTime());
         connection.hMSet(key_token, tokenInfo);
     }
 
@@ -236,10 +237,8 @@ public class RstpSessionRedisLogger implements InitializingBean {
         redisTemplate.execute(new RedisCallback<Void>() {
             @Override
             public Void doInRedis(RedisConnection connection) throws DataAccessException {
-                long expireSeconds = sessionHeartBeat * 2 / 1000;
-
                 // 设置超时时间
-                connection.expire(KEY_MEDIA_DEVICES, 1 + expireSeconds);
+                connection.expire(KEY_MEDIA_DEVICES, getDeviceInfoExpiredTime());
 
                 // get members from redis
                 Collection<String> redisMembers;
@@ -266,6 +265,12 @@ public class RstpSessionRedisLogger implements InitializingBean {
                 return null;
             }
         });
+    }
+    
+    private long getDeviceInfoExpiredTime() {
+        long expireSeconds = sessionHeartBeat * 2 / 1000;
+        
+        return expireSeconds + 1;
     }
 
 
