@@ -22,7 +22,6 @@ import java.nio.charset.Charset;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.sdp.SessionDescription;
@@ -30,6 +29,7 @@ import javax.sip.TransportNotSupportedException;
 
 import org.slf4j.LoggerFactory;
 
+import com.sengled.cloud.mediaserver.rtsp.FullHttpMessageUtils;
 import com.sengled.cloud.mediaserver.rtsp.RTPSetup;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession.SessionMode;
@@ -109,14 +109,7 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
         try {
             if (msg instanceof FullHttpRequest) {
                 FullHttpRequest request = (FullHttpRequest) msg;
-                HttpMethod method = request.getMethod();
-                HttpHeaders headers = request.headers();
-                logger.info("{} {} {}", method, request.getUri(), request.getProtocolVersion());
-                if (logger.isDebugEnabled()) {
-                    for (Entry<String, String> entry : headers) {
-                        logger.debug("{}:{}", entry.getKey(), entry.getValue());
-                    }
-                }
+                FullHttpMessageUtils.log(logger, request).info();
                 
                 handleRequest(ctx, request);
             } else if (null != session) {
@@ -148,8 +141,31 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
                         FullHttpRequest request) throws UnsupportedEncodingException {
         FullHttpResponse response = null;
         
-        HttpMethod method = request.getMethod();
+        response = makeHttpResponse(ctx, request);
         
+        if (null == response) {
+            logger.info("no response");
+        } else if (!ctx.channel().isWritable()) {
+            logger.warn("channel writable is False");
+        } else {
+            FullHttpMessageUtils.log(logger, response).info();
+            ctx.writeAndFlush(response);
+            
+
+            HttpMethod method = request.getMethod();
+            if (RtspMethods.RECORD.equals(method)) {
+                session.record();
+            } else if (RtspMethods.PLAY.equals(method)) {
+                session.play();
+            }
+        }
+    }
+
+    private FullHttpResponse makeHttpResponse(final ChannelHandlerContext ctx,
+                                              FullHttpRequest request)
+            throws UnsupportedEncodingException {
+        FullHttpResponse response;
+        HttpMethod method = request.getMethod();
         if (RtspMethods.OPTIONS.equals(method)) {
             response = makeResponseWithStatus(request, HttpResponseStatus.OK);
             
@@ -166,20 +182,17 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
             if (null == sdp) {
                 response.setStatus(HttpResponseStatus.NOT_FOUND);
                 ctx.writeAndFlush(response);
-                return;
             } else {
                 logger.debug("output:\r\n{}", sdp);
                 response.content().writeBytes(sdp.getBytes("UTF-8"));
+                response.headers().add(RtspHeaders.Names.CACHE_CONTROL, RtspHeaders.Values.NO_CACHE);
+                response.headers().add(RtspHeaders.Names.EXPIRES, response.headers().get(RtspHeaders.Names.DATE));
+                response.headers().set(RtspHeaders.Names.CONTENT_LENGTH, response.content().readableBytes());
+                response.headers().set(RtspHeaders.Names.CONTENT_TYPE, "application/sdp");
             }
-            
-            response.headers().add(RtspHeaders.Names.CACHE_CONTROL, RtspHeaders.Values.NO_CACHE);
-            response.headers().add(RtspHeaders.Names.EXPIRES, response.headers().get(RtspHeaders.Names.DATE));
-            response.headers().set(RtspHeaders.Names.CONTENT_LENGTH, response.content().readableBytes());
-            response.headers().set(RtspHeaders.Names.CONTENT_TYPE, "application/sdp");
         } 
         else if (RtspMethods.ANNOUNCE.equals(method)) {
             String sdp = request.content().toString(Charset.forName("UTF-8"));
-            logger.info("sdp:\r\n{}", sdp);
             
             response = makeResponse(request, session);
             session = new RtspSession(ctx, request.getUri())
@@ -249,17 +262,7 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
             response = makeResponse(request, session);
             response.setStatus(HttpResponseStatus.FORBIDDEN);
         }
-        
-        
-        if (null != response) {
-            ctx.writeAndFlush(response);
-            
-            if (RtspMethods.RECORD.equals(method)) {
-                session.record();
-            } else if (RtspMethods.PLAY.equals(method)) {
-                session.play();
-            }
-        }
+        return response;
     }
 
     private String getRtpInfo(HttpRequest request) {

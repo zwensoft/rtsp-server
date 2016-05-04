@@ -64,9 +64,10 @@ public class TimeoutExecutor {
                 
                 if(cancleIt) {
                     cancel();
+                    logger.info("cancle {} after executed", task);
                 }
             } catch(Exception e) {
-                logger.warn("fail execute interval task '{}'", task, e);
+                logger.warn("Failed to execute interval task '{}'", task, e);
                 cancel();
             }
         }

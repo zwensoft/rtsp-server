@@ -54,7 +54,7 @@ public class RtspSessions {
             sessionEventBus.post(new RtspSessionRemovedEvent(oldSession));
         }
         
-        logger.info("{} rtsp session(s) online", sessions.size());
+        logger.info("{} device session(s) online", numSessions());
         return oldSession;
     }
 
@@ -66,7 +66,7 @@ public class RtspSessions {
         sessionEventBus.post(new RtspSessionUpdatedEvent(session));
         
        
-        logger.info("{} rtsp session(s) online", sessions.size());
+        logger.info("{} device session(s) online", numSessions());
         return oldSession;
     }
 
@@ -111,6 +111,10 @@ public class RtspSessions {
 
     public Collection<String> sessionNames() {
         return sessions.keySet();
+    }
+
+    public int numSessions() {
+        return sessions.size();
     }
     
     

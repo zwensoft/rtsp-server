@@ -85,7 +85,8 @@ public class RstpSessionRedisLogger implements InitializingBean {
                 try {
                     updateServerHeartBeat();
                 } catch (Exception ex) {
-                    logger.error("{}", "fail update server heart beat", ex);
+                    logger.error("Failed to send rtsp server heart beat");
+                    logger.debug(ex.getMessage(), ex);
                 }
                 return null;
             }
@@ -97,7 +98,14 @@ public class RstpSessionRedisLogger implements InitializingBean {
         redisTaskExecutor.setInterval(new Callable<Boolean>() {
             @Override
             public Boolean call() throws Exception {
-                updateSessionList();
+                try{
+                    updateSessionList();
+                } catch(Exception ex){
+                    logger.error("Failed to update device list to redis");
+                    logger.debug(ex.getMessage(), ex);
+                } finally {
+                    logger.info("{} device session online", RtspSessions.getInstance().numSessions());
+                }
                 return null;
             }
 
@@ -107,32 +115,46 @@ public class RstpSessionRedisLogger implements InitializingBean {
 
 
     @Subscribe
-    public void onSessionCreated(RtspSessionUpdatedEvent event) {
-        final RtspSession session = event.getSession();
-        final String token = getDeviceToken(session.getName());
-
-        redisTemplate.execute(new RedisCallback<Void>() {
+    public void onSessionCreated(final RtspSessionUpdatedEvent event) {
+        redisTaskExecutor.setTimeout(new Callable<Void>() {
             @Override
-            public Void doInRedis(RedisConnection connection) throws DataAccessException {
-                addDeviceToken(connection, token);
+            public Void call() throws Exception {
+                final RtspSession session = event.getSession();
+                final String token = getDeviceToken(session.getName());
+
+                redisTemplate.execute(new RedisCallback<Void>() {
+                    @Override
+                    public Void doInRedis(RedisConnection connection) throws DataAccessException {
+                        addDeviceToken(connection, token);
+                        return null;
+                    }
+                });
                 return null;
             }
-        });
+        }, 0);
+        
     }
 
     @Subscribe
-    public void onSessionRemoved(RtspSessionRemovedEvent event) {
-        final RtspSession session = event.getSession();
-        final String token = getDeviceToken(session.getName());
-
-        redisTemplate.execute(new RedisCallback<Void>() {
+    public void onSessionRemoved(final RtspSessionRemovedEvent event) {
+        redisTaskExecutor.setTimeout(new Callable<Void>() {
             @Override
-            public Void doInRedis(RedisConnection connection) throws DataAccessException {
-                removeDeviceToken(connection, token);
+            public Void call() throws Exception {
+                final RtspSession session = event.getSession();
+                final String token = getDeviceToken(session.getName());
+
+                redisTemplate.execute(new RedisCallback<Void>() {
+                    @Override
+                    public Void doInRedis(RedisConnection connection) throws DataAccessException {
+                        removeDeviceToken(connection, token);
+                        return null;
+                    }
+
+                });
                 return null;
             }
-
-        });
+        }, 0);
+        
     }
 
 
