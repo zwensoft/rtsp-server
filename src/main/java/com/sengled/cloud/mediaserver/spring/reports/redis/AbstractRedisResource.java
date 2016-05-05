@@ -15,8 +15,12 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
+import com.google.common.eventbus.Subscribe;
 import com.sengled.cloud.async.TimerExecutor;
+import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.ServerContext;
+import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionRemovedEvent;
+import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionUpdatedEvent;
 import com.sengled.cloud.mediaserver.spring.monitor.OSMonitor;
 
 /**
@@ -78,6 +82,38 @@ public abstract class AbstractRedisResource {
     }
 
 
+    @Subscribe
+    public void onSessionCreated(RtspSessionUpdatedEvent event) {
+        final RtspSession session = event.getSession();
+        final String token = getDeviceToken(session.getName());
+        
+        redisTemplate.execute(new RedisCallback<Void>() {
+            @Override
+            public Void doInRedis(RedisConnection connection) throws DataAccessException {
+                String deviceListKey = getDeviceListKey();
+                
+                addDevice(connection, deviceListKey, token);
+                return null;
+            }
+        });
+    }
+    
+    
+    @Subscribe
+    public void onSessionRemoved(RtspSessionRemovedEvent event) {
+        final RtspSession session = event.getSession();
+        final String token = getDeviceToken(session.getName());
+        
+        redisTemplate.execute(new RedisCallback<Void>() {
+            @Override
+            public Void doInRedis(RedisConnection connection) throws DataAccessException {
+                String deviceListKey = getDeviceListKey();
+                
+                removeDevice(connection, deviceListKey, token);
+                return null;
+            }
+        });
+    }
 
     private Callable<Boolean> updateResourceListCallable() {
         return new Callable<Boolean>() {
