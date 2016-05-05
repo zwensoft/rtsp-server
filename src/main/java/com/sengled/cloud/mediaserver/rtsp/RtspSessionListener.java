@@ -168,11 +168,12 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         switch (state) {
             case WAITING_KEY_FRAME:
                 if (!fullRtp.isKeyFrame()) {
-                    logger.info("waiting key frame");
+                    logger.debug("waiting key frame");
                     return false; // waiting key frame
                 } 
 
                 state = PlayState.PLAYING;
+                logger.info("starts playing '{}'", session.getName());
                 break;
             case PLAYING:
                 if (bufferIfFull()) {

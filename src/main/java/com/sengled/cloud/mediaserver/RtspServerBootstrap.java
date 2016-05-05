@@ -5,7 +5,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.group.ChannelGroup;
@@ -21,6 +20,7 @@ import org.slf4j.LoggerFactory;
 
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession.SessionMode;
+import com.sengled.cloud.mediaserver.rtsp.ServerContext;
 import com.sengled.cloud.mediaserver.rtsp.codec.RtpObjectAggregator;
 import com.sengled.cloud.mediaserver.rtsp.codec.RtspObjectDecoder;
 import com.sengled.cloud.mediaserver.rtsp.codec.RtspRequestDecoder;
@@ -39,34 +39,25 @@ import com.sengled.cloud.mediaserver.rtsp.codec.RtspRequestDecoder;
  * @author 陈修恒
  * @date 2016年4月15日
  */
-public class RtspServer {
-    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(RtspServer.class);
-    private static final RtspServer instance = new RtspServer(true);
+public class RtspServerBootstrap {
+    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(RtspServerBootstrap.class);
+    private static final NioEventLoopGroup workerGroup = new NioEventLoopGroup(Math.max(1, Runtime.getRuntime().availableProcessors() * 2), new DefaultThreadFactory("netty-worker-group"));
     
+    final private int port;
+    final private ServerContext rtspServer;
+    final private NioEventLoopGroup bossGroup;
     
-    private PooledByteBufAllocator allocator;
     private ServerBootstrap bootstrap;
     private ChannelGroup channels = new DefaultChannelGroup("rtsp-server", null);
-    private NioEventLoopGroup bossGroup = new NioEventLoopGroup(1, new DefaultThreadFactory("netty-boss-group"));
-    private NioEventLoopGroup workerGroup = new NioEventLoopGroup(Math.max(1, Runtime.getRuntime().availableProcessors() * 2), new DefaultThreadFactory("netty-worker-group"));
     
-    private Class<? extends ChannelHandler> rtspHandlerClass;
-    private int port = -1;
     
-    public static RtspServer getInstance() {
-        return instance;
-    }
-    private RtspServer(boolean preferDirect) {
-        this.allocator = new PooledByteBufAllocator(preferDirect);
-        this.rtspHandlerClass = RtspServerInboundHandler.class;
-        this.bootstrap = makeServerBosststrap(this.allocator);
+    public RtspServerBootstrap(String name, ServerContext rtspServer, int port) {
+        this.port = port;
+        this.rtspServer = rtspServer;
+        this.bossGroup = new NioEventLoopGroup(1, new DefaultThreadFactory(name));
+        this.bootstrap = makeServerBosststrap(new PooledByteBufAllocator(true));
     }
     
-    public RtspServer withHandlerClass(Class<? extends ChannelHandler> rtspHandlerClass) {
-        this.rtspHandlerClass = rtspHandlerClass;
-        
-        return this;
-    }
     
     public void start() throws InterruptedException {
         listen(getPort());
@@ -77,26 +68,11 @@ public class RtspServer {
     }
 
     private void listen(int port, String host) throws InterruptedException {
-        ensureHandlerOK();
-        
         ChannelFuture future = bootstrap.bind(host, port).sync();
         
         Channel channel = future.channel();
         channels.add(channel);
-        this.port = port;
         logger.info("listen: {}", channel.localAddress()); 
-    }
-    
-    private void ensureHandlerOK() {
-        if (null == rtspHandlerClass) {
-            throw new IllegalArgumentException("rtsp handler is UNKNOWN");
-        }
-
-        try{
-            rtspHandlerClass.newInstance();
-        } catch(Exception e) {
-            throw new IllegalArgumentException("can't call new " + rtspHandlerClass + "()");
-        }
     }
 
 
@@ -143,13 +119,12 @@ public class RtspServer {
                 ch.pipeline().addLast(RtspObjectDecoder.NAME, new RtspRequestDecoder());
                 ch.pipeline().addLast("rtsp-channel-0", new RtpObjectAggregator(0));
                 ch.pipeline().addLast("rtsp-channel-2", new RtpObjectAggregator(2));
-                ch.pipeline().addLast("rtsp", rtspHandlerClass.newInstance());
+                ch.pipeline().addLast("rtsp", new RtspServerInboundHandler(rtspServer));
             }
          });
 
         return b;
     }
-    
     
     public int getPort() {
         if (port < 0) {
@@ -158,10 +133,4 @@ public class RtspServer {
         
         return port;
     }
-    
-    public void setPort(int port) {
-        this.port = port;
-    }
-  
-    
 }

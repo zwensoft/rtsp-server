@@ -11,9 +11,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
 
 import com.google.common.eventbus.Subscribe;
-import com.sengled.cloud.async.TimeoutExecutor;
+import com.sengled.cloud.async.TimerExecutor;
+import com.sengled.cloud.mediaserver.rtsp.ServerContext;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
-import com.sengled.cloud.mediaserver.rtsp.RtspSessions;
 import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionRemovedEvent;
 import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionUpdatedEvent;
 
@@ -23,20 +23,23 @@ import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionUpdatedEvent;
  * @author 陈修恒
  * @date 2016年5月3日
  */
-public class RstpSessionLocalLogger implements InitializingBean {
-    private static Logger logger = LoggerFactory.getLogger(RstpSessionLocalLogger.class);
-    private TimeoutExecutor executor = new TimeoutExecutor("write-rtsp-session-at-local");
+public class RtspSessionLogger {
+
+
+    private static Logger logger = LoggerFactory.getLogger(RtspSessionLogger.class);
+    private TimerExecutor executor = new TimerExecutor("write-rtsp-session-at-local");
     
     private final static String SDP_URL;
     static {
         SDP_URL = getSdpUrl();
     }
 
-    @Override
-    public void afterPropertiesSet() throws Exception {
-        RtspSessions.getInstance().sessionEventBus().register(this);
-    }
 
+    public void register(ServerContext ctx) {
+        ctx.eventBus().register(this);
+    }
+    
+    
     @Subscribe
     public void onSessionCreated(RtspSessionUpdatedEvent event) {
         final RtspSession session = event.getSession();
@@ -110,5 +113,6 @@ public class RstpSessionLocalLogger implements InitializingBean {
         }
         return sdpUrl;
     }
+
     
 }

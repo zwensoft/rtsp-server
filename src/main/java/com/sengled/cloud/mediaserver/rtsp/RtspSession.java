@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtcpContent;
+import com.sengled.cloud.mediaserver.rtsp.interleaved.RtpPkt;
 import com.sengled.cloud.mediaserver.rtsp.rtp.InterLeavedRTPSession;
 import com.sengled.cloud.mediaserver.url.URLObject;
 
@@ -60,6 +61,7 @@ public class RtspSession implements Serializable {
     private String uri;
     private SessionMode mode = SessionMode.OTHERS;
     final private ChannelHandlerContext ctx;
+    final private ServerContext server;
 
     private SessionDescription sd;
     private RTPStream[] streams;
@@ -68,15 +70,16 @@ public class RtspSession implements Serializable {
     private RtspSessionListener listener;
     private RtspSessionDispatcher dispatcher;
     
-    public RtspSession(ChannelHandlerContext ctx, String url) {
-        this(ctx, URLObject.getUri(url), RandomStringUtils.random(16, false, true));
+    public RtspSession(ServerContext server, ChannelHandlerContext ctx, String url) {
+        this(server, ctx, URLObject.getUri(url), RandomStringUtils.random(16, false, true));
     }
     
-    public RtspSession(ChannelHandlerContext ctx, String url, String sessionId) {
-        this(ctx, url, sessionId, URLObject.getUri(url));
+    public RtspSession(ServerContext server, ChannelHandlerContext ctx, String url, String sessionId) {
+        this(server, ctx, url, sessionId, URLObject.getUri(url));
     }
 
-    public RtspSession(ChannelHandlerContext ctx, String url, String sessionId, String name) {
+    public RtspSession(ServerContext server, ChannelHandlerContext ctx, String url, String sessionId, String name) {
+        this.server = server;
         this.ctx = ctx;
         this.id = sessionId;
         this.uri = URLObject.getUri(url);
@@ -250,10 +253,9 @@ public class RtspSession implements Serializable {
     }
     
     public RtspSession withMode(SessionMode newMode) {
-        RtspSessions sessions = RtspSessions.getInstance();
         switch (newMode) {
             case PLAY:
-                this.sd = sessions.getSessionDescription(uri);
+                this.sd = server.getSessionDescription(uri);
                 this.streams = new RTPStream[getMediaDescriptions(sd).size()];
                 this.rtpSessions = new InterLeavedRTPSession[getMediaDescriptions(sd).size()];
                 this.listener = new RtspSessionListener(this, 128 * 1024); 
@@ -274,14 +276,13 @@ public class RtspSession implements Serializable {
     }
 
     public void play() {
-        RtspSessions sessions = RtspSessions.getInstance();
         
         switch (mode) {
             case PUBLISH:
-                sessions.updateSession(name, this);
+                server.updateSession(name, this);
                 break;
             case PLAY:
-                RtspSessions.getInstance().register(name, listener);
+                server.register(name, listener);
                 break;
             default:
                 break;
@@ -289,15 +290,14 @@ public class RtspSession implements Serializable {
     }
 
     public void destroy(String reason) {
-        RtspSessions sessions = RtspSessions.getInstance();
         
         switch (mode) {
             case PUBLISH:
                 dispatcher().teardown(reason);
-                sessions.removeSession(name, this);
+                server.removeSession(name, this);
                 break;
             case PLAY:
-                RtspSessions.getInstance().unregister(name, listener);
+                server.unregister(name, listener);
             default:
                 break;
         }
@@ -374,6 +374,12 @@ public class RtspSession implements Serializable {
             return listener;
         } else {
             throw new UnsupportedOperationException("SessionMode[" + mode + "] dont supporte Dispatcher");
+        }
+    }
+  
+    public <T> void dispatch(RtpEvent<T> event) {
+        if (isStreamSetup(event.getStreamIndex()) || event.getStreamIndex() < 0) {
+            server.dispatch(getName(), event);
         }
     }
     

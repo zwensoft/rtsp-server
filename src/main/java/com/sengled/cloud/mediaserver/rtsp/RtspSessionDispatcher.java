@@ -19,7 +19,7 @@ import jlibrtp.StaticProcs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.sengled.cloud.async.TimeoutExecutor;
+import com.sengled.cloud.async.TimerExecutor;
 import com.sengled.cloud.mediaserver.rtsp.event.FullRtpPktEvent;
 import com.sengled.cloud.mediaserver.rtsp.event.NtpTimeEvent;
 import com.sengled.cloud.mediaserver.rtsp.event.TearDownEvent;
@@ -38,15 +38,13 @@ import com.sengled.cloud.mediaserver.rtsp.rtp.RTCPCodec;
  */
 public class RtspSessionDispatcher {
     private static Logger logger = LoggerFactory.getLogger(RtspSessionDispatcher.class);
-    final private static TimeoutExecutor tasker = new TimeoutExecutor();
+    final private static TimerExecutor tasker = new TimerExecutor();
     
-    private String _name;
     private RtspSession session;
 
     public RtspSessionDispatcher(final RtspSession session) {
         super();
         this.session = session;
-        this._name = session.getName();
         
         tasker.setInterval(new Callable<Boolean>() {
             
@@ -63,17 +61,11 @@ public class RtspSessionDispatcher {
         }, 5000, 5000);
     }
 
-    final public String name() {
-        return null != _name ? _name : session.getName();
-    }
-
 
     public <T> void dispatch(RtpEvent<T> event) {
         if (null != event) {
             try {
-                if (session.isStreamSetup(event.getStreamIndex())) {
-                    RtspSessions.getInstance().dispatch(name(), event);
-                }
+                session.dispatch(event);
             } finally {
                 event.destroy();
             }
@@ -118,7 +110,6 @@ public class RtspSessionDispatcher {
             // h264
             if ("h264".equalsIgnoreCase(stream.getCodec())) {
             	ByteBuf buf = pkt.first().data();
-            	long timestamp = Rational.$_1_000.convert(pkt.getTimestamp(), stream.getTimeUnit());
             	
             	int firstByte =  buf.readByte();
                 switch (firstByte & 0x1F) {

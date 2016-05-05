@@ -35,9 +35,8 @@ import org.slf4j.LoggerFactory;
 
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession.SessionMode;
+import com.sengled.cloud.mediaserver.rtsp.ServerContext;
 import com.sengled.cloud.mediaserver.rtsp.Transport;
-import com.sengled.cloud.mediaserver.rtsp.codec.RtpObjectAggregator;
-import com.sengled.cloud.mediaserver.rtsp.codec.RtspObjectDecoder;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.FullRtpPkt;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtcpContent;
 import com.sengled.cloud.mediaserver.url.URLObject;
@@ -51,6 +50,8 @@ import com.sengled.cloud.mediaserver.url.URLObject;
  */
 public class RtspClient implements Closeable {
     private static final Logger logger = LoggerFactory.getLogger(RtspClient.class);
+
+    final private ServerContext rtspServer;
 
     private int seqNo = 1;
     private String name;
@@ -69,8 +70,9 @@ public class RtspClient implements Closeable {
     
     private boolean isClosed;
 
-    public RtspClient(String name, URLObject urlObj, Channel channel) {
+    public RtspClient(ServerContext rtspServer, String name, URLObject urlObj, Channel channel) {
         super();
+        this.rtspServer = rtspServer;
         this.name = null != name ? name : urlObj.getUri();
         this.urlObj = urlObj;
         this.channel = channel;
@@ -303,7 +305,7 @@ public class RtspClient implements Closeable {
                 }
             } else if (RtspMethods.DESCRIBE.equals(requestMethod)) {
                 String sessionId = response.headers().get(RtspHeaders.Names.SESSION);
-                session = new RtspSession(ctx, urlObj.getUrl(), sessionId, name);
+                session = new RtspSession(rtspServer, ctx, urlObj.getUrl(), sessionId, name);
                 session.withMode(SessionMode.PUBLISH)
                         .withSdp(response.content().toString(Charset.forName("UTF-8")));
 
@@ -312,7 +314,7 @@ public class RtspClient implements Closeable {
                 int streamIndex = session.getStreamIndex(requestUrl);
                 String transport = response.headers().get(RtspHeaders.Names.TRANSPORT);
 
-                Transport t = session.setupStream(requestUrl, transport);
+                session.setupStream(requestUrl, transport);
                 session.setId(response.headers().get(RtspHeaders.Names.SESSION));
                 request = setupStreamRequest(streamIndex + 1);
             } else if (RtspMethods.PLAY.equals(requestMethod)) {

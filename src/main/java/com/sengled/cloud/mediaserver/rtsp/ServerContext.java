@@ -16,42 +16,29 @@ import com.google.common.eventbus.AsyncEventBus;
 import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionRemovedEvent;
 import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionUpdatedEvent;
 
-public class RtspSessions {
+public class ServerContext {
     
-    private static final Logger logger = LoggerFactory.getLogger(RtspSessions.class);
-    private static final RtspSessions instance = new RtspSessions();
+    private static final Logger logger = LoggerFactory.getLogger(ServerContext.class);
     
-    private final AsyncEventBus sessionEventBus = new AsyncEventBus(Executors.newSingleThreadExecutor());
-    
-    
+    private final AsyncEventBus eventBus = new AsyncEventBus(Executors.newSingleThreadExecutor());
     private Map<String, RtspSession> sessions = new ConcurrentHashMap<String, RtspSession>();
     private ConcurrentHashMap<String, List<RtspSessionListener>> dispatchers = new ConcurrentHashMap<String, List<RtspSessionListener>>();
    
     
-    private RtspSessions(){}
+    public ServerContext(){}
     
-    public static RtspSessions getInstance() {
-        return instance;
-    }
-    
-    public AsyncEventBus sessionEventBus() {
-        return sessionEventBus;
-    }
-    
-    public SessionDescription getSessionDescription(String uri) {
-        RtspSession session = getInstance().sessions.get(uri);
-        
-        return null != session ? session.getSessionDescription() : null;
+    public AsyncEventBus eventBus() {
+        return eventBus;
     }
     
     public RtspSession removeSession(final String name, final RtspSession session) {
-        RtspSession oldSession = getInstance().sessions.get(name);
+        RtspSession oldSession = sessions.get(name);
         if (oldSession == session) {
-            oldSession = getInstance().sessions.remove(name);
+            oldSession = sessions.remove(name);
         }
         
         if (null != oldSession) {
-            sessionEventBus.post(new RtspSessionRemovedEvent(oldSession));
+            eventBus.post(new RtspSessionRemovedEvent(oldSession));
         }
         
         logger.info("{} device session(s) online", numSessions());
@@ -61,9 +48,9 @@ public class RtspSessions {
 
     
     public RtspSession updateSession(final String name, final RtspSession session) {
-        RtspSession oldSession = getInstance().sessions.put(name, session);
+        RtspSession oldSession = sessions.put(name, session);
         
-        sessionEventBus.post(new RtspSessionUpdatedEvent(session));
+        eventBus.post(new RtspSessionUpdatedEvent(session));
         
        
         logger.info("{} device session(s) online", numSessions());
@@ -115,6 +102,12 @@ public class RtspSessions {
 
     public int numSessions() {
         return sessions.size();
+    }
+
+    public SessionDescription getSessionDescription(String uri) {
+        RtspSession session = sessions.get(uri);
+        
+        return null != session ? session.getSessionDescription() : null;
     }
     
     

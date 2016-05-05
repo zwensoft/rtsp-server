@@ -12,7 +12,7 @@ import java.util.concurrent.Callable;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
 
-import com.sengled.cloud.async.TimeoutExecutor;
+import com.sengled.cloud.async.TimerExecutor;
 
 /**
  * 检测系统运行状态
@@ -27,7 +27,7 @@ public class OSMonitor  implements InitializingBean {
     private double cpuUseRate = 0.0;
             
 
-    private final TimeoutExecutor monitorTaskExecutor = new TimeoutExecutor("server-monitor");
+    private final TimerExecutor monitorTaskExecutor = new TimerExecutor("server-monitor");
     
     private final Callable<Boolean> task; 
     

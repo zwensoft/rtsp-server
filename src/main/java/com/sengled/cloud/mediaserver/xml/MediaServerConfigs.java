@@ -5,7 +5,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
 import org.dom4j.Document;
@@ -19,7 +21,7 @@ import org.dom4j.io.SAXReader;
  */
 public class MediaServerConfigs {
 	private String mode;
-	private int[] ports = new int[]{5454};
+	private Map<String, Integer> ports = Collections.emptyMap();
 	private List<StreamSourceDef> streamSources = Collections.emptyList();
 	
 	
@@ -76,18 +78,21 @@ public class MediaServerConfigs {
 		}
 
 		// <ports><port>
-		int[] ports = new int[] { 5454 };
+		Map<String, Integer> ports = new HashMap<String, Integer>();
 		Element portsEl = doc.getRootElement().element("ports");
 		if (null != portsEl) {
 			@SuppressWarnings("unchecked")
-			List<Element> portELs = (List<Element>)portsEl.elements("port");
-			ports = new int[portELs.size()]; 
-			for (int i = 0; i < ports.length; i++) {
-				ports[i] = Integer.parseInt(portELs.get(i).getTextTrim());
-				if (ports[i] < 0 || ports[i] > 65535) {
-					throw new IOException("illegal port [" + ports[i] + "]");
-				}
-			}
+			List<Element> portELs = (List<Element>)portsEl.elements();
+			for (Element element : portELs) {
+			    String name = element.getName();
+                String portString = element.getTextTrim();
+                
+                int port = Integer.parseInt(portString);
+                if (port < 0 || port > 65535) {
+                    throw new IOException("illegal port [" + port + "]");
+                }
+                ports.put(name, port);
+            }
 		}
 		
         //<mode>
@@ -100,7 +105,7 @@ public class MediaServerConfigs {
 		return configs;
 	}
 	
-	public int[] getPorts() {
+	public Map<String, Integer> getPorts() {
 		return ports;
 	}
 	

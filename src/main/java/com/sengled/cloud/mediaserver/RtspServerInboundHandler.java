@@ -17,7 +17,6 @@ import io.netty.util.ReferenceCountUtil;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
 import java.nio.charset.Charset;
 import java.sql.Timestamp;
 import java.util.concurrent.atomic.AtomicLong;
@@ -31,12 +30,11 @@ import com.sengled.cloud.mediaserver.rtsp.FullHttpMessageUtils;
 import com.sengled.cloud.mediaserver.rtsp.RTPStream;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession.SessionMode;
-import com.sengled.cloud.mediaserver.rtsp.RtspSessions;
+import com.sengled.cloud.mediaserver.rtsp.ServerContext;
 import com.sengled.cloud.mediaserver.rtsp.Transport;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.FullRtpPkt;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtcpContent;
 import com.sengled.cloud.mediaserver.rtsp.rtp.InterLeavedRTPSession;
-import com.sengled.cloud.mediaserver.url.URLObject;
 
 /**
  * 处理客户端的 rtsp 请求。
@@ -51,9 +49,14 @@ import com.sengled.cloud.mediaserver.url.URLObject;
 public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
     private static org.slf4j.Logger logger = LoggerFactory.getLogger(RtspServerInboundHandler.class);
 
-    
+
+    final private ServerContext rtspServer;
     private RtspSession session = null;
     private AtomicLong numRtp = new AtomicLong();
+    
+    public RtspServerInboundHandler(ServerContext rtspServer) {
+        this.rtspServer = rtspServer;
+    }
     
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -166,7 +169,7 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
         }
         else if (RtspMethods.DESCRIBE.equals(method)){
             
-            session = new RtspSession(ctx, request.getUri());
+            session = new RtspSession(rtspServer, ctx, request.getUri());
             final RtspSession mySession = session;
             mySession.withMode(SessionMode.PLAY);
             
@@ -188,7 +191,7 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
             String sdp = request.content().toString(Charset.forName("UTF-8"));
             
             response = makeResponse(request, session);
-            session = new RtspSession(ctx, request.getUri())
+            session = new RtspSession(rtspServer, ctx, request.getUri())
                 .withSdp(sdp)
                 .withMode(SessionMode.PUBLISH);
         }
@@ -219,20 +222,13 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
             response.headers().set(RtspHeaders.Names.RTP_INFO,  getRtpInfo(request));
         }
         else if (RtspMethods.GET_PARAMETER.equals(method)) {
-            try {
-                URLObject urlObj = new URLObject(request.getUri());
-                SessionDescription  sd = RtspSessions.getInstance().getSessionDescription(urlObj.getUri());
-                
-                if (null == sd) {
-                    response = makeResponse(request, session);
-                    response.setStatus(HttpResponseStatus.NOT_FOUND);
-                } else {
-                    response = makeResponse(request, session);
-                }
-            } catch (MalformedURLException ex) {
+            SessionDescription  sd = session.getSessionDescription();
+            
+            if (null == sd) {
                 response = makeResponse(request, session);
-                response.setStatus(HttpResponseStatus.BAD_REQUEST);
-                logger.warn("request url decode failed. {}", ex.getMessage(), ex);
+                response.setStatus(HttpResponseStatus.NOT_FOUND);
+            } else {
+                response = makeResponse(request, session);
             }
         }
         else if (RtspMethods.TEARDOWN.equals(method)) {
@@ -256,10 +252,6 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
     }
 
     private String getRtpInfo(HttpRequest request) {
-        String url = request.getUri();
-        String baseUrl = URLObject.getServerUrl(url);
-        // baseUrl = "rtsp://54.223.242.201:1554";
-        
         StringBuilder rtpInfo = new StringBuilder();
         int i = 0;
         for (RTPStream stream : session.getStreams()) {

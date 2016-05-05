@@ -14,7 +14,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.sengled.cloud.mediaserver.RtspClients;
-import com.sengled.cloud.mediaserver.RtspServer;
+import com.sengled.cloud.mediaserver.RtspServerBootstrap;
+import com.sengled.cloud.mediaserver.rtsp.ServerContext;
 import com.sengled.cloud.mediaserver.spring.reports.SpringStarter;
 import com.sengled.cloud.mediaserver.xml.MediaServerConfigs;
 import com.sengled.cloud.mediaserver.xml.StreamSourceDef;
@@ -25,7 +26,11 @@ import com.sengled.cloud.mediaserver.xml.StreamSourceDef;
  * @author 陈修恒
  */
 public class MediaServer {
+    private static final String PORT_TALKBACK_SERVER = "talkback-server";
+    private static final String PORT_RTSP_SERVER = "rtsp-server";
+
     private static final Logger logger = LoggerFactory.getLogger(MediaServer.class);
+    
     
     public static void main(String[] args) throws InterruptedException, IOException, DocumentException {
         File configDir = getConfigDir(args);
@@ -41,31 +46,51 @@ public class MediaServer {
         } finally {
             IOUtils.closeQuietly(in);
         }
-    	int[] ports = configs.getPorts();
-        for (int i = 0; i < ports.length; i++) {
-            RtspServer.getInstance().setPort(ports[i]);
-        }
+
 
         
-        // 启动 rtsp server
-        RtspServer.getInstance().start();
+        // 启动 rtsp-server
+        ServerContext rtspServerCtx = new ServerContext();
+        Integer rtspServerPort = configs.getPorts().get(PORT_RTSP_SERVER);
+        if (null != rtspServerPort) {
+            new RtspServerBootstrap("boss-rtsp-server", rtspServerCtx, rtspServerPort).start();
+
+            for (StreamSourceDef def : configs.getStreamSources()) {
+                try {
+                    RtspClients.open(rtspServerCtx, def.getUrl(), def.getName());
+                } catch (ConnectException ex) {
+                   logger.warn("can't open stream[{}] url='{}'", def.getName(), def.getUrl());
+                   logger.debug("{}", ex.getMessage(), ex);
+                }
+            }
+        }
+
+        // 启动 talkback-server
+        ServerContext talkbackServerCtx = new ServerContext();
+        Integer talkbackServerPort = configs.getPorts().get(PORT_TALKBACK_SERVER);
+        if (null != talkbackServerPort) {
+            new RtspServerBootstrap("boss-talkback-server", talkbackServerCtx, talkbackServerPort).start();
+        }
 
         // 启动 spring 容器
         if (!"local".equalsIgnoreCase(configs.getMode())) {
-            new SpringStarter(configDir).start();
-        } else {
+            SpringStarter starter = new SpringStarter(configDir);
+            starter.start();
+            
+            if (null != rtspServerPort) {
+                starter.initMediaResource(rtspServerPort, rtspServerCtx);
+            }
+            
+            if (null != talkbackServerPort) {
+                starter.initTalkbackResource(talkbackServerPort, talkbackServerCtx);
+            }
+            
+        } else {        
             logger.warn("use local mode, don't start spring");
         }
+
         
         
-        for (StreamSourceDef def : configs.getStreamSources()) {
-        	try {
-                RtspClients.open(def.getUrl(), def.getName());
-            } catch (ConnectException ex) {
-               logger.warn("can't open stream[{}] url='{}'", def.getName(), def.getUrl());
-               logger.debug("{}", ex.getMessage(), ex);
-            }
-		}
         
     }
 

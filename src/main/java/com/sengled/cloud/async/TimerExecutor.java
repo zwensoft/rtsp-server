@@ -15,16 +15,16 @@ import org.slf4j.LoggerFactory;
  * @author 陈修恒
  * @date 2016年4月28日
  */
-public class TimeoutExecutor {
-    private static final Logger logger = LoggerFactory.getLogger(TimeoutExecutor.class);
+public class TimerExecutor {
+    private static final Logger logger = LoggerFactory.getLogger(TimerExecutor.class);
     
     private final Timer timer;
     
-    public TimeoutExecutor() {
+    public TimerExecutor() {
         timer = new Timer(true);
     }
     
-    public TimeoutExecutor(String name) {
+    public TimerExecutor(String name) {
         timer = new Timer(name, true);
     }
     
@@ -64,7 +64,7 @@ public class TimeoutExecutor {
                 
                 if(cancleIt) {
                     cancel();
-                    logger.info("cancle {} after executed", task);
+                    logger.debug("cancle {} after executed", task);
                 }
             } catch(Exception e) {
                 logger.warn("Failed to execute interval task '{}'", task, e);
