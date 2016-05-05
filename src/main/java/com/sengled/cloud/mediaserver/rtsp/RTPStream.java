@@ -14,6 +14,7 @@ public class RTPStream {
 
     private static final Logger logger = LoggerFactory.getLogger(RTPStream.class);
     
+    private String url;
     private MediaDescription md;
     private int streamIndex;
     
@@ -23,8 +24,9 @@ public class RTPStream {
     private int channels;
 
     
-    public RTPStream(int streamIndex, MediaDescription md) {
+    public RTPStream(int streamIndex, MediaDescription md, String url) {
         this.md = md;
+        this.url = url;
         this.streamIndex = streamIndex;
         
         this.timeUnit = Rational.$_1_000;
@@ -109,6 +111,8 @@ public class RTPStream {
     public MediaType getMediaType() {
         return mediaType;
     }
-    
-    
+
+    public String getUrl() {
+        return url;
+    }
 }

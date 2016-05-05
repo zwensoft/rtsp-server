@@ -20,8 +20,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.nio.charset.Charset;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.sdp.SessionDescription;
@@ -30,13 +28,11 @@ import javax.sip.TransportNotSupportedException;
 import org.slf4j.LoggerFactory;
 
 import com.sengled.cloud.mediaserver.rtsp.FullHttpMessageUtils;
-import com.sengled.cloud.mediaserver.rtsp.RTPSetup;
+import com.sengled.cloud.mediaserver.rtsp.RTPStream;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession.SessionMode;
 import com.sengled.cloud.mediaserver.rtsp.RtspSessions;
 import com.sengled.cloud.mediaserver.rtsp.Transport;
-import com.sengled.cloud.mediaserver.rtsp.codec.RtpObjectAggregator;
-import com.sengled.cloud.mediaserver.rtsp.codec.RtspObjectDecoder;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.FullRtpPkt;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtcpContent;
 import com.sengled.cloud.mediaserver.rtsp.rtp.InterLeavedRTPSession;
@@ -57,9 +53,6 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
 
     
     private RtspSession session = null;
-    private List<RTPSetup> setups = new ArrayList<RTPSetup>();
-
-    
     private AtomicLong numRtp = new AtomicLong();
     
     @Override
@@ -85,8 +78,8 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
         super.userEventTriggered(ctx, evt);
         
         if (evt instanceof IdleStateEvent) {
-            if (null != session && session.getMode() == SessionMode.PUBLISH) {
-                throw new java.util.concurrent.TimeoutException("TimeOut To ReadOrWrite Data");
+            if ( null != session && session.getMode() == SessionMode.PUBLISH) {
+                throw new java.util.concurrent.TimeoutException("read timeout, token = '" + session.getName() + "'");
             }
         }
     }
@@ -264,16 +257,25 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
 
     private String getRtpInfo(HttpRequest request) {
         String url = request.getUri();
-        String baseUrl = url.substring(0, url.indexOf('/', "rtsp://".length()));
+        String baseUrl = URLObject.getServerUrl(url);
         // baseUrl = "rtsp://54.223.242.201:1554";
         
         StringBuilder rtpInfo = new StringBuilder();
-        for (int i = 0; i < setups.size(); i++) {
+        int i = 0;
+        for (RTPStream stream : session.getStreams()) {
+            if (null == stream) {
+                continue;
+            }
+            
             if (i != 0) {
                 rtpInfo.append(",");
             }
-            rtpInfo.append(setups.get(i).getUrl(baseUrl));
+            
+            rtpInfo.append("url=").append(stream.getUrl());
+            
+            i++;
         }
+        
         return rtpInfo.toString();
     }
 

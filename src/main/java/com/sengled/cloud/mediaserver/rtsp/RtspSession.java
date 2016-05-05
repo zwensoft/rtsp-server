@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtcpContent;
 import com.sengled.cloud.mediaserver.rtsp.rtp.InterLeavedRTPSession;
+import com.sengled.cloud.mediaserver.url.URLObject;
 
 /**
  * 一个 rtsp 会话。
@@ -68,17 +69,17 @@ public class RtspSession implements Serializable {
     private RtspSessionDispatcher dispatcher;
     
     public RtspSession(ChannelHandlerContext ctx, String url) {
-        this(ctx, getUri(url), RandomStringUtils.random(16, false, true));
+        this(ctx, URLObject.getUri(url), RandomStringUtils.random(16, false, true));
     }
     
     public RtspSession(ChannelHandlerContext ctx, String url, String sessionId) {
-        this(ctx, url, sessionId, getUri(url));
+        this(ctx, url, sessionId, URLObject.getUri(url));
     }
 
     public RtspSession(ChannelHandlerContext ctx, String url, String sessionId, String name) {
         this.ctx = ctx;
         this.id = sessionId;
-        this.uri = getUri(url);
+        this.uri = URLObject.getUri(url);
         this.name = name;
     }
     
@@ -105,16 +106,16 @@ public class RtspSession implements Serializable {
             throw new TransportNotSupportedException("interleaved");
         }
         
-        String uri = getUri(url);
+        String uri = URLObject.getUri(url);
         int mediaIndex = 0;
         for (MediaDescription dm : getMediaDescriptions(sd)) {
             try {
-                if (StringUtils.endsWith(uri, getUri(dm.getAttribute("control")))) {
-                    streams[mediaIndex] = new RTPStream(mediaIndex, dm);
+                if (StringUtils.endsWith(uri, getControlUri(dm))) {
+                    streams[mediaIndex] = new RTPStream(mediaIndex, dm, url);
                     rtpSessions[mediaIndex] = new InterLeavedRTPSession(ctx.channel(), interleaved[0], interleaved[1]);
                     return t;
                 }
-            } catch (SdpParseException ex) {
+            } catch (IllegalArgumentException ex) {
                 logger.warn("{}", ex.getMessage(), ex);
             }
             
@@ -122,6 +123,15 @@ public class RtspSession implements Serializable {
         }
 
         throw new IllegalArgumentException("No Media Found in SDP, Named as '" + uri + "'");
+    }
+
+    
+    private String getControlUri(MediaDescription dm) throws IllegalArgumentException {
+        try {
+            return URLObject.getUri(dm.getAttribute("control"));
+        } catch (Exception c) {
+            throw new IllegalArgumentException(c.getMessage(), c);
+        }
     }
 
 
@@ -154,14 +164,14 @@ public class RtspSession implements Serializable {
     }
     
     public int getStreamIndex(String url) {
-        String uri = getUri(url);
+        String uri = URLObject.getUri(url);
         int mediaIndex = 0;
         for (MediaDescription dm : getMediaDescriptions(sd)) {
             try {
-                if (StringUtils.endsWith(uri, getUri(dm.getAttribute("control")))) {
+                if (StringUtils.endsWith(uri, getControlUri(dm))) {
                     return mediaIndex;
                 }
-            } catch (SdpParseException ex) {
+            } catch (IllegalArgumentException ex) {
                 logger.warn("{}", ex.getMessage(), ex);
             }
             
@@ -191,23 +201,7 @@ public class RtspSession implements Serializable {
         
         return -1;
     }
-    public RTPStream getStream(String url) {
-        String uri = getUri(url);
-        int mediaIndex = 0;
-        for (MediaDescription dm : getMediaDescriptions(sd)) {
-            try {
-                if (StringUtils.endsWith(uri, getUri(dm.getAttribute("control")))) {
-                    return streams[mediaIndex];
-                }
-            } catch (SdpParseException ex) {
-                logger.warn("{}", ex.getMessage(), ex);
-            }
-            
-            mediaIndex ++;
-        }
-        
-        throw new IllegalArgumentException("stream[" + url + "] Not Found IN " + sd);
-    }
+
     
     @SuppressWarnings("unchecked")
     private java.util.List<MediaDescription> getMediaDescriptions(SessionDescription sd) {
@@ -224,15 +218,6 @@ public class RtspSession implements Serializable {
         }
 
         return Collections.emptyList();
-    }
-    
-    public static String getUri(String url) {
-        String uri = url;
-        if (StringUtils.startsWith(url, "rtsp://")) {
-            int indexOf = url.indexOf("/", "rtsp://".length());
-			uri = indexOf > 0 ? url.substring(indexOf) : "/";
-        }
-        return uri;
     }
     
     public RtspSession withSdp(String sdp) {

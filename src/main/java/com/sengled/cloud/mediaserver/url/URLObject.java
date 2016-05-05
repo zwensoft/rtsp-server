@@ -4,6 +4,9 @@ import java.net.MalformedURLException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 /**
  * URL 对象
@@ -14,6 +17,8 @@ import java.util.regex.Pattern;
  * @date 2016年4月15日
  */
 public class URLObject {
+    private static final Logger logger = LoggerFactory.getLogger(URLObject.class);
+    
     private final String scheme;
     private final String user;
     private final String password;
@@ -21,9 +26,51 @@ public class URLObject {
     private final int port;
     private final String uri;
 
-    public URLObject(String url) throws MalformedURLException {
+    
+    private static Matcher match(String url) {
         Pattern pattern = Pattern.compile("^([^:]+)://(([^:]+):([^@]*)@)?([^:/]+)(:([0-9]+))?([^\\?]*)");
         Matcher m = pattern.matcher(url);
+        return m;
+    }
+
+    
+
+    public static String getServerUrl(String url) {
+        if (null == url) {
+            return null;
+        }
+
+        Matcher m =  match(url);
+        if (!m.find()) {
+            return "";
+        }
+
+        String scheme = m.group(1);
+        String host = m.group(5);
+        String portString = m.group(7);
+
+        if (null == portString) {
+            return scheme + "://" + host;
+        } else {
+            return scheme + "://" + host + ":" + portString;
+        }
+    }
+    
+    public static String getUri(String url) {
+        if (null == url) {
+            return null;
+        }
+        
+        Matcher matcher =  match(url);
+        if (matcher.find()) {
+            return matcher.group(8);
+        } else {
+            return url;
+        }
+    }
+    
+    public URLObject(String url) throws MalformedURLException {
+        Matcher m = match(url);
         if (!m.find()) {
             throw new MalformedURLException("非法的 RTSP 地址[" + url + "]");
         }
@@ -55,6 +102,7 @@ public class URLObject {
         uri = m.group(8);
         
     }
+
 
     public String getScheme() {
         return scheme;
