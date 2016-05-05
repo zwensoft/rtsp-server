@@ -123,31 +123,33 @@ public class RtspSessionDispatcher {
             	long timestamp = Rational.$_1_000.convert(pkt.getTimestamp(), stream.getTimeUnit());
             	
             	int firstByte =  buf.readByte();
-            	switch (firstByte & 0x1F) {
-            	case 1:
-            		logger.info("av_new_packet");
-            		break;
-            	case 28:
-            		int fu_indicator  = firstByte;
-            		int fu_header     = buf.readByte();
-            		int start_bit     = fu_header >> 7;
-            		int nal_type      = fu_header & 0x1f;
-            		int nal           = fu_indicator & 0xe0 | nal_type;
-            		
-            		logger.info("nalType: {}, nal = {}, t = {}, {}", nal_type, nal, DateFormatUtils.format(timestamp, "HH:mm:ss.SSS"), pkt.dataLength());
-            		break;
-            	default:
-            		logger.info("nalType:{}", firstByte & 0x1F);
-            	}
+                switch (firstByte & 0x1F) {
+                    case 5:  // IDR
+                    case 7:  // SPS
+                    case 8:  // PPS
+                        pkt.setKeyFrame(true);
+                        break;
+                    case 28:  // FU-A (fragmented nal)
+                        int fu_header = buf.readByte();
+                        int nal_type = fu_header & 0x1f;
+
+                        switch (nal_type) {
+                            case 5:  // IDR
+                            case 7:  // SPS
+                            case 8:  // PPS
+                                pkt.setKeyFrame(true);
+                                break;
+                        }
+                        break;
+                }
             }
-            
+
+            logger.debug("dispatch: {}", pkt);
             dispatch(new FullRtpPktEvent(streamIndex, pkt.retain()));
-            logger.debug("dispatched: {}", pkt);
         } finally {
             ReferenceCountUtil.release(pkt);
         }
     }
-
     
 
     private void sendRtcpPktRR() {

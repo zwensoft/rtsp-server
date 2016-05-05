@@ -16,6 +16,7 @@ import java.io.IOException;
 
 import org.apache.commons.lang.StringUtils;
 
+import com.sengled.cloud.mediaserver.rtsp.codec.RtpObjectAggregator;
 import com.sengled.cloud.mediaserver.rtsp.codec.RtspObjectDecoder;
 import com.sengled.cloud.mediaserver.rtsp.codec.RtspResponseDecoder;
 import com.sengled.cloud.mediaserver.url.URLObject;
@@ -65,6 +66,8 @@ public class RtspClients {
                 ch.pipeline().addLast(new IdleStateHandler(60, 30, 0));
                 ch.pipeline().addLast(new RtspEncoder());
                 ch.pipeline().addLast(RtspObjectDecoder.NAME, new RtspResponseDecoder());
+                ch.pipeline().addLast("rtsp-channel-0", new RtpObjectAggregator(0));
+                ch.pipeline().addLast("rtsp-channel-2", new RtpObjectAggregator(2));
             }
         });
 

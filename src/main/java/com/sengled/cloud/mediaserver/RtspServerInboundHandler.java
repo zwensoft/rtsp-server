@@ -213,10 +213,6 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
                 response.headers().add(RtspHeaders.Names.CACHE_CONTROL, RtspHeaders.Values.NO_CACHE);
                 response.headers().add(RtspHeaders.Names.EXPIRES, response.headers().get(RtspHeaders.Names.DATE));
                 response.headers().add(RtspHeaders.Names.TRANSPORT, transport.toString());
-
-                
-                
-                ctx.pipeline().addAfter(RtspObjectDecoder.NAME, "rtp-rtp-" + rtpChannel, new RtpObjectAggregator(rtpChannel));
             } catch (TransportNotSupportedException ex) {
                 logger.warn("Not Supported Transport '{}'", ex.getMessage(), ex);
                 

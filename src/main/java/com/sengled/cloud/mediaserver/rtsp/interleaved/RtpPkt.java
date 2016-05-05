@@ -113,9 +113,9 @@ public class RtpPkt extends InterleavedFrame implements IRtpPkt {
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
-        buf.append("{RTP");
-        buf.append(", refCnt=").append(refCnt());
+        buf.append("{").append(getClass().getSimpleName());
         buf.append(", channel=").append(channel());
+        buf.append(", refCnt=").append(refCnt());
         buf.append(", pType=").append(getPayloadType());
         buf.append(", seq=").append(getSeqNumber());
         buf.append(", t=").append(getTimestamp());

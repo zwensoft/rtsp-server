@@ -9,7 +9,6 @@ import io.netty.util.concurrent.GenericFutureListener;
 import java.util.concurrent.atomic.AtomicLong;
 
 import jlibrtp.Participant;
-import jlibrtp.RtcpPktSR;
 
 import org.apache.commons.lang.time.DateFormatUtils;
 import org.slf4j.Logger;
@@ -29,6 +28,9 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
     final private RtspSession session;
     final private int maxBufferSize;
     final private AtomicLong bufferSize = new AtomicLong();
+    
+
+    private PlayState state = PlayState.WAITING_KEY_FRAME;
     
     public RtspSessionListener(RtspSession mySession, int maxRtpBufferSize) {
         super();
@@ -152,20 +154,42 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         FullRtpPkt fullRtp = rtpEvent.getSource();
         
         
-        // 如果缓冲区没满，则可以发送
-        if (!bufferIfFull()) {
-            sendFullRtpPkt(streamIndex, fullRtp.duplicate());
-            sent = true;
-        }
-        
+        sent = sendFullRtpPkt(streamIndex, fullRtp.duplicate());
         if (!sent) {
             logger.debug("session drop: {}.", fullRtp);
         }
     }
 
-    private void sendFullRtpPkt(int streamIndex, FullRtpPkt fullRtp) {
+    private boolean sendFullRtpPkt(int streamIndex, FullRtpPkt fullRtp) {
         InterLeavedRTPSession rtpSess = session.getRTPSessions()[streamIndex];
-        
+        switch (state) {
+            case WAITING_KEY_FRAME:
+                if (!fullRtp.isKeyFrame()) {
+                    logger.info("waiting key frame");
+                    return false; // waiting key frame
+                } 
+
+                state = PlayState.PLAYING;
+                break;
+            case PLAYING:
+                if (bufferIfFull()) {
+                    state = PlayState.BUFFER_FULL;
+                    return false;
+                }
+                break;
+            case BUFFER_FULL:
+                if (bufferSize.get() > 0) {
+                    return false;
+                } else if (!fullRtp.isKeyFrame()){
+                    state = PlayState.WAITING_KEY_FRAME;
+                    return false;
+                } else {
+                    state = PlayState.PLAYING;
+                }
+            default:
+                throw new IllegalStateException("illegal PlayState[" + state + "]");
+        }
+
         // 统计流量
         rtpSess.sentPktCount ++;
         rtpSess.sentOctetCount += fullRtp.dataLength();
@@ -218,6 +242,9 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
             bufferSize.getAndIncrement();
             channel().writeAndFlush(payload, channel().newPromise().addListener(this));
         }
+        
+        
+        return true;
     }
     
     

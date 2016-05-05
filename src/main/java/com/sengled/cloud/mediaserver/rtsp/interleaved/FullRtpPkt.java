@@ -17,7 +17,8 @@ import com.sengled.cloud.mediaserver.rtsp.InterLeaved;
 public class FullRtpPkt implements ReferenceCounted, InterLeaved {
     private AtomicInteger refCnt = new AtomicInteger(1);
     final private List<RtpPkt> contents;
-
+    private boolean keyFrame;
+    
     public FullRtpPkt(RtpPkt rtp)  {
         super();
         contents = new ArrayList<RtpPkt>();
@@ -25,7 +26,8 @@ public class FullRtpPkt implements ReferenceCounted, InterLeaved {
     }
     
 
-    private FullRtpPkt(List<RtpPkt> newPkts) {
+    private FullRtpPkt(boolean isKeyFrame, List<RtpPkt> newPkts) {
+        this.keyFrame = isKeyFrame;
         this.contents = newPkts;
     }
 
@@ -43,6 +45,14 @@ public class FullRtpPkt implements ReferenceCounted, InterLeaved {
     
     public long ssrc() {
         return first().ssrc();
+    }
+    
+    public void setKeyFrame(boolean keyFrame) {
+        this.keyFrame = keyFrame;
+    }
+    
+    public boolean isKeyFrame() {
+        return keyFrame;
     }
     
     public long getTimestamp() {
@@ -109,8 +119,9 @@ public class FullRtpPkt implements ReferenceCounted, InterLeaved {
     public String toString() {
         StringBuilder buf = new StringBuilder();
         buf.append("{FullRtpPkt[").append(numContents()).append("]");
-        buf.append(", refCnt = ").append(refCnt());
         buf.append(", channel = ").append(channel());
+        buf.append(", keyFrame = ").append(isKeyFrame());
+        buf.append(", refCnt = ").append(refCnt());
         buf.append(", timestamp = ").append(getTimestamp());
         buf.append(", pt = ").append(getPayloadType());
         buf.append(", length = ").append(length());
@@ -132,7 +143,7 @@ public class FullRtpPkt implements ReferenceCounted, InterLeaved {
             newPkts.add(rtpPkt.duplicate());
         }
         
-        return new FullRtpPkt(newPkts);
+        return new FullRtpPkt(isKeyFrame(), newPkts);
     }
     
     @Override

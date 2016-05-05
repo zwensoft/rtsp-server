@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession.SessionMode;
+import com.sengled.cloud.mediaserver.rtsp.codec.RtpObjectAggregator;
 import com.sengled.cloud.mediaserver.rtsp.codec.RtspObjectDecoder;
 import com.sengled.cloud.mediaserver.rtsp.codec.RtspRequestDecoder;
 
@@ -140,6 +141,8 @@ public class RtspServer {
         
                 // server端接收到的是httpRequest，所以要使用HttpRequestDecoder进行解码
                 ch.pipeline().addLast(RtspObjectDecoder.NAME, new RtspRequestDecoder());
+                ch.pipeline().addLast("rtsp-channel-0", new RtpObjectAggregator(0));
+                ch.pipeline().addLast("rtsp-channel-2", new RtpObjectAggregator(2));
                 ch.pipeline().addLast("rtsp", rtspHandlerClass.newInstance());
             }
          });
