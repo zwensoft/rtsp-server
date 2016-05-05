@@ -280,12 +280,12 @@ public abstract class AbstractRedisResource {
         return interval + 1;
     }
 
-    private String getInfoKey() {
-        return "resource:" + name + ":" + innerHost + ":info";
+    private String getListKey() {
+        return "resource:" + name + ":list";
     }
 
-    private String getListKey() {
-        return "resource:" + name + ":" + innerHost + ":list";
+    private String getInfoKey() {
+        return "resource:" + name + ":" + innerHost + ":info";
     }
 
     protected String getDeviceListKey() {
