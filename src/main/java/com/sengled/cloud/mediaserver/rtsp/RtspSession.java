@@ -334,6 +334,10 @@ public class RtspSession implements Serializable {
     }
     
     public boolean isStreamSetup(int streamIndex) {
+        if (streamIndex < 0 || streamIndex >= streams.length) {
+            return false;
+        }
+
         return null != streams[streamIndex];
     }
 
