@@ -13,7 +13,7 @@
 	<streams>  
         <stream>
             <name>/b</name>
-            <url>rtsp://54.222.187.235/D5F755CACDD0031671F6DF5C6A2A6CF8.sdp</url>
+            <url>rtsp://54.222.187.235/AD5F755CACDD0031671F6DF5C6A2A6CF8.sdp</url>
         </stream>
    <!--
 		<stream>
