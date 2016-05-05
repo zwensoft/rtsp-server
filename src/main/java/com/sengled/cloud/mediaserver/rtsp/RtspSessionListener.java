@@ -151,12 +151,15 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
     private void onFullRtpPktEvent(FullRtpPktEvent rtpEvent) {
         boolean sent = false;
         int streamIndex = rtpEvent.getStreamIndex();
-        FullRtpPkt fullRtp = rtpEvent.getSource();
-        
-        
-        sent = sendFullRtpPkt(streamIndex, fullRtp.duplicate());
-        if (!sent) {
-            logger.debug("session drop: {}.", fullRtp);
+        if (session.isStreamSetup(streamIndex)) {
+            FullRtpPkt fullRtp = rtpEvent.getSource();
+            
+            sent = sendFullRtpPkt(streamIndex, fullRtp.duplicate());
+            if (!sent) {
+                logger.debug("session drop: {}.", fullRtp);
+            }
+        } else {
+            logger.debug("stream#{} not setup", streamIndex);
         }
     }
 
