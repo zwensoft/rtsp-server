@@ -28,6 +28,8 @@
     
     
     <bean id="osMonitor" class="com.sengled.cloud.mediaserver.spring.monitor.OSMonitor"></bean>
+    <!-- 测试过程中不写 redis 
+     -->
     <bean id="rstpSessionRedisLogger" class="com.sengled.cloud.mediaserver.spring.reports.RstpSessionRedisLogger">
       <property name="osMonitor" ref="osMonitor"></property>
       <property name="innerHost"><value>${PRIVATE_IPV4}</value></property>
