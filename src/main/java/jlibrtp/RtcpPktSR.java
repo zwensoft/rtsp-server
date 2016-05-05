@@ -74,6 +74,7 @@ public class RtcpPktSR extends UDPRtcpPkt {
 	public RtcpPktSR(byte[] aRawPkt, int start, int length) {
 		super.rawPkt = aRawPkt;
 
+        logger.debug("   -> RtcpPktSR.decode()");
 		if(!super.parseHeaders(start) || packetType != 200 ) {
 			logger.info(" <-> RtcpPktSR.parseHeaders() etc. problem: {} {} ", (!super.parseHeaders(start) ), packetType);
 			super.problem = -200;
@@ -95,6 +96,8 @@ public class RtcpPktSR extends UDPRtcpPkt {
 				rReports = new RtcpPktRR(rawPkt,start,itemCount);
 			}
 		}
+		
+		logger.debug("  <- {}", this);
 	}
 	
 	public long getNTPTime() {
