@@ -13,8 +13,8 @@ public class TearDownEvent extends AbstractRTPEvent<String> {
      * @param streamIndex
      * @param reason 关闭原因
      */
-    public TearDownEvent(int streamIndex, String reason) {
-        super(streamIndex, reason);
+    public TearDownEvent(String reason) {
+        super(-1, reason);
     }
 
     @Override

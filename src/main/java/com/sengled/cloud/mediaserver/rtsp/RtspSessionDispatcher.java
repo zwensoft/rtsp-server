@@ -78,9 +78,7 @@ public class RtspSessionDispatcher {
      * 视频流停止上传了
      */
     public void teardown(String reason) {
-        for (int i = 0; i < session.numStreams(); i++) {
-            dispatch(new TearDownEvent(i, reason));
-        }
+        dispatch(new TearDownEvent(reason));
     }
     
     /**

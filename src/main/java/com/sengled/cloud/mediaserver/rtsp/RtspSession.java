@@ -10,6 +10,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.rtsp.RtspHeaders;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -300,7 +301,6 @@ public class RtspSession implements Serializable {
     }
 
     public void destroy(String reason) {
-        
         switch (mode) {
             case PUBLISH:
                 dispatcher().teardown(reason);
@@ -308,6 +308,9 @@ public class RtspSession implements Serializable {
                 break;
             case PLAY:
                 server.unregister(name, listener);
+                if (channel().isWritable()){
+                    channel().close();
+                }
             default:
                 break;
         }

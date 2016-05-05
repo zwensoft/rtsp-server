@@ -70,10 +70,6 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
     }
     
     public <T> void on(RtpEvent<T> event) {
-        InterLeavedRTPSession rtp = session.getRTPSessions()[event.getStreamIndex()];
-        if (null == rtp) {
-            return;
-        }
         
         if(event instanceof FullRtpPktEvent) {
             onFullRtpPktEvent(((FullRtpPktEvent)event));
@@ -82,8 +78,7 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
             syncNtpTime((NtpTimeEvent)event);
             
         }else if (event instanceof TearDownEvent) {
-            TearDownEvent tearDown = (TearDownEvent)event;
-            
+            session.destroy("publisher has teardown");
         } else {
             logger.warn("ignore {}", event);
         }
