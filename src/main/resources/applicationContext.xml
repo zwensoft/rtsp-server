@@ -30,12 +30,20 @@
     <bean id="osMonitor" class="com.sengled.cloud.mediaserver.spring.monitor.OSMonitor"></bean>
     <!-- 测试过程中不写 redis 
      -->
-    <bean id="rstpSessionRedisLogger" class="com.sengled.cloud.mediaserver.spring.reports.RstpSessionRedisLogger">
+    <bean id="mediaResource" class="com.sengled.cloud.mediaserver.spring.reports.redis.MediaResource">
+      <property name="redisTemplate" ref="redisTemplate"></property>
       <property name="osMonitor" ref="osMonitor"></property>
       <property name="innerHost"><value>${PRIVATE_IPV4}</value></property>
       <property name="outerHost"><value>${PUBLIC_IPV4}</value></property>
     </bean>
-    <bean class="com.sengled.cloud.mediaserver.spring.reports.RstpSessionLocalLogger">
+   <bean id="talkbackResource" class="com.sengled.cloud.mediaserver.spring.reports.redis.TalkbackResource">
+      <property name="redisTemplate" ref="redisTemplate"></property>
+      <property name="osMonitor" ref="osMonitor"></property>
+      <property name="innerHost"><value>${PRIVATE_IPV4}</value></property>
+      <property name="outerHost"><value>${PUBLIC_IPV4}</value></property>
+    </bean>
+    
+    <bean class="com.sengled.cloud.mediaserver.spring.reports.RtspSessionLogger">
       
     </bean>
 </beans>
