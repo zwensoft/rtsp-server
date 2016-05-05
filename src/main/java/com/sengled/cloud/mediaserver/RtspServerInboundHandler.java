@@ -222,8 +222,11 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
             response.headers().set(RtspHeaders.Names.RTP_INFO,  getRtpInfo(request));
         }
         else if (RtspMethods.GET_PARAMETER.equals(method)) {
-            SessionDescription  sd = session.getSessionDescription();
+            SessionDescription  sd = null;
             
+            if (null != session) {
+                sd = session.getSessionDescription();
+            }
             if (null == sd) {
                 response = makeResponse(request, session);
                 response.setStatus(HttpResponseStatus.NOT_FOUND);
