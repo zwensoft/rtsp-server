@@ -291,7 +291,7 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
                 new DefaultFullHttpResponse(RtspVersions.RTSP_1_0, status);
         resp.headers().set(RtspHeaders.Names.CSEQ, headers.get(RtspHeaders.Names.CSEQ));
         resp.headers().set(RtspHeaders.Names.DATE, new Timestamp(System.currentTimeMillis()));
-        resp.headers().set(RtspHeaders.Names.SERVER, "Sengled Media Server On Netty");
+        resp.headers().set(RtspHeaders.Names.SERVER, "Sengled Java Media Server 1.0");
 
         return resp;
     }
