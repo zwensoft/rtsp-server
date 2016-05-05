@@ -125,8 +125,7 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         
         
         // TODO
-        logger.warn("忽略了 RtcpPktSR");
-
+        // 丢弃的 SR
         /**
         
         RtcpPktSR sr = new RtcpPktSR(dst.ssrc(), dst.sentPktCount, dst.sentOctetCount, null);
