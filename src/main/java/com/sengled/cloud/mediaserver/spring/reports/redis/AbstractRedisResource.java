@@ -79,6 +79,7 @@ public abstract class AbstractRedisResource {
         timer.setInterval(updateResourceListCallable(), 0, updateResourceListDelay * 1000);
         timer.setInterval(updateResourceInfoCallable(), 0, updateResourceInfoDelay * 1000);
         timer.setInterval(updateResourceDevicesCallable(), 0, updateResourceDevicesDelay * 1000);
+        rtspServer.eventBus().register(this);
     }
 
 
