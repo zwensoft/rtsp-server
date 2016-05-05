@@ -53,7 +53,7 @@ public class MediaServer {
         ServerContext rtspServerCtx = new ServerContext();
         Integer rtspServerPort = configs.getPorts().get(PORT_RTSP_SERVER);
         if (null != rtspServerPort) {
-            new RtspServerBootstrap("boss-rtsp-server", rtspServerCtx, rtspServerPort).start();
+            new RtspServerBootstrap("rtsp-server", rtspServerCtx, rtspServerPort).start();
 
             for (StreamSourceDef def : configs.getStreamSources()) {
                 try {
@@ -69,7 +69,7 @@ public class MediaServer {
         ServerContext talkbackServerCtx = new ServerContext();
         Integer talkbackServerPort = configs.getPorts().get(PORT_TALKBACK_SERVER);
         if (null != talkbackServerPort) {
-            new RtspServerBootstrap("boss-talkback-server", talkbackServerCtx, talkbackServerPort).start();
+            new RtspServerBootstrap("talkback-server", talkbackServerCtx, talkbackServerPort).start();
         }
 
         // 启动 spring 容器

@@ -41,20 +41,23 @@ import com.sengled.cloud.mediaserver.rtsp.codec.RtspRequestDecoder;
  */
 public class RtspServerBootstrap {
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(RtspServerBootstrap.class);
-    private static final NioEventLoopGroup workerGroup = new NioEventLoopGroup(Math.max(1, Runtime.getRuntime().availableProcessors() * 2), new DefaultThreadFactory("netty-worker-group"));
     
     final private int port;
     final private ServerContext rtspServer;
     final private NioEventLoopGroup bossGroup;
+    final private NioEventLoopGroup workerGroup;
     
     private ServerBootstrap bootstrap;
     private ChannelGroup channels = new DefaultChannelGroup("rtsp-server", null);
     
     
     public RtspServerBootstrap(String name, ServerContext rtspServer, int port) {
+        int maxThreads = Math.max(1, Runtime.getRuntime().availableProcessors() * 2);
+
         this.port = port;
         this.rtspServer = rtspServer;
         this.bossGroup = new NioEventLoopGroup(1, new DefaultThreadFactory(name));
+        this.workerGroup = new NioEventLoopGroup(maxThreads, new DefaultThreadFactory(name + "-worker"));
         this.bootstrap = makeServerBosststrap(new PooledByteBufAllocator(true));
     }
     
