@@ -7,6 +7,8 @@ import gov.nist.javax.sdp.parser.ParserFactory;
 import gov.nist.javax.sdp.parser.SDPParser;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.rtsp.RtspHeaders;
 
 import java.io.Serializable;
 import java.text.ParseException;
@@ -63,6 +65,7 @@ public class RtspSession implements Serializable {
     final private ChannelHandlerContext ctx;
     final private ServerContext server;
 
+    private String userAgent;
     private SessionDescription sd;
     private RTPStream[] streams;
     private InterLeavedRTPSession[] rtpSessions = null;
@@ -223,6 +226,11 @@ public class RtspSession implements Serializable {
         return Collections.emptyList();
     }
     
+    public RtspSession withUserAgent(HttpHeaders headers) {
+        this.userAgent = headers.get(RtspHeaders.Names.USER_AGENT);
+        return this;
+    }
+    
     public RtspSession withSdp(String sdp) {
         SessionDescriptionImpl sd = new SessionDescriptionImpl();
 
@@ -282,7 +290,8 @@ public class RtspSession implements Serializable {
                 server.updateSession(name, this);
                 break;
             case PLAY:
-                server.register(name, listener);
+                int numListeners = server.register(name, listener);
+                logger.info("{} is {}th listener of '{}'", userAgent, numListeners, name);
                 break;
             default:
                 break;

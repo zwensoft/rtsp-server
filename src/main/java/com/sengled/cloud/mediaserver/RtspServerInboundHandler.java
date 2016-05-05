@@ -171,7 +171,8 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
             
             session = new RtspSession(rtspServer, ctx, request.getUri());
             final RtspSession mySession = session;
-            mySession.withMode(SessionMode.PLAY);
+            mySession.withMode(SessionMode.PLAY)
+                     .withUserAgent(request.headers());
             
             response = makeResponse(request, null);
             String sdp = session.getSDP();
@@ -193,7 +194,8 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
             response = makeResponse(request, session);
             session = new RtspSession(rtspServer, ctx, request.getUri())
                 .withSdp(sdp)
-                .withMode(SessionMode.PUBLISH);
+                .withMode(SessionMode.PUBLISH)
+                .withUserAgent(request.headers());
         }
         else if (RtspMethods.SETUP.equals(method)) {
             try {

@@ -307,6 +307,7 @@ public class RtspClient implements Closeable {
                 String sessionId = response.headers().get(RtspHeaders.Names.SESSION);
                 session = new RtspSession(rtspServer, ctx, urlObj.getUrl(), sessionId, name);
                 session.withMode(SessionMode.PUBLISH)
+                        .withUserAgent(requestHeaders)
                         .withSdp(response.content().toString(Charset.forName("UTF-8")));
 
                 request = setupStreamRequest(0);

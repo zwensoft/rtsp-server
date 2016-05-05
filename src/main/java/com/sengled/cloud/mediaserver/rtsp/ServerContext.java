@@ -57,16 +57,22 @@ public class ServerContext {
         return oldSession;
     }
 
-    public void register(String name, RtspSessionListener listener) {
+    public int register(String name, RtspSessionListener listener) {
         if (null != listener) {
             dispatchers.putIfAbsent(name, new CopyOnWriteArrayList<RtspSessionListener>());
-            dispatchers.get(name).add(listener);
+            List<RtspSessionListener> listeners = dispatchers.get(name);
+            listeners.add(listener);
+            
             
             RtspSession producer = sessions.get(name);
             if (null != producer) {
                 listener.init(producer);
             }
+            
+            return listeners.size();
         }
+        
+        return 0;
     }
 
     public void unregister(String uri, RtspSessionListener listener) {
