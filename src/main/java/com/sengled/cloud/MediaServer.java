@@ -51,7 +51,11 @@ public class MediaServer {
         RtspServer.getInstance().start();
 
         // 启动 spring 容器
-        //new SpringStarter(configDir).start();
+        if (!"local".equalsIgnoreCase(configs.getMode())) {
+            new SpringStarter(configDir).start();
+        } else {
+            logger.warn("use local mode, don't start spring");
+        }
         
         
         for (StreamSourceDef def : configs.getStreamSources()) {

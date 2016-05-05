@@ -18,7 +18,7 @@ import org.dom4j.io.SAXReader;
  * @author 陈修恒
  */
 public class MediaServerConfigs {
-	
+	private String mode;
 	private int[] ports = new int[]{5454};
 	private List<StreamSourceDef> streamSources = Collections.emptyList();
 	
@@ -74,7 +74,6 @@ public class MediaServerConfigs {
 				streams.add(new StreamSourceDef(name, url, descript));
 			}
 		}
-				
 
 		// <ports><port>
 		int[] ports = new int[] { 5454 };
@@ -91,10 +90,13 @@ public class MediaServerConfigs {
 			}
 		}
 		
-		
+        //<mode>
+        String mode = doc.getRootElement().elementTextTrim("mode");
+
 		MediaServerConfigs configs = new MediaServerConfigs();
 		configs.streamSources = streams;
 		configs.ports = ports;
+		configs.mode = mode;
 		return configs;
 	}
 	
@@ -105,4 +107,8 @@ public class MediaServerConfigs {
 	public List<StreamSourceDef> getStreamSources() {
 		return streamSources;
 	}
+	
+	public String getMode() {
+        return mode;
+    }
 }
