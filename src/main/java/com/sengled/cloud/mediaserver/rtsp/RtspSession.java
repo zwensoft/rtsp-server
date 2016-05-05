@@ -288,6 +288,7 @@ public class RtspSession implements Serializable {
         switch (mode) {
             case PUBLISH:
                 server.updateSession(name, this);
+                logger.info("{} will publish media", userAgent);
                 break;
             case PLAY:
                 int numListeners = server.register(name, listener);
