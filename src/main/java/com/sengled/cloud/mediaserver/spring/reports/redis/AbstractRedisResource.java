@@ -173,7 +173,7 @@ public abstract class AbstractRedisResource {
                 // 更新 media-list
                 String key = getListKey();
                 connection.zAdd(key.getBytes(), leftCpuUsageRate, innerHost.getBytes());
-                logger.info("updated {}, score = {}, host = {}", key, leftCpuUsageRate, innerHost);
+                logger.debug("updated {}, score = {}, host = {}", key, leftCpuUsageRate, innerHost);
 
                 return null;
             }
@@ -199,7 +199,7 @@ public abstract class AbstractRedisResource {
                 String key = getInfoKey();
                 connection.hMSet(key.getBytes(), serverInfos);
                 connection.expire(key.getBytes(), getExpireSeconds(updateResourceInfoDelay));
-                logger.info("updated {}, {} session online", key, numSessions);
+                logger.debug("updated {}, {} session online", key, numSessions);
                 return null;
             }
 
