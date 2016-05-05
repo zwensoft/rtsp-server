@@ -1,14 +1,16 @@
 
 <media-server>
-	<ports>
+	<mode>local</mode>
+    <ports>
 		<port>5454</port>
 	</ports>
-	<streams>  <!-- 
+    
+	<streams>  
         <stream>
-            <name>/AD5F755CACDD0031671F6DF5C6A2A6CF8.sdp</name>
-            <url>rtsp://54.222.187.235/AD5F755CACDD0031671F6DF5C6A2A6CF8.sdp</url>
+            <name>/b</name>
+            <url>rtsp://54.222.187.235/D5F755CACDD0031671F6DF5C6A2A6CF8.sdp</url>
         </stream>
-  
+   <!--
 		<stream>
 			<name>/dahua</name>
 			<url>rtsp://admin:admin@192.168.1.108</url>
