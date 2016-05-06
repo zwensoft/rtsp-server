@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession.SessionMode;
-import com.sengled.cloud.mediaserver.rtsp.ServerContext;
+import com.sengled.cloud.mediaserver.rtsp.ServerEngine;
 import com.sengled.cloud.mediaserver.rtsp.Transport;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.FullRtpPkt;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtcpContent;
@@ -51,7 +51,7 @@ import com.sengled.cloud.mediaserver.url.URLObject;
 public class RtspClient implements Closeable {
     private static final Logger logger = LoggerFactory.getLogger(RtspClient.class);
 
-    final private ServerContext rtspServer;
+    final private ServerEngine engine;
 
     private int seqNo = 1;
     private String name;
@@ -70,9 +70,9 @@ public class RtspClient implements Closeable {
     
     private boolean isClosed;
 
-    public RtspClient(ServerContext rtspServer, String name, URLObject urlObj, Channel channel) {
+    public RtspClient(ServerEngine engine, String name, URLObject urlObj, Channel channel) {
         super();
-        this.rtspServer = rtspServer;
+        this.engine = engine;
         this.name = null != name ? name : urlObj.getUri();
         this.urlObj = urlObj;
         this.channel = channel;
@@ -305,7 +305,7 @@ public class RtspClient implements Closeable {
                 }
             } else if (RtspMethods.DESCRIBE.equals(requestMethod)) {
                 String sessionId = response.headers().get(RtspHeaders.Names.SESSION);
-                session = new RtspSession(rtspServer, ctx, urlObj.getUrl(), sessionId, name);
+                session = new RtspSession(engine, ctx, urlObj.getUrl(), sessionId, name);
                 session.withMode(SessionMode.PUBLISH)
                         .withUserAgent(requestHeaders)
                         .withSdp(response.content().toString(Charset.forName("UTF-8")));

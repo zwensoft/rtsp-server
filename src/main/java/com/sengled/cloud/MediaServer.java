@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import com.sengled.cloud.mediaserver.RtspClients;
 import com.sengled.cloud.mediaserver.RtspServerBootstrap;
-import com.sengled.cloud.mediaserver.rtsp.ServerContext;
+import com.sengled.cloud.mediaserver.rtsp.ServerEngine;
 import com.sengled.cloud.mediaserver.spring.reports.SpringStarter;
 import com.sengled.cloud.mediaserver.xml.MediaServerConfigs;
 import com.sengled.cloud.mediaserver.xml.StreamSourceDef;
@@ -50,14 +50,14 @@ public class MediaServer {
 
         
         // 启动 rtsp-server
-        ServerContext rtspServerCtx = new ServerContext();
+        ServerEngine rtspServerEngine = new ServerEngine();
         Integer rtspServerPort = configs.getPorts().get(PORT_RTSP_SERVER);
         if (null != rtspServerPort) {
-            new RtspServerBootstrap("rtsp-server", rtspServerCtx, rtspServerPort).start();
+            new RtspServerBootstrap("rtsp-server", rtspServerEngine, rtspServerPort).start();
 
             for (StreamSourceDef def : configs.getStreamSources()) {
                 try {
-                    RtspClients.open(rtspServerCtx, def.getUrl(), def.getName());
+                    RtspClients.open(rtspServerEngine, def.getUrl(), def.getName());
                 } catch (ConnectException ex) {
                    logger.warn("can't open stream[{}] url='{}'", def.getName(), def.getUrl());
                    logger.debug("{}", ex.getMessage(), ex);
@@ -66,10 +66,10 @@ public class MediaServer {
         }
 
         // 启动 talkback-server
-        ServerContext talkbackServerCtx = new ServerContext();
+        ServerEngine talkbackEngine = new ServerEngine();
         Integer talkbackServerPort = configs.getPorts().get(PORT_TALKBACK_SERVER);
         if (null != talkbackServerPort) {
-            new RtspServerBootstrap("talkback-server", talkbackServerCtx, talkbackServerPort).start();
+            new RtspServerBootstrap("talkback-server", talkbackEngine, talkbackServerPort).start();
         }
 
         // 启动 spring 容器
@@ -78,11 +78,11 @@ public class MediaServer {
             starter.start();
             
             if (null != rtspServerPort) {
-                starter.initMediaResource(rtspServerPort, rtspServerCtx);
+                starter.initMediaResource(rtspServerPort, rtspServerEngine);
             }
             
             if (null != talkbackServerPort) {
-                starter.initTalkbackResource(talkbackServerPort, talkbackServerCtx);
+                starter.initTalkbackResource(talkbackServerPort, talkbackEngine);
             }
             
         } else {        

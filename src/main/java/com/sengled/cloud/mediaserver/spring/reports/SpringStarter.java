@@ -6,7 +6,7 @@ import java.net.UnknownHostException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
-import com.sengled.cloud.mediaserver.rtsp.ServerContext;
+import com.sengled.cloud.mediaserver.rtsp.ServerEngine;
 import com.sengled.cloud.mediaserver.spring.reports.redis.MediaResource;
 import com.sengled.cloud.mediaserver.spring.reports.redis.TalkbackResource;
 
@@ -32,25 +32,25 @@ public class SpringStarter {
     }
 
     public void initMediaResource(Integer rtspServerPort,
-                                  ServerContext rtspServerCtx) throws UnknownHostException {
+                                  ServerEngine rtspServerCtx) throws UnknownHostException {
         if (null != springContext) {
             MediaResource mediaResource = springContext.getBean(MediaResource.class);
             mediaResource.start(rtspServerPort, rtspServerCtx);
             
             RtspSessionLogger sessionLogger = springContext.getBean(RtspSessionLogger.class);
-            sessionLogger.register(rtspServerCtx);
+            sessionLogger.start(rtspServerPort, rtspServerCtx);
         }
     }
 
     public void initTalkbackResource(Integer talkbackServerPort,
-                                     ServerContext talkbackServerCtx) throws UnknownHostException {
+                                     ServerEngine talkbackServerCtx) throws UnknownHostException {
         if (null != springContext) {
             TalkbackResource resource = springContext.getBean(TalkbackResource.class);
             resource.start(talkbackServerPort, talkbackServerCtx);
             
 
             RtspSessionLogger sessionLogger = springContext.getBean(RtspSessionLogger.class);
-            sessionLogger.register(talkbackServerCtx);
+            sessionLogger.start(talkbackServerPort, talkbackServerCtx);
         }
     }
 

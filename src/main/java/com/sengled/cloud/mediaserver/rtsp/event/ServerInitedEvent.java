@@ -1,6 +1,6 @@
 package com.sengled.cloud.mediaserver.rtsp.event;
 
-import com.sengled.cloud.mediaserver.rtsp.ServerContext;
+import com.sengled.cloud.mediaserver.rtsp.ServerEngine;
 
 /**
  * 服务器启动成功
@@ -10,7 +10,7 @@ import com.sengled.cloud.mediaserver.rtsp.ServerContext;
  */
 public class ServerInitedEvent {
     private int port;
-    private ServerContext rtspServerContext;
+    private ServerEngine rtspServerContext;
 
 
     public int getPort() {
@@ -21,11 +21,11 @@ public class ServerInitedEvent {
         this.port = port;
     }
 
-    public ServerContext getRtspServerContext() {
+    public ServerEngine getRtspServerContext() {
         return rtspServerContext;
     }
 
-    public void setRtspServerContext(ServerContext sessions) {
+    public void setRtspServerContext(ServerEngine sessions) {
         this.rtspServerContext = sessions;
     }
 

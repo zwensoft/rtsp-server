@@ -64,7 +64,7 @@ public class RtspSession implements Serializable {
     private String uri;
     private SessionMode mode = SessionMode.OTHERS;
     final private ChannelHandlerContext ctx;
-    final private ServerContext server;
+    final private ServerEngine engine;
 
     private String userAgent;
     private SessionDescription sd;
@@ -74,16 +74,16 @@ public class RtspSession implements Serializable {
     private RtspSessionListener listener;
     private RtspSessionDispatcher dispatcher;
     
-    public RtspSession(ServerContext server, ChannelHandlerContext ctx, String url) {
-        this(server, ctx, URLObject.getUri(url), RandomStringUtils.random(16, false, true));
+    public RtspSession(ServerEngine engine, ChannelHandlerContext ctx, String url) {
+        this(engine, ctx, URLObject.getUri(url), RandomStringUtils.random(16, false, true));
     }
     
-    public RtspSession(ServerContext server, ChannelHandlerContext ctx, String url, String sessionId) {
-        this(server, ctx, url, sessionId, URLObject.getUri(url));
+    public RtspSession(ServerEngine engine, ChannelHandlerContext ctx, String url, String sessionId) {
+        this(engine, ctx, url, sessionId, URLObject.getUri(url));
     }
 
-    public RtspSession(ServerContext server, ChannelHandlerContext ctx, String url, String sessionId, String name) {
-        this.server = server;
+    public RtspSession(ServerEngine engine, ChannelHandlerContext ctx, String url, String sessionId, String name) {
+        this.engine = engine;
         this.ctx = ctx;
         this.id = sessionId;
         this.uri = URLObject.getUri(url);
@@ -264,7 +264,7 @@ public class RtspSession implements Serializable {
     public RtspSession withMode(SessionMode newMode) {
         switch (newMode) {
             case PLAY:
-                this.sd = server.getSessionDescription(uri);
+                this.sd = engine.getSessionDescription(uri);
                 this.streams = new RTPStream[getMediaDescriptions(sd).size()];
                 this.rtpSessions = new InterLeavedRTPSession[getMediaDescriptions(sd).size()];
                 this.listener = new RtspSessionListener(this, 128 * 1024); 
@@ -288,11 +288,11 @@ public class RtspSession implements Serializable {
         
         switch (mode) {
             case PUBLISH:
-                server.updateSession(name, this);
+                engine.updateSession(name, this);
                 logger.info("{} will publish media", userAgent);
                 break;
             case PLAY:
-                int numListeners = server.register(name, listener);
+                int numListeners = engine.register(name, listener);
                 logger.info("{} is {}th listener of '{}'", userAgent, numListeners, name);
                 break;
             default:
@@ -304,10 +304,10 @@ public class RtspSession implements Serializable {
         switch (mode) {
             case PUBLISH:
                 dispatcher().teardown(reason);
-                server.removeSession(name, this);
+                engine.removeSession(name, this);
                 break;
             case PLAY:
-                server.unregister(name, listener);
+                engine.unregister(name, listener);
                 if (channel().isWritable()){
                     channel().close();
                 }
@@ -392,7 +392,7 @@ public class RtspSession implements Serializable {
   
     public <T> void dispatch(RtpEvent<T> event) {
         if (isStreamSetup(event.getStreamIndex()) || event.getStreamIndex() < 0) {
-            server.dispatch(getName(), event);
+            engine.dispatch(getName(), event);
         }
     }
     

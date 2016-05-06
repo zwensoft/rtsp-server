@@ -18,7 +18,7 @@ import com.google.common.collect.Collections2;
 import com.google.common.eventbus.Subscribe;
 import com.sengled.cloud.async.TimerExecutor;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
-import com.sengled.cloud.mediaserver.rtsp.ServerContext;
+import com.sengled.cloud.mediaserver.rtsp.ServerEngine;
 import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionRemovedEvent;
 import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionUpdatedEvent;
 import com.sengled.cloud.mediaserver.spring.monitor.OSMonitor;
@@ -40,7 +40,7 @@ public abstract class AbstractRedisResource {
     private String innerHost;
     private String outerHost;
     private int port;
-    private ServerContext serverCtx;
+    private ServerEngine engine;
 
     private OSMonitor osMonitor;
     private StringRedisTemplate redisTemplate;
@@ -53,9 +53,9 @@ public abstract class AbstractRedisResource {
         this.name = name;
     }
 
-    final public void start(int port, ServerContext rtspServer) throws UnknownHostException {
+    final public void start(int port, ServerEngine rtspServer) throws UnknownHostException {
         this.port = port;
-        this.serverCtx = rtspServer;
+        this.engine = rtspServer;
 
         if (null == innerHost) {
             innerHost = InetAddress.getLocalHost().getHostAddress();
@@ -183,7 +183,7 @@ public abstract class AbstractRedisResource {
 
 
     private void updateResourceInfo() {
-        final int numSessions = serverCtx.numSessions();
+        final int numSessions = engine.numSessions();
 
         final HashMap<byte[], byte[]> serverInfos;
         serverInfos = new HashMap<byte[], byte[]>();
@@ -241,7 +241,7 @@ public abstract class AbstractRedisResource {
     private Collection<String> getMembersFromMem() {
         final Collection<String> memMembers;
         memMembers =
-                Collections2.transform(serverCtx.sessionNames(),
+                Collections2.transform(engine.sessionNames(),
                         new Function<String, String>() {
                             @Override
                             public String apply(String input) {

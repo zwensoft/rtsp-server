@@ -31,7 +31,7 @@ import com.sengled.cloud.mediaserver.rtsp.FullHttpMessageUtils;
 import com.sengled.cloud.mediaserver.rtsp.RTPStream;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession.SessionMode;
-import com.sengled.cloud.mediaserver.rtsp.ServerContext;
+import com.sengled.cloud.mediaserver.rtsp.ServerEngine;
 import com.sengled.cloud.mediaserver.rtsp.Transport;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.FullRtpPkt;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtcpContent;
@@ -51,12 +51,12 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
     private static org.slf4j.Logger logger = LoggerFactory.getLogger(RtspServerInboundHandler.class);
 
 
-    final private ServerContext rtspServer;
+    final private ServerEngine engine;
     private RtspSession session = null;
     private AtomicLong numRtp = new AtomicLong();
     
-    public RtspServerInboundHandler(ServerContext rtspServer) {
-        this.rtspServer = rtspServer;
+    public RtspServerInboundHandler(ServerEngine engine) {
+        this.engine = engine;
     }
     
     @Override
@@ -172,7 +172,7 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
         }
         else if (RtspMethods.DESCRIBE.equals(method)){
             
-            session = new RtspSession(rtspServer, ctx, request.getUri());
+            session = new RtspSession(engine, ctx, request.getUri());
             final RtspSession mySession = session;
             mySession.withMode(SessionMode.PLAY)
                      .withUserAgent(request.headers());
@@ -195,7 +195,7 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
             String sdp = request.content().toString(Charset.forName("UTF-8"));
             
             response = makeResponse(request, session);
-            session = new RtspSession(rtspServer, ctx, request.getUri())
+            session = new RtspSession(engine, ctx, request.getUri())
                 .withSdp(sdp)
                 .withMode(SessionMode.PUBLISH)
                 .withUserAgent(request.headers());

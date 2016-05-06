@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory;
 
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession.SessionMode;
-import com.sengled.cloud.mediaserver.rtsp.ServerContext;
+import com.sengled.cloud.mediaserver.rtsp.ServerEngine;
 import com.sengled.cloud.mediaserver.rtsp.codec.RtpObjectAggregator;
 import com.sengled.cloud.mediaserver.rtsp.codec.RtspObjectDecoder;
 import com.sengled.cloud.mediaserver.rtsp.codec.RtspRequestDecoder;
@@ -42,8 +42,8 @@ import com.sengled.cloud.mediaserver.rtsp.codec.RtspRequestDecoder;
 public class RtspServerBootstrap {
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(RtspServerBootstrap.class);
     
+    final private ServerEngine engine;
     final private int port;
-    final private ServerContext rtspServer;
     final private NioEventLoopGroup bossGroup;
     final private NioEventLoopGroup workerGroup;
     
@@ -51,11 +51,11 @@ public class RtspServerBootstrap {
     private ChannelGroup channels = new DefaultChannelGroup("rtsp-server", null);
     
     
-    public RtspServerBootstrap(String name, ServerContext rtspServer, int port) {
+    public RtspServerBootstrap(String name, ServerEngine engine, int port) {
         int maxThreads = Math.max(1, Runtime.getRuntime().availableProcessors() * 2);
 
         this.port = port;
-        this.rtspServer = rtspServer;
+        this.engine = engine;
         this.bossGroup = new NioEventLoopGroup(1, new DefaultThreadFactory(name));
         this.workerGroup = new NioEventLoopGroup(maxThreads, new DefaultThreadFactory(name + "-worker"));
         this.bootstrap = makeServerBosststrap(new PooledByteBufAllocator(true));
@@ -122,7 +122,7 @@ public class RtspServerBootstrap {
                 ch.pipeline().addLast(RtspObjectDecoder.NAME, new RtspRequestDecoder());
                 ch.pipeline().addLast("rtsp-channel-0", new RtpObjectAggregator(0));
                 ch.pipeline().addLast("rtsp-channel-2", new RtpObjectAggregator(2));
-                ch.pipeline().addLast("rtsp", new RtspServerInboundHandler(rtspServer));
+                ch.pipeline().addLast("rtsp", new RtspServerInboundHandler(engine));
             }
          });
 

@@ -16,7 +16,7 @@ import java.io.IOException;
 
 import org.apache.commons.lang.StringUtils;
 
-import com.sengled.cloud.mediaserver.rtsp.ServerContext;
+import com.sengled.cloud.mediaserver.rtsp.ServerEngine;
 import com.sengled.cloud.mediaserver.rtsp.codec.RtpObjectAggregator;
 import com.sengled.cloud.mediaserver.rtsp.codec.RtspObjectDecoder;
 import com.sengled.cloud.mediaserver.rtsp.codec.RtspResponseDecoder;
@@ -33,11 +33,11 @@ public class RtspClients {
         
     }
 
-    public static RtspClient open(ServerContext rtspServer, URLObject urlObj, String name) throws InterruptedException, IOException {
-        return clients.doOpen(rtspServer, urlObj, name);
+    public static RtspClient open(ServerEngine engine, URLObject urlObj, String name) throws InterruptedException, IOException {
+        return clients.doOpen(engine, urlObj, name);
     }
 
-    private RtspClient doOpen(ServerContext rtspServer, URLObject urlObj,
+    private RtspClient doOpen(ServerEngine engine, URLObject urlObj,
     						  String name) throws InterruptedException, IOException {
         if (StringUtils.isEmpty(name)) {
         	throw new IllegalArgumentException("stream name is EMPTY");
@@ -76,7 +76,7 @@ public class RtspClients {
 
         boolean closeChannel = true;
         try {
-            RtspClient client = new RtspClient(rtspServer, name, urlObj, channel);
+            RtspClient client = new RtspClient(engine, name, urlObj, channel);
             channel.pipeline().addLast(client.getRtspResponseHandler());
             client.connect();
             

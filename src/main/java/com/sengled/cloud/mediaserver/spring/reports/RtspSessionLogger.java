@@ -8,12 +8,11 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.InitializingBean;
 
 import com.google.common.eventbus.Subscribe;
 import com.sengled.cloud.async.TimerExecutor;
-import com.sengled.cloud.mediaserver.rtsp.ServerContext;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
+import com.sengled.cloud.mediaserver.rtsp.ServerEngine;
 import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionRemovedEvent;
 import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionUpdatedEvent;
 
@@ -35,8 +34,8 @@ public class RtspSessionLogger {
     }
 
 
-    public void register(ServerContext ctx) {
-        ctx.eventBus().register(this);
+    public void start(int port, ServerEngine engine) {
+        engine.eventBus().register(this);
     }
     
     

@@ -16,15 +16,21 @@ import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionRemovedEvent;
 import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionUpdatedEvent;
 import com.sengled.cloud.mediaserver.rtsp.event.TearDownEvent;
 
-public class ServerContext {
+/**
+ * 一个 server 实例
+ * 
+ * @author 陈修恒
+ * @date 2016年5月6日
+ */
+public class ServerEngine {
     
-    private static final Logger logger = LoggerFactory.getLogger(ServerContext.class);
+    private static final Logger logger = LoggerFactory.getLogger(ServerEngine.class);
     
     private final AsyncEventBus eventBus = new AsyncEventBus(Executors.newSingleThreadExecutor());
     private ConcurrentHashMap<String, RtspSessionAndListeners> sessionAndListeners = new ConcurrentHashMap<String, RtspSessionAndListeners>();
    
     
-    public ServerContext(){}
+    public ServerEngine(){}
     
     public AsyncEventBus eventBus() {
         return eventBus;
