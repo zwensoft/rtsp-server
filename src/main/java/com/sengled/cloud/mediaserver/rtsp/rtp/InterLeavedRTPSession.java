@@ -26,7 +26,6 @@ public class InterLeavedRTPSession extends RTPSession {
     private int rtpChannel;
     
     private NtpTime ntpTime;
-    private long rtpTimeStamp;
     private long playingTimestamp;
     
     public InterLeavedRTPSession(Channel channel, int rtpChannel, int rtcpChannel) {
@@ -48,20 +47,18 @@ public class InterLeavedRTPSession extends RTPSession {
         this.playingTimestamp = playingTimestamp;
     }
     
-    public long getRtpTimeStamp() {
-        return rtpTimeStamp;
-    }
-    
-    public long getRtpTimeMillis() {
+    public long getPlayingTimeMillis(Rational streamTimeUnit) {
         if (null == ntpTime) {
-            throw new UnsupportedOperationException("ntp time is unknown");
+            return Rational.$_1_000.convert(playingTimestamp, streamTimeUnit);
+        } else {
+            long duration = playingTimestamp - ntpTime.getRtpTime();
+            return ntpTime.getNtpTimeMillis() + Rational.$_1_000.convert(duration, streamTimeUnit);
         }
-        
-        long duration = rtpTimeStamp - ntpTime.getRtpTime();
-        
-        return ntpTime.getNtpTimeMillis() + Rational.$_1_000.convert(duration, ntpTime.getRtpTimeUnit());
     }
     
+    public void setNtpTime(NtpTime ntpTime) {
+        this.ntpTime = ntpTime;
+    }
 
     public Channel channel() {
         return channel;
@@ -130,6 +127,7 @@ public class InterLeavedRTPSession extends RTPSession {
         }
         return p;
     }
+
 
     
 }

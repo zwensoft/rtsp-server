@@ -94,15 +94,8 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
      */
     private void onNtpTimeEvent(NtpTimeEvent event) {
         InterLeavedRTPSession rtp = session.getRTPSessions()[event.getStreamIndex()];
-        Participant p = rtp.findParticipant();
         NtpTime ntp = event.getSource();
-        
-        p.lastRtpPkt = ntp.getRtpTime();
-        p.lastNtpTs1 = ntp.getNtpTs1();
-        p.lastNtpTs2 = ntp.getNtpTs2();
-        logger.debug("stream#{}, {}", event.getStreamIndex(), ntp);
-        
-        sendRtcpPktSR(event.getStreamIndex(), rtp);
+        rtp.setNtpTime(ntp);
     }
 
 
@@ -187,8 +180,12 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
             sendFullRtpPkt(streamIndex, isNewFrame, rtpObj.duplicate()); // 拷贝一份，重复使用
             rtpSession.setPlayingTimestamp(rtpObj.getTimestamp());
             
-            if (isNewFrame) {
-                logger.debug("stream#{} sent: {}", streamIndex, rtpObj);
+            if (isNewFrame && logger.isDebugEnabled()) {
+                MediaStream mediaStream = session.getStreams()[streamIndex];
+                Rational timeunit = mediaStream.getTimeUnit();
+                long playingTimeMillis = rtpSession.getPlayingTimeMillis(timeunit);
+                String logTime = DateFormatUtils.format(playingTimeMillis, "yyyy-MM-dd HH:mm:ss.SSS");
+                logger.debug("stream#{} sent: {}, {}", streamIndex, logTime, mediaStream.getCodec());
             }
         }
     }
