@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.sql.Timestamp;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.sdp.SessionDescription;
@@ -82,7 +83,7 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
         
         if (evt instanceof IdleStateEvent) {
             if ( null != session && session.getMode() == SessionMode.PUBLISH) {
-                throw new java.util.concurrent.TimeoutException("read timeout, token = '" + session.getName() + "'");
+                throw new TimeoutException("read timeout, token = '" + session.getName() + "'");
             }
         }
     }
@@ -92,7 +93,9 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
                                 Throwable cause) throws Exception {
         if(cause instanceof IOException) {
             logger.info("IOException {}", cause.getMessage());
-        } else {
+        } else if (cause  instanceof TimeoutException) {
+            logger.error("idle timeout, {}.", cause.getMessage());
+        } else{
             logger.error("channel close for {}", cause.getMessage(), cause);
         }
 
