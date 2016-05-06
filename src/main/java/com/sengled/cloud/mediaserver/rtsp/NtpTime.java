@@ -48,6 +48,10 @@ public class NtpTime {
         return rtpTime;
     }
 
+    public Rational getRtpTimeUnit() {
+        return rtpTimeUnit;
+    }
+    
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();

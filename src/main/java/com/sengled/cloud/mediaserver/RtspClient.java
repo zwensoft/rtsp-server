@@ -37,8 +37,8 @@ import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession.SessionMode;
 import com.sengled.cloud.mediaserver.rtsp.ServerEngine;
 import com.sengled.cloud.mediaserver.rtsp.Transport;
-import com.sengled.cloud.mediaserver.rtsp.interleaved.FullRtpPkt;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtcpContent;
+import com.sengled.cloud.mediaserver.rtsp.interleaved.RtpPkt;
 import com.sengled.cloud.mediaserver.url.URLObject;
 
 /**
@@ -217,8 +217,8 @@ public class RtspClient implements Closeable {
         public void channelRead(ChannelHandlerContext ctx,
                                 Object msg) throws Exception {
             try {
-                if (msg instanceof FullRtpPkt) {
-                    handleRtpPacket(((FullRtpPkt)msg));
+                if (msg instanceof RtpPkt) {
+                    handleRtpPacket(((RtpPkt)msg));
                 } else if (msg instanceof RtcpContent) {
                     handleRtcpPacket(((RtcpContent)msg));
                 } else if (msg instanceof FullHttpResponse) {
@@ -237,7 +237,7 @@ public class RtspClient implements Closeable {
             }
         }
 
-        private void handleRtpPacket(FullRtpPkt msg) {
+        private void handleRtpPacket(RtpPkt msg) {
             if (null != session) {
                 session.dispatcher().dispatch(msg.retain());
             }

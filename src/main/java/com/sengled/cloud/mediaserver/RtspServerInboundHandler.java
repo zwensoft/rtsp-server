@@ -35,6 +35,7 @@ import com.sengled.cloud.mediaserver.rtsp.ServerEngine;
 import com.sengled.cloud.mediaserver.rtsp.Transport;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.FullRtpPkt;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtcpContent;
+import com.sengled.cloud.mediaserver.rtsp.interleaved.RtpPkt;
 import com.sengled.cloud.mediaserver.rtsp.rtp.InterLeavedRTPSession;
 
 /**
@@ -121,13 +122,13 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
     }
 
     private void handleRtps(Object msg) {
-        if (msg instanceof FullRtpPkt) {
+        if (msg instanceof RtpPkt) {
             long num = numRtp.incrementAndGet();
             if (num % 500 == 0) {
                 logger.debug("receive Frame[{}] of {} ", num, session);
             }
    
-            session.dispatcher().dispatch(((FullRtpPkt) msg).retain());
+            session.dispatcher().dispatch(((RtpPkt) msg).retain());
         } else if (msg instanceof RtcpContent)  {
             RtcpContent rtcpObj = (RtcpContent)msg;
             session.onRtcpEvent(rtcpObj);

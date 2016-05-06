@@ -11,8 +11,13 @@ import io.netty.buffer.ByteBuf;
  */
 public class RtpPkt extends InterleavedFrame implements IRtpPkt {
     private int headerLength;
+    private boolean keyFrame;
     
     public RtpPkt(int channel, ByteBuf payload) {
+        this(channel, payload, false);
+    } 
+    
+    public RtpPkt(int channel, ByteBuf payload, boolean isKeyFrame) {
         super(channel, payload);
         
         headerLength = 12; 
@@ -32,7 +37,7 @@ public class RtpPkt extends InterleavedFrame implements IRtpPkt {
     
     @Override
     public RtpPkt duplicate() {
-        return new RtpPkt(channel(), content().duplicate());
+        return new RtpPkt(channel(), content().duplicate(), isKeyFrame());
     }
     
     
@@ -124,6 +129,16 @@ public class RtpPkt extends InterleavedFrame implements IRtpPkt {
         buf.append(isMarker() ? " Marker" : "");
         buf.append("}");
         return buf.toString();
+    }
+
+
+
+    public boolean isKeyFrame() {
+        return keyFrame;
+    }
+    
+    public void setKeyFrame(boolean keyFrame) {
+        this.keyFrame = keyFrame;
     }
 
 }

@@ -20,10 +20,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.sengled.cloud.async.TimerExecutor;
-import com.sengled.cloud.mediaserver.rtsp.event.FullRtpPktEvent;
 import com.sengled.cloud.mediaserver.rtsp.event.NtpTimeEvent;
+import com.sengled.cloud.mediaserver.rtsp.event.RtpPktEvent;
 import com.sengled.cloud.mediaserver.rtsp.event.TearDownEvent;
-import com.sengled.cloud.mediaserver.rtsp.interleaved.FullRtpPkt;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtcpContent;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtpPkt;
 import com.sengled.cloud.mediaserver.rtsp.rtp.InterLeavedParticipant;
@@ -84,37 +83,32 @@ public class RtspSessionDispatcher {
     /**
      * 新收到一组 RTP 帧
      * 
-     * @param pkt
+     * @param rtpObj
      */
-    public void dispatch(FullRtpPkt pkt) {
+    public void dispatch(RtpPkt rtpObj) {
         try {
-            int streamIndex = session.getStreamIndex(pkt);
+            int streamIndex = session.getStreamIndex(rtpObj);
             if (streamIndex < 0) {
-                logger.debug("stream of channel#{} NOT Found", pkt.channel());
+                logger.debug("stream of channel#{} NOT Found", rtpObj.channel());
                 return;
             }
 
             MediaStream stream = session.getStreams()[streamIndex];
             InterLeavedRTPSession rtpSess = session.getRTPSessions()[streamIndex];
             rtpSess.sentPktCount += 1;
-            rtpSess.sentOctetCount += pkt.dataLength();
+            rtpSess.sentOctetCount += rtpObj.dataLength();
             
-            Participant partition = findParticipant(rtpSess, pkt.ssrc());
-            for (RtpPkt rtp : pkt.contents()) {
-                partition.updateRRStats(rtp.contentLength(), rtp);
-            }
-            partition.lastRtpPkt = pkt.getTimestamp();
-            
+
             // h264
             if ("h264".equalsIgnoreCase(stream.getCodec())) {
-            	ByteBuf buf = pkt.first().data();
+            	ByteBuf buf = rtpObj.data();
             	
             	int firstByte =  buf.readByte();
                 switch (firstByte & 0x1F) {
                     case 5:  // IDR
                     case 7:  // SPS
                     case 8:  // PPS
-                        pkt.setKeyFrame(true);
+                        rtpObj.setKeyFrame(true);
                         break;
                     case 28:  // FU-A (fragmented nal)
                         int fu_header = buf.readByte();
@@ -124,17 +118,17 @@ public class RtspSessionDispatcher {
                             case 5:  // IDR
                             case 7:  // SPS
                             case 8:  // PPS
-                                pkt.setKeyFrame(true);
+                                rtpObj.setKeyFrame(true);
                                 break;
                         }
                         break;
                 }
             }
 
-            logger.debug("dispatch: {}", pkt);
-            dispatch(new FullRtpPktEvent(streamIndex, pkt.retain()));
+            logger.debug("dispatch: {}", rtpObj);
+            dispatch(new RtpPktEvent(streamIndex, rtpObj.retain()));
         } finally {
-            ReferenceCountUtil.release(pkt);
+            ReferenceCountUtil.release(rtpObj);
         }
     }
     

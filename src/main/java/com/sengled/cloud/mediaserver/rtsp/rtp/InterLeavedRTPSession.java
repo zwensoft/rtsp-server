@@ -11,6 +11,9 @@ import jlibrtp.RTPSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.sengled.cloud.mediaserver.rtsp.NtpTime;
+import com.sengled.cloud.mediaserver.rtsp.Rational;
+
 /**
  * RTP over tcp
  * @author 陈修恒
@@ -21,6 +24,10 @@ public class InterLeavedRTPSession extends RTPSession {
     
     private Channel channel;
     private int rtpChannel;
+    
+    private NtpTime ntpTime;
+    private long rtpTimeStamp;
+    private long playingTimestamp;
     
     public InterLeavedRTPSession(Channel channel, int rtpChannel, int rtcpChannel) {
         super(InterLeavedParticipantDatabase.FACTORY);
@@ -33,6 +40,28 @@ public class InterLeavedRTPSession extends RTPSession {
         this.rtcpSession = new InterLeavedRTCPSession(rtcpChannel);
     }
 
+    public long getPlayingTimestamp() {
+        return playingTimestamp;
+    }
+    
+    public void setPlayingTimestamp(long playingTimestamp) {
+        this.playingTimestamp = playingTimestamp;
+    }
+    
+    public long getRtpTimeStamp() {
+        return rtpTimeStamp;
+    }
+    
+    public long getRtpTimeMillis() {
+        if (null == ntpTime) {
+            throw new UnsupportedOperationException("ntp time is unknown");
+        }
+        
+        long duration = rtpTimeStamp - ntpTime.getRtpTime();
+        
+        return ntpTime.getNtpTimeMillis() + Rational.$_1_000.convert(duration, ntpTime.getRtpTimeUnit());
+    }
+    
 
     public Channel channel() {
         return channel;
