@@ -45,7 +45,7 @@ import com.sengled.cloud.mediaserver.url.URLObject;
  * @date 2016年4月15日
  */
 public class RtspSession implements Serializable {
-    private static final RTPStream[] EMPTY_STREAMS = new RTPStream[0];
+    private static final MediaStream[] EMPTY_STREAMS = new MediaStream[0];
     private static final Logger logger = LoggerFactory.getLogger(RtspSession.class);
     private static final long serialVersionUID = -8562791602891803122L;
 
@@ -68,7 +68,7 @@ public class RtspSession implements Serializable {
 
     private String userAgent;
     private SessionDescription sd;
-    private RTPStream[] streams = EMPTY_STREAMS;
+    private MediaStream[] streams = EMPTY_STREAMS;
     private InterLeavedRTPSession[] rtpSessions = null;
     
     private RtspSessionListener listener;
@@ -118,7 +118,7 @@ public class RtspSession implements Serializable {
         for (MediaDescription dm : getMediaDescriptions(sd)) {
             try {
                 if (StringUtils.endsWith(uri, getControlUri(dm))) {
-                    streams[mediaIndex] = new RTPStream(mediaIndex, dm, url);
+                    streams[mediaIndex] = new MediaStream(mediaIndex, dm, url);
                     rtpSessions[mediaIndex] = new InterLeavedRTPSession(ctx.channel(), interleaved[0], interleaved[1]);
                     return t;
                 }
@@ -162,7 +162,7 @@ public class RtspSession implements Serializable {
         return null;
     }
     
-    public RTPStream[] getStreams() {
+    public MediaStream[] getStreams() {
         return streams;
     }
     
@@ -256,7 +256,7 @@ public class RtspSession implements Serializable {
         List<MediaDescription> mediaDescripts = getMediaDescriptions(sd);
 
         this.sd = sd;
-        this.streams = new RTPStream[mediaDescripts.size()];
+        this.streams = new MediaStream[mediaDescripts.size()];
         this.rtpSessions = new InterLeavedRTPSession[mediaDescripts.size()];
         return this;
     }
@@ -265,7 +265,7 @@ public class RtspSession implements Serializable {
         switch (newMode) {
             case PLAY:
                 this.sd = engine.getSessionDescription(uri);
-                this.streams = new RTPStream[getMediaDescriptions(sd).size()];
+                this.streams = new MediaStream[getMediaDescriptions(sd).size()];
                 this.rtpSessions = new InterLeavedRTPSession[getMediaDescriptions(sd).size()];
                 this.listener = new RtspSessionListener(this, 128 * 1024); 
                 break;
@@ -409,7 +409,7 @@ public class RtspSession implements Serializable {
 
     public boolean hasVideo() {
         for (int i = 0; i < streams.length; i++) {
-            RTPStream s = (RTPStream)streams[i];
+            MediaStream s = (MediaStream)streams[i];
             if (s.isVideo()) {
                 return true;
             }

@@ -94,7 +94,7 @@ public class RtspSessionDispatcher {
                 return;
             }
 
-            RTPStream stream = session.getStreams()[streamIndex];
+            MediaStream stream = session.getStreams()[streamIndex];
             InterLeavedRTPSession rtpSess = session.getRTPSessions()[streamIndex];
             rtpSess.sentPktCount += 1;
             rtpSess.sentOctetCount += pkt.dataLength();

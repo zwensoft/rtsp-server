@@ -52,7 +52,7 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         InterLeavedRTPSession[] dstSessions =  session.getRTPSessions();
         
         for (int i = 0; i < srcSessions.length; i++) {
-            RTPStream stream = session.getStreams()[i];
+            MediaStream stream = session.getStreams()[i];
             InterLeavedRTPSession src = srcSessions[i];
             InterLeavedRTPSession dst = dstSessions[i];
             if (null == src || null == dst) {
@@ -193,7 +193,7 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         Participant participant = rtpSess.findParticipant();
         
        
-        RTPStream stream = session.getStreams()[streamIndex];
+        MediaStream stream = session.getStreams()[streamIndex];
         if (participant.lastRtpPkt > 0 && participant.lastRtpPkt < fullRtp.getTimestamp()) {
             long ptsOffset = stream.getTimestampMills(fullRtp.getTimestamp()  - participant.lastRtpPkt);
             long ntpTime = NtpTime.getNtpTime(participant.lastNtpTs1, participant.lastNtpTs2);

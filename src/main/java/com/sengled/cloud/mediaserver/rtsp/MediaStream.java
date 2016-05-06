@@ -9,10 +9,16 @@ import javax.sdp.MediaDescription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class RTPStream {
+/**
+ * 媒体信息， 类似于 FFmpeg 中的  AVStream
+ * 
+ * @author 陈修恒
+ * @date 2016年5月6日
+ */
+public class MediaStream {
     public static final int SSRC_UNKNOWN = -1;
 
-    private static final Logger logger = LoggerFactory.getLogger(RTPStream.class);
+    private static final Logger logger = LoggerFactory.getLogger(MediaStream.class);
     
     private String url;
     private MediaDescription md;
@@ -24,7 +30,7 @@ public class RTPStream {
     private int channels;
 
     
-    public RTPStream(int streamIndex, MediaDescription md, String url) {
+    public MediaStream(int streamIndex, MediaDescription md, String url) {
         this.md = md;
         this.url = url;
         this.streamIndex = streamIndex;
