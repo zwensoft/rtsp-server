@@ -2,6 +2,7 @@ package com.sengled.cloud.mediaserver.rtsp;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -185,7 +186,7 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
                 Rational timeunit = mediaStream.getTimeUnit();
                 long playingTimeMillis = rtpSession.getPlayingTimeMillis(timeunit);
                 String logTime = DateFormatUtils.format(playingTimeMillis, "yyyy-MM-dd HH:mm:ss.SSS");
-                logger.debug("stream#{} sent: {}, {}", streamIndex, logTime, mediaStream.getCodec());
+                logger.debug("stream#{} {}, {}. {} bytes, seq = {}", streamIndex, logTime, mediaStream.getCodec(), rtpObj.dataLength(), rtpObj.getSeqNumber());
             }
         }
     }
@@ -202,26 +203,6 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         Participant participant = rtpSess.findParticipant();
         
        
-        MediaStream stream = session.getStreams()[streamIndex];
-        if (participant.lastRtpPkt > 0 && participant.lastRtpPkt < rtpObj.getTimestamp()) {
-            long ptsOffset = stream.getTimestampMills(rtpObj.getTimestamp()  - participant.lastRtpPkt);
-            long ntpTime = NtpTime.getNtpTime(participant.lastNtpTs1, participant.lastNtpTs2);
-            long ptsMills = ntpTime + ptsOffset;
-            logger.debug("stream#{} {} dataLength = {}, ntp-pts = {}", 
-                    streamIndex, 
-                    stream.getCodec(),
-                    rtpObj.dataLength(), 
-                    DateFormatUtils.format(ptsMills, "yyyy-MM-dd HH:mm:ss.SSS"));
-        } else {
-            long ptsMills = stream.getTimestampMills(rtpObj.getTimestamp());
-            logger.debug("stream#{} {} dataLength = {}, raw-pts = {}", 
-                    streamIndex, 
-                    stream.getCodec(),
-                    rtpObj.dataLength(), 
-                    DateFormatUtils.format(ptsMills, "HH:mm:ss.SSS"));
-        }
-        
-        
         // 依次发送  rtp 包
         int payloadLength;
         ByteBufAllocator alloc = channel().alloc();
@@ -240,8 +221,8 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         payload.writeByte(rtpSess.rtpChannel());
         payload.writeShort(payloadLength);
         
-        rtpObj.ssrc(rtpSess.ssrc());
         rtpObj.setSeqNumber(nextSeqNo);
+        rtpObj.ssrc(rtpSess.ssrc());
         payload.writeBytes(rtpObj.content()); // 应为修改了 ssrc 和 seq, 所以只能用拷贝
         
         bufferSize.getAndIncrement();
