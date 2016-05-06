@@ -96,7 +96,7 @@ public class MediaServer {
 
     private static File getConfigDir(String[] args) {
         File configDir = null;
-        if (args.length > 1) { // read config from args
+        if (args.length > 0) { // read config from args
             configDir = new File(FilenameUtils.normalize(args[0])).getAbsoluteFile();
         }
         
