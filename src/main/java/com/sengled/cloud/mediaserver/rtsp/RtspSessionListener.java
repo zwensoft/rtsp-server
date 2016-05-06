@@ -147,7 +147,8 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         int streamIndex = rtpEvent.getStreamIndex();
         if (session.isStreamSetup(streamIndex)) {
             FullRtpPkt fullRtp = rtpEvent.getSource();
-            
+
+            // 拷贝一份，重复使用
             sent = sendFullRtpPkt(streamIndex, fullRtp.duplicate());
             if (!sent) {
                 logger.debug("drop: {}.", fullRtp);
