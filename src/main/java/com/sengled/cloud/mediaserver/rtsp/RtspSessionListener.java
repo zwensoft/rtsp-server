@@ -219,21 +219,24 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         int payloadLength;
         ByteBufAllocator alloc = channel().alloc();
         for (RtpPkt rtpObj : fullRtp.contents()) {
-            payloadLength = rtpObj.content().readableBytes();
             
             int nextSeqNo = 0xFFFF & (participant.lastSeqNumber + 1);
             participant.lastSeqNumber = nextSeqNo;
-            rtpObj.ssrc(rtpSess.ssrc());
-            rtpObj.setSeqNumber(nextSeqNo);
-
             if (participant.firstSeqNumber < 0) {
                 participant.firstSeqNumber  = nextSeqNo;
             }
 
+            // rtp header
+            payloadLength = rtpObj.content().readableBytes();
             ByteBuf payload = alloc.buffer(4 + payloadLength);
             payload.writeByte('$');
             payload.writeByte(rtpSess.rtpChannel());
             payload.writeShort(payloadLength);
+
+            // rtp data
+            // 由于修改了  ssrc 和 seqNo, 需要拷贝到新的   buffer 中
+            rtpObj.ssrc(rtpSess.ssrc());
+            rtpObj.setSeqNumber(nextSeqNo);
             payload.writeBytes(rtpObj.content());
             
             bufferSize.getAndIncrement();
