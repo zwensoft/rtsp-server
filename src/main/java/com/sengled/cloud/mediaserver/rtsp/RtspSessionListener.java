@@ -143,49 +143,53 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
     
     private void onRtpPktEvent(RtpPktEvent rtpEvent) {
         int streamIndex = rtpEvent.getStreamIndex();
-        if (session.isStreamSetup(streamIndex)) {
-            boolean sent = false;
-            boolean isNewFrame = false;
-            RtpPkt rtpObj = rtpEvent.getSource();
-            InterLeavedRTPSession rtpSession = session.getRTPSessions()[streamIndex];
+        if (!session.isStreamSetup(streamIndex)) {
+            logger.debug("stream#{} NOT setup", streamIndex);
+        }
+    
+        boolean sent = false;
+        boolean isNewFrame = false;
+        RtpPkt rtpObj = rtpEvent.getSource();
+        InterLeavedRTPSession rtpSession = session.getRTPSessions()[streamIndex];
 
-            if (rtpObj.getTimestamp() == rtpSession.getPlayingTimestamp()) {
-                sent = true;
-            } else { // new frame
-                switch (state) {
-                    case WAITING_KEY_FRAME:
-                        if (isSuitableForPlaying(rtpObj)) {
-                            state = PlayState.PLAYING;
-                        }
-                        break;
-                    case PLAYING:
-                        if (bufferIfFull()) {
-                            state = PlayState.BUFFER_FULL;
-                        }
-                        break;
-                    case BUFFER_FULL:
-                        if (bufferSize.get() < 1 && isSuitableForPlaying(rtpObj)) {
-                            state = PlayState.PLAYING;
-                        } else if (bufferSize.get() < 1) {
-                            state = PlayState.WAITING_KEY_FRAME;
-                        }
-                    default:
-                        throw new IllegalStateException("illegal PlayState[" + state + "]");
-                }
-                
-                sent = (state == PlayState.PLAYING);
-                isNewFrame = true;
+        if (rtpObj.getTimestamp() == rtpSession.getPlayingTimestamp()) {
+            sent = true;
+        } else { // new frame
+            switch (state) {
+                case WAITING_KEY_FRAME:
+                    if (isSuitableForPlaying(rtpObj)) {
+                        state = PlayState.PLAYING;
+                    }
+                    break;
+                case PLAYING:
+                    if (bufferIfFull()) {
+                        state = PlayState.BUFFER_FULL;
+                    }
+                    break;
+                case BUFFER_FULL:
+                    if (bufferSize.get() < 1 && isSuitableForPlaying(rtpObj)) {
+                        state = PlayState.PLAYING;
+                    } else if (bufferSize.get() < 1) {
+                        state = PlayState.WAITING_KEY_FRAME;
+                    }
+                default:
+                    throw new IllegalStateException("illegal PlayState[" + state + "]");
             }
             
-            if(!sent) {
-                logger.debug("drop: {}.", rtpObj);
-            } else {
-                logger.debug("sent: {}.", rtpObj);
-                sendFullRtpPkt(streamIndex, isNewFrame, rtpObj.duplicate()); // 拷贝一份，重复使用
-                rtpSession.setPlayingTimestamp(rtpObj.getTimestamp());
-            }
+            sent = (state == PlayState.PLAYING);
+            isNewFrame = true;
+        }
+        
+        // send or not ?
+        if(!sent) {
+            logger.debug("stream#{} drop: {}.", streamIndex, rtpObj);
         } else {
-            logger.debug("stream#{} not setup", streamIndex);
+            sendFullRtpPkt(streamIndex, isNewFrame, rtpObj.duplicate()); // 拷贝一份，重复使用
+            rtpSession.setPlayingTimestamp(rtpObj.getTimestamp());
+            
+            if (isNewFrame) {
+                logger.debug("stream#{} sent: {}", streamIndex, rtpObj);
+            }
         }
     }
 
