@@ -234,7 +234,7 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
             payload.writeShort(payloadLength);
 
             // rtp data
-            // 由于修改了  ssrc 和 seqNo, 需要拷贝到新的   buffer 中
+            // 由于修改了  ssrc 和 seqNo, 需要把修改结果拷贝到新的   buffer 中
             rtpObj.ssrc(rtpSess.ssrc());
             rtpObj.setSeqNumber(nextSeqNo);
             payload.writeBytes(rtpObj.content());
