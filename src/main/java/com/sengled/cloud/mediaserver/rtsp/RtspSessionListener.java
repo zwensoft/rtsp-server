@@ -150,7 +150,9 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
             
             sent = sendFullRtpPkt(streamIndex, fullRtp.duplicate());
             if (!sent) {
-                logger.debug("session drop: {}.", fullRtp);
+                logger.debug("drop: {}.", fullRtp);
+            } else {
+                logger.debug("sent: {}.", fullRtp);
             }
         } else {
             logger.debug("stream#{} not setup", streamIndex);
@@ -161,33 +163,29 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         InterLeavedRTPSession rtpSess = session.getRTPSessions()[streamIndex];
         switch (state) {
             case WAITING_KEY_FRAME:
-                if (!fullRtp.isKeyFrame()) {
-                    logger.debug("waiting key frame");
-                    return false; // waiting key frame
-                } 
-
-                state = PlayState.PLAYING;
-                logger.info("starts playing '{}'", session.getName());
+                if (isSuitableForPlaying(fullRtp)) {
+                    state = PlayState.PLAYING;
+                }
                 break;
             case PLAYING:
                 if (bufferIfFull()) {
                     state = PlayState.BUFFER_FULL;
-                    return false;
                 }
                 break;
             case BUFFER_FULL:
-                if (bufferSize.get() > 0) {
-                    return false;
-                } else if (!fullRtp.isKeyFrame()){
-                    state = PlayState.WAITING_KEY_FRAME;
-                    return false;
-                } else {
+                if (bufferSize.get() < 1 && isSuitableForPlaying(fullRtp)) {
                     state = PlayState.PLAYING;
+                } else if (bufferSize.get() < 1) {
+                    state = PlayState.WAITING_KEY_FRAME;
                 }
             default:
                 throw new IllegalStateException("illegal PlayState[" + state + "]");
         }
 
+        if (state != PlayState.PLAYING) {
+            return false;
+        }
+        
         // 统计流量
         rtpSess.sentPktCount ++;
         rtpSess.sentOctetCount += fullRtp.dataLength();
@@ -241,8 +239,18 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
             channel().writeAndFlush(payload, channel().newPromise().addListener(this));
         }
         
-        
         return true;
+    }
+
+    /**
+     * 可以作为媒体流的第一帧开始播放
+     * 
+     * @param fullRtp
+     * @return
+     */
+    private boolean isSuitableForPlaying(FullRtpPkt fullRtp) {
+        boolean onlyVideo = !session.hasVideo(); // 在对讲模式下， 只有音频，没有视频
+        return onlyVideo || fullRtp.isKeyFrame();
     }
     
     

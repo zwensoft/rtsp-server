@@ -10,7 +10,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.rtsp.RtspHeaders;
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -46,6 +45,7 @@ import com.sengled.cloud.mediaserver.url.URLObject;
  * @date 2016年4月15日
  */
 public class RtspSession implements Serializable {
+    private static final RTPStream[] EMPTY_STREAMS = new RTPStream[0];
     private static final Logger logger = LoggerFactory.getLogger(RtspSession.class);
     private static final long serialVersionUID = -8562791602891803122L;
 
@@ -68,7 +68,7 @@ public class RtspSession implements Serializable {
 
     private String userAgent;
     private SessionDescription sd;
-    private RTPStream[] streams;
+    private RTPStream[] streams = EMPTY_STREAMS;
     private InterLeavedRTPSession[] rtpSessions = null;
     
     private RtspSessionListener listener;
@@ -405,6 +405,17 @@ public class RtspSession implements Serializable {
         
         buf.append("}");
         return buf.toString();
+    }
+
+    public boolean hasVideo() {
+        for (int i = 0; i < streams.length; i++) {
+            RTPStream s = (RTPStream)streams[i];
+            if (s.isVideo()) {
+                return true;
+            }
+            
+        }
+        return false;
     }
 
 }

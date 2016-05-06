@@ -200,7 +200,7 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
                 .withMode(SessionMode.PUBLISH)
                 .withUserAgent(request.headers());
         }
-        else if (RtspMethods.SETUP.equals(method)) {
+        else if (null != session && RtspMethods.SETUP.equals(method)) {
             try {
                 String exceptTransport = request.headers().get(RtspHeaders.Names.TRANSPORT);
                 Transport transport = session.setupStream(request.getUri(), exceptTransport);
@@ -221,7 +221,7 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
                 response.setStatus(HttpResponseStatus.NOT_EXTENDED);
             }
         }
-        else if (RtspMethods.RECORD.equals(method) || RtspMethods.PLAY.equals(method)) {
+        else if (null != session && RtspMethods.RECORD.equals(method) || RtspMethods.PLAY.equals(method)) {
             // response = makeResponse(request, null);
             response = makeResponse(request, session);
             response.headers().set(RtspHeaders.Names.RTP_INFO,  getRtpInfo(request));
@@ -249,9 +249,8 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
         }
         // OTHERWISE
         else {
-            logger.warn("unsupported method [{}]", method);
-            logger.debug("{}", request.content().toString(Charset.forName("UTF-8")));
-            
+            logger.warn("illegal call session = {}, method = {}", session, method);
+            logger.warn("{}", request.content().toString(Charset.forName("UTF-8")));
 
             response = makeResponse(request, session);
             response.setStatus(HttpResponseStatus.FORBIDDEN);
