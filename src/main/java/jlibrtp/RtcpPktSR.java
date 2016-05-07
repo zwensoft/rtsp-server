@@ -111,9 +111,9 @@ public class RtcpPktSR extends UDPRtcpPkt {
 	 */
 	public void encode() {		
 	    if(this.rReports != null) {
-            logger.info("  -> RtcpPktSR.encode() receptionReports.length: {}", this.rReports.length );
+            logger.debug("  -> RtcpPktSR.encode() receptionReports.length: {}", this.rReports.length );
         } else {
-            logger.info("  -> RtcpPktSR.encode() receptionReports: null");
+            logger.debug("  -> RtcpPktSR.encode() receptionReports: null");
         }
 		
 		if(this.rReports != null) {
@@ -149,7 +149,7 @@ public class RtcpPktSR extends UDPRtcpPkt {
 		someBytes = StaticProcs.uIntLongToByteWord(sendersOctCount);
 		System.arraycopy(someBytes, 0, super.rawPkt, 24, 4);
 		
-		logger.info("  <- {}", this);
+		logger.debug("  <- {}", this);
 	}
 
 	
@@ -162,8 +162,6 @@ public class RtcpPktSR extends UDPRtcpPkt {
         buf.append(", octetCount=").append(Long.toString(sendersOctCount));
         buf.append(", ntp=").append(DateFormatUtils.format(getNTPTime(), "yyyy-MM-dd HH:mm:ss.SSS"));
         buf.append(", rtpTs=").append(rtpTs);
-        buf.append(", ntpTs1=").append(Long.toString(ntpTs1));
-        buf.append(", ntpTs2=").append(Long.toString(ntpTs2));
         
         if (null != this.rReports) {
             buf.append(", Part of Sender Report: ").append(rReports);

@@ -1,8 +1,5 @@
 package com.sengled.cloud.mediaserver.rtsp;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.Channel;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
@@ -37,10 +34,6 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         this.maxBufferSize = maxRtpBufferSize;
     }
 
-    private Channel channel() {
-        return session.channel();
-    }
-
     /**
      * 初始化
      * 
@@ -51,7 +44,6 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         InterLeavedRTPSession[] dstSessions =  session.getRTPSessions();
         
         for (int i = 0; i < srcSessions.length; i++) {
-            MediaStream stream = session.getStreams()[i];
             InterLeavedRTPSession src = srcSessions[i];
             InterLeavedRTPSession dst = dstSessions[i];
             if (null == src || null == dst) {
@@ -60,7 +52,7 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
             
             Participant p = src.findParticipant();
             
-            onNtpTimeEvent(new NtpTimeEvent(i, new NtpTime(p.lastNtpTs1, p.lastNtpTs2, p.lastRtpPkt, stream.getTimeUnit())));
+            onNtpTimeEvent(new NtpTimeEvent(i, new NtpTime(p.lastNtpTs1, p.lastNtpTs2, p.lastRtpPkt)));
         }
     }
     
@@ -84,7 +76,7 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
     }
 
 
-    public void onRtcpEvent(RtcpContent event) {
+    public void receiveRtcpEvent(RtcpContent event) {
         logger.debug("ignore rtcp event, {}", event);
     }
 
@@ -94,8 +86,9 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
      */
     private void onNtpTimeEvent(NtpTimeEvent event) {
         InterLeavedRTPSession rtp = session.getRTPSessions()[event.getStreamIndex()];
-        NtpTime ntp = event.getSource();
-        rtp.setNtpTime(ntp);
+        if (null != rtp) {
+        	rtp.setNtpTime(event.getSource());
+        }
     }
 
 
@@ -177,56 +170,16 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         if(!sent) {
             logger.debug("stream#{} drop: {}.", streamIndex, rtpObj);
         } else {
-            sendFullRtpPkt(streamIndex, isNewFrame, rtpObj.duplicate()); // 拷贝一份，重复使用
-            rtpSession.setPlayingTimestamp(rtpObj.getTimestamp());
+        	bufferSize.incrementAndGet();
+            rtpSession.sendRtpPkt(isNewFrame, rtpObj.duplicate(), this); // 拷贝一份，重复使用
             
             if (isNewFrame && logger.isDebugEnabled()) {
-                MediaStream mediaStream = session.getStreams()[streamIndex];
-                Rational timeunit = mediaStream.getTimeUnit();
-                long playingTimeMillis = rtpSession.getPlayingTimeMillis(timeunit);
+                MediaStream mediaStream = session.getRTPSessions()[streamIndex].getMediaStream();
+                long playingTimeMillis = rtpSession.getPlayingTimeMillis();
                 String logTime = DateFormatUtils.format(playingTimeMillis, "yyyy-MM-dd HH:mm:ss.SSS");
                 logger.debug("stream#{} {}, {}. {} bytes, seq = {}", streamIndex, logTime, mediaStream.getCodec(), rtpObj.dataLength(), rtpObj.getSeqNumber());
             }
         }
-    }
-
-    private void sendFullRtpPkt(int streamIndex, boolean isNewFrame, RtpPkt rtpObj) {
-        InterLeavedRTPSession rtpSess = session.getRTPSessions()[streamIndex];
-        
-        
-        // 统计流量
-        if (isNewFrame) {
-            rtpSess.sentPktCount ++;
-        }
-        rtpSess.sentOctetCount += rtpObj.dataLength();
-        Participant participant = rtpSess.findParticipant();
-        
-       
-        // 依次发送  rtp 包
-        int payloadLength;
-        ByteBufAllocator alloc = channel().alloc();
-        payloadLength = rtpObj.content().readableBytes();
-        
-        final int nextSeqNo = 0xFFFF & (participant.lastSeqNumber + 1);
-        participant.lastSeqNumber = nextSeqNo;
-      
-
-        if (participant.firstSeqNumber < 0) {
-            participant.firstSeqNumber  = nextSeqNo;
-        }
-
-        ByteBuf payload = alloc.buffer(4 + payloadLength);
-        payload.writeByte('$');
-        payload.writeByte(rtpSess.rtpChannel());
-        payload.writeShort(payloadLength);
-        
-        rtpObj.setSeqNumber(nextSeqNo);
-        rtpObj.ssrc(rtpSess.ssrc());
-        payload.writeBytes(rtpObj.content()); // 应为修改了 ssrc 和 seq, 所以只能用拷贝
-        
-        bufferSize.getAndIncrement();
-        channel().writeAndFlush(payload, channel().newPromise().addListener(this));
-        
     }
 
     /**

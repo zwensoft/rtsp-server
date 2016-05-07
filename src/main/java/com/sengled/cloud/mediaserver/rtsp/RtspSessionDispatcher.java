@@ -93,8 +93,8 @@ public class RtspSessionDispatcher {
                 return;
             }
 
-            MediaStream stream = session.getStreams()[streamIndex];
             InterLeavedRTPSession rtpSess = session.getRTPSessions()[streamIndex];
+            MediaStream stream = rtpSess.getMediaStream();
             rtpSess.sentPktCount += 1;
             rtpSess.sentOctetCount += rtpObj.dataLength();
             
@@ -155,7 +155,7 @@ public class RtspSessionDispatcher {
      * 
      * @param rtcp rtcp 包
      */
-    public void onRtcpEvent(RtcpContent rtcp) {
+    public void receiveRtcpEvent(RtcpContent rtcp) {
         try {
             int streamIndex = session.getStreamIndex(rtcp);
             if (streamIndex < 0) {
@@ -223,15 +223,12 @@ public class RtspSessionDispatcher {
                         // For the next RR
                         p.timeReceivedLSR = curTime;
                         p.setTimeStampLSR(srPkt.ntpTs1,srPkt.ntpTs2);
-                        
-                        logger.debug("{}", p);
                     }
 
-                    Rational timeUnit = session.getStreams()[streamIndex].getTimeUnit();
-                    NtpTimeEvent event = new NtpTimeEvent(streamIndex, new NtpTime(srPkt.ntpTs1, srPkt.ntpTs2, srPkt.rtpTs, timeUnit));
+                    NtpTimeEvent event = new NtpTimeEvent(streamIndex, new NtpTime(srPkt.ntpTs1, srPkt.ntpTs2, srPkt.rtpTs));
+                    logger.info("stream#{} dispatch {}", streamIndex, event.getSource());
+
                     dispatch(event);
-                    
-                    logger.debug("stream#{} dispatch {}", streamIndex, event);
 
                     /**        Source Descriptions       **/
                 } else if(aPkt instanceof RtcpPktSDES) {

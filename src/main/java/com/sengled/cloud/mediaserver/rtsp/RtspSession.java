@@ -44,7 +44,6 @@ import com.sengled.cloud.mediaserver.url.URLObject;
  * @date 2016年4月15日
  */
 public class RtspSession  {
-    private static final MediaStream[] EMPTY_STREAMS = new MediaStream[0];
     private static final Logger logger = LoggerFactory.getLogger(RtspSession.class);
 
     public enum SessionMode {
@@ -66,7 +65,6 @@ public class RtspSession  {
 
     private String userAgent;
     private SessionDescription sd;
-    private MediaStream[] streams = EMPTY_STREAMS;
     private InterLeavedRTPSession[] rtpSessions = null;
     
     private RtspSessionListener listener;
@@ -116,8 +114,8 @@ public class RtspSession  {
         for (MediaDescription dm : getMediaDescriptions(sd)) {
             try {
                 if (StringUtils.endsWith(uri, getControlUri(dm))) {
-                    streams[mediaIndex] = new MediaStream(mediaIndex, dm, url);
-                    rtpSessions[mediaIndex] = new InterLeavedRTPSession(ctx.channel(), interleaved[0], interleaved[1]);
+                	MediaStream stream = new MediaStream(mediaIndex, dm, url);
+                    rtpSessions[mediaIndex] = new InterLeavedRTPSession(stream, ctx.channel(), interleaved[0], interleaved[1]);
                     return t;
                 }
             } catch (IllegalArgumentException ex) {
@@ -158,10 +156,6 @@ public class RtspSession  {
         }
         
         return null;
-    }
-    
-    public MediaStream[] getStreams() {
-        return streams;
     }
     
     public InterLeavedRTPSession[] getRTPSessions() {
@@ -254,7 +248,6 @@ public class RtspSession  {
         List<MediaDescription> mediaDescripts = getMediaDescriptions(sd);
 
         this.sd = sd;
-        this.streams = new MediaStream[mediaDescripts.size()];
         this.rtpSessions = new InterLeavedRTPSession[mediaDescripts.size()];
         return this;
     }
@@ -263,7 +256,6 @@ public class RtspSession  {
         switch (newMode) {
             case PLAY:
                 this.sd = engine.getSessionDescription(uri);
-                this.streams = new MediaStream[getMediaDescriptions(sd).size()];
                 this.rtpSessions = new InterLeavedRTPSession[getMediaDescriptions(sd).size()];
                 this.listener = new RtspSessionListener(this, 128 * 1024); 
                 break;
@@ -345,11 +337,11 @@ public class RtspSession  {
     }
     
     public boolean isStreamSetup(int streamIndex) {
-        if (streamIndex < 0 || streamIndex >= streams.length) {
+        if (streamIndex < 0 || streamIndex >= rtpSessions.length) {
             return false;
         }
 
-        return null != streams[streamIndex];
+        return null != rtpSessions[streamIndex];
     }
 
 
@@ -365,9 +357,9 @@ public class RtspSession  {
 
     public void onRtcpEvent(RtcpContent event) {
         if (SessionMode.PUBLISH == mode) {
-            dispatcher().onRtcpEvent(event);
+            dispatcher().receiveRtcpEvent(event);
         } else { 
-            listener().onRtcpEvent(event);
+            listener().receiveRtcpEvent(event);
         }
     }
     
@@ -406,12 +398,15 @@ public class RtspSession  {
     }
 
     public boolean hasVideo() {
-        for (int i = 0; i < streams.length; i++) {
-            MediaStream s = (MediaStream)streams[i];
-            if (s.isVideo()) {
+        for (int i = 0; i < rtpSessions.length; i++) {
+        	if (null == rtpSessions[i]) {
+        		continue;
+        	}
+
+        	MediaStream s = (MediaStream)rtpSessions[i].getMediaStream();
+            if (null != s && s.isVideo()) {
                 return true;
             }
-            
         }
         return false;
     }

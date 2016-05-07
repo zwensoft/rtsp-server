@@ -233,7 +233,7 @@ public class RtspClient implements Closeable {
 
         private void handleRtcpPacket(RtcpContent rtcpContent) {
             if (null != session) {
-                session.dispatcher().onRtcpEvent(rtcpContent);
+                session.dispatcher().receiveRtcpEvent(rtcpContent);
             }
         }
 

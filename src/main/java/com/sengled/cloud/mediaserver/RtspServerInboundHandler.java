@@ -28,12 +28,10 @@ import javax.sip.TransportNotSupportedException;
 import org.slf4j.LoggerFactory;
 
 import com.sengled.cloud.mediaserver.rtsp.FullHttpMessageUtils;
-import com.sengled.cloud.mediaserver.rtsp.MediaStream;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession.SessionMode;
 import com.sengled.cloud.mediaserver.rtsp.ServerEngine;
 import com.sengled.cloud.mediaserver.rtsp.Transport;
-import com.sengled.cloud.mediaserver.rtsp.interleaved.FullRtpPkt;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtcpContent;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtpPkt;
 import com.sengled.cloud.mediaserver.rtsp.rtp.InterLeavedRTPSession;
@@ -262,8 +260,8 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
     private String getRtpInfo(HttpRequest request) {
         StringBuilder rtpInfo = new StringBuilder();
         int i = 0;
-        for (MediaStream stream : session.getStreams()) {
-            if (null == stream) {
+        for (InterLeavedRTPSession rtpSession : session.getRTPSessions()) {
+            if (null == rtpSession) {
                 continue;
             }
             
@@ -271,7 +269,7 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
                 rtpInfo.append(",");
             }
             
-            rtpInfo.append("url=").append(stream.getUrl());
+            rtpInfo.append("url=").append(rtpSession.getMediaStream().getUrl());
             
             i++;
         }
