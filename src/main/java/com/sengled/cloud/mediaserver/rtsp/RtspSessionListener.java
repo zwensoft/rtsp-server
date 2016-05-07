@@ -61,7 +61,10 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
     }
     
     public <T> void on(RtpEvent<T> event) {
-        
+        if (session.isDestroyed()) {
+        	return; // session has been release
+        }
+
         if(event instanceof RtpPktEvent) {
             onRtpPktEvent(((RtpPktEvent)event));
         } else if (event instanceof NtpTimeEvent) {

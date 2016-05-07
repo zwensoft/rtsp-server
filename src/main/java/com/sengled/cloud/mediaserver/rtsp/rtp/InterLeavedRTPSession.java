@@ -9,9 +9,12 @@ import io.netty.util.concurrent.GenericFutureListener;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.charset.Charset;
 
 import jlibrtp.Participant;
 import jlibrtp.RTPSession;
+import jlibrtp.RtcpPkt;
+import jlibrtp.RtcpPktBYE;
 import jlibrtp.RtcpPktSR;
 
 import org.slf4j.Logger;
@@ -128,6 +131,7 @@ public class InterLeavedRTPSession extends RTPSession {
 	}
 
 	/**
+	 * send Rtcp SR
 	 * @param rtpTs
 	 * @return the NTP time millil sent
 	 */
@@ -138,6 +142,20 @@ public class InterLeavedRTPSession extends RTPSession {
 		sr.ntpTs1 = NtpTime.getNtpTs1(ntpTimeMills);
 		sr.ntpTs2 = NtpTime.getNtpTs2(ntpTimeMills);
 		
+		sendRtcpPkt(sr);
+		return sr.ntpTs1;
+	}
+
+
+
+	private void sendRtcpPktBye(String reason) {
+		Charset utf8 = Charset.forName("UTF-8");
+		RtcpPktBYE bye = new RtcpPktBYE(new long[]{outPart.ssrc()}, null == reason ? null : reason.getBytes(utf8));
+	
+		sendRtcpPkt(bye);
+	}
+
+	public void sendRtcpPkt(RtcpPkt sr) {
 		sr.encode();
 		final byte[] rawPkt = sr.rawPkt;
 		final int payloadLength = rawPkt.length;
@@ -154,10 +172,9 @@ public class InterLeavedRTPSession extends RTPSession {
 
 		writeAndFlush(payload, null);
 		logger.info("stream#{} sent {}", mediaStream.getStreamIndex(), sr);
-		return sr.ntpTs1;
 	}
 
-
+	
 	private void writeAndFlush(ByteBuf data,
 			GenericFutureListener<? extends Future<? super Void>> onComplete) {
 
@@ -186,9 +203,8 @@ public class InterLeavedRTPSession extends RTPSession {
 	}
 
 	@Override
-	public void endSession() {
-		// TODO Auto-generated method stub
-		logger.warn("NOT Implemented!");
+	public void endSession(String reason) {
+		sendRtcpPktBye(reason);
 	}
 
 	@Override

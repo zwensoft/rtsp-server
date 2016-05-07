@@ -52,16 +52,20 @@ public class RtspSession  {
         /** PLAY: 客户端从服务器拉流 */
         PLAY,
         
+        /** has been destroyed **/
+        DESTROYED,
+        
         /** 其他 */
         OTHERS
     }
+
+    final private ServerEngine engine;
+    final private ChannelHandlerContext ctx;
 
     private String id;
     private String name;
     private String uri;
     private SessionMode mode = SessionMode.OTHERS;
-    final private ChannelHandlerContext ctx;
-    final private ServerEngine engine;
 
     private String userAgent;
     private SessionDescription sd;
@@ -291,23 +295,29 @@ public class RtspSession  {
     }
 
     public void destroy(String reason) {
-        switch (mode) {
-            case PUBLISH:
-                dispatcher().teardown(reason);
-                engine.removeSession(name, this);
-                break;
-            case PLAY:
-                engine.unregister(name, listener);
-                if (channel().isWritable()){
-                    channel().close();
-                }
-            default:
-                break;
-        }
+		switch (mode) {
+		case DESTROYED:
+			break; // has been destroyed
+		case PUBLISH:
+			dispatcher().teardown(reason);
+			engine.removeSession(name, this);
+			break;
+		case PLAY:
+			engine.unregister(name, listener);
+			for (int i = 0; i < numStreams(); i++) {
+				if (null != rtpSessions[i]) {
+					rtpSessions[i].endSession(reason);
+				}
+			}
+		default:
+			break;
+		}
+		
+		this.mode = SessionMode.DESTROYED;
     }
     
     public boolean isDestroyed() {
-        return null == ctx || !ctx.channel().isActive();
+        return mode == SessionMode.DESTROYED;
     }
 
     
@@ -364,20 +374,12 @@ public class RtspSession  {
     }
     
     public RtspSessionDispatcher dispatcher() {
-        if (SessionMode.PUBLISH == mode) {
-            return dispatcher;
-        } else {
-            throw new UnsupportedOperationException("SessionMode[" + mode + "] dont supporte Dispatcher");
-        }
+    	return dispatcher;
     }
     
     
     public RtspSessionListener listener() {
-        if (SessionMode.PLAY == mode) {
-            return listener;
-        } else {
-            throw new UnsupportedOperationException("SessionMode[" + mode + "] dont supporte Dispatcher");
-        }
+    	return listener;
     }
   
     public <T> void dispatch(RtpEvent<T> event) {

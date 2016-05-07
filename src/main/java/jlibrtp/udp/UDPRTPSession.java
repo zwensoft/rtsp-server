@@ -256,7 +256,7 @@ public class UDPRTPSession extends RTPSession {
 	}
 	
 
-    public void endSession() {
+    public void endSession(String reason) {
         this.endSession = true;
         
         // No more RTP packets, please

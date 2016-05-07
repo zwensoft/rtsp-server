@@ -193,8 +193,9 @@ public abstract class RTPSession {
      * End the RTP Session. This will halt all threads and send bye-messages to other participants.
      * 
      * RTCP related threads may require several seconds to wake up and terminate.
+     * @param reason TODO
      */
-    public abstract void endSession();
+    public abstract void endSession(String reason);
 
 
     /**
@@ -612,7 +613,7 @@ public abstract class RTPSession {
     		
     	} else {
     		System.out.println("Too many conflicts. There is probably a loop in the network.");
-    		this.endSession();
+    		this.endSession(null);
     	}
     }
 

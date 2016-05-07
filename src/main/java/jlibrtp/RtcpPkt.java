@@ -90,7 +90,7 @@ public class RtcpPkt {
     /**
      * This is just a dummy to make Eclipse complain less.
      */
-    protected void encode() {
+    public void encode() {
     	System.out.println("RtcpPkt.encode() should never be invoked!! " + this.packetType);
     }
 
