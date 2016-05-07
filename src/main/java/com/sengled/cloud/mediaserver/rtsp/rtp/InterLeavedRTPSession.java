@@ -171,7 +171,7 @@ public class InterLeavedRTPSession extends RTPSession {
 		payload.writeBytes(rawPkt);
 
 		if(writeAndFlush(payload, null)) {
-			logger.info("stream#{} sent {}", mediaStream.getStreamIndex(), sr);
+			logger.info("stream#{} channle#{} sent {}", mediaStream.getStreamIndex(), rtcpChannel(), sr);
 		}
 	}
 
