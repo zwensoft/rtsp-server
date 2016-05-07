@@ -10,7 +10,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.rtsp.RtspHeaders;
 
-import java.io.Serializable;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,16 +37,15 @@ import com.sengled.cloud.mediaserver.url.URLObject;
  * 
  * <p>
  * <ul>
- * <li>1、通过 {@link #onRtcpEvent(RtpPkt)} 把流数据分发给他的监听者</li>
+ * <li>1、通过 {@link #onRtpEvent(RtpPkt)} 把流数据分发给他的监听者</li>
  * <li>2、通过 {@link #getSessionDescription()} 获取 SDP 信息</li>
  * </ul>
  * @author 陈修恒
  * @date 2016年4月15日
  */
-public class RtspSession implements Serializable {
+public class RtspSession  {
     private static final MediaStream[] EMPTY_STREAMS = new MediaStream[0];
     private static final Logger logger = LoggerFactory.getLogger(RtspSession.class);
-    private static final long serialVersionUID = -8562791602891803122L;
 
     public enum SessionMode {
         /** PUBLISH: 客户端向服务器推流 */

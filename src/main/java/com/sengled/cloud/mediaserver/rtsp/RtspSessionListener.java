@@ -2,7 +2,6 @@ package com.sengled.cloud.mediaserver.rtsp;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -30,7 +29,7 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
     final private AtomicLong bufferSize = new AtomicLong();
     
 
-    private PlayState state = PlayState.WAITING_KEY_FRAME;
+    private PlayState state = PlayState.INITED;
     
     public RtspSessionListener(RtspSession mySession, int maxRtpBufferSize) {
         super();
@@ -150,7 +149,7 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
             sent = true;
         } else { // new frame
             switch (state) {
-                case WAITING_KEY_FRAME:
+                case INITED:
                     if (isSuitableForPlaying(rtpObj)) {
                         state = PlayState.PLAYING;
                     }
@@ -164,7 +163,7 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
                     if (bufferSize.get() < 1 && isSuitableForPlaying(rtpObj)) {
                         state = PlayState.PLAYING;
                     } else if (bufferSize.get() < 1) {
-                        state = PlayState.WAITING_KEY_FRAME;
+                        state = PlayState.INITED;
                     }
                 default:
                     throw new IllegalStateException("illegal PlayState[" + state + "]");
