@@ -170,20 +170,28 @@ public class InterLeavedRTPSession extends RTPSession {
 
 		payload.writeBytes(rawPkt);
 
-		writeAndFlush(payload, null);
-		logger.info("stream#{} sent {}", mediaStream.getStreamIndex(), sr);
+		if(writeAndFlush(payload, null)) {
+			logger.info("stream#{} sent {}", mediaStream.getStreamIndex(), sr);
+		}
 	}
 
 	
-	private void writeAndFlush(ByteBuf data,
+	private boolean writeAndFlush(ByteBuf data,
 			GenericFutureListener<? extends Future<? super Void>> onComplete) {
+		Channel channel = channel();
+		if (channel.isWritable()) {
+			ChannelPromise promise = channel.newPromise();
+			if (null != onComplete) {
+				promise.addListener(onComplete);
+			}
+			
+			channel.writeAndFlush(data, promise);
 
-		ChannelPromise promise = channel().newPromise();
-		if (null != onComplete) {
-			promise.addListener(onComplete);
+			return true;
 		}
 		
-		channel().writeAndFlush(data, promise);
+		
+		return false;
 	}
 	
 	public Channel channel() {

@@ -17,7 +17,11 @@ public class TearDownEvent extends AbstractRTPEvent<String> {
         super(-1, reason);
     }
 
-    @Override
+    public TearDownEvent(byte[] reason) {
+        super(-1, null != reason ? new String(reason) : "");
+	}
+
+	@Override
     protected void doDestroy() {
         
     }

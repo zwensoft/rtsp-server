@@ -256,6 +256,12 @@ public class RtspSessionDispatcher {
                     if(rtpSession.rtcpAppIntf() != null) {
                         rtpSession.rtcpAppIntf().BYEPktReceived(partArray, new String(byePkt.reason()));
                     }
+
+                    TearDownEvent event = new TearDownEvent(byePkt.reason());
+                    dispatch(event);
+                    
+                    logger.info("stream#{} dispatch {}", streamIndex, event.getSource());
+                    session.close();
                     
                     /**        Application specific Packets       **/
                 } else if(aPkt instanceof RtcpPktAPP) {

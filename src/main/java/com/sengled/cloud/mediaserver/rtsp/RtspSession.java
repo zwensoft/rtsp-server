@@ -303,17 +303,23 @@ public class RtspSession  {
 			engine.removeSession(name, this);
 			break;
 		case PLAY:
-			engine.unregister(name, listener);
+			engine.unregister(name, listener());
 			for (int i = 0; i < numStreams(); i++) {
 				if (null != rtpSessions[i]) {
 					rtpSessions[i].endSession(reason);
 				}
 			}
+			
 		default:
 			break;
 		}
 		
 		this.mode = SessionMode.DESTROYED;
+    }
+    
+    public void close() {
+    	destroy(null);
+    	ctx.close();
     }
     
     public boolean isDestroyed() {
