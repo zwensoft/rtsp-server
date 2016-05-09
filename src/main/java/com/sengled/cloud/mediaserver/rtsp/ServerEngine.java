@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.eventbus.AsyncEventBus;
+import com.google.common.eventbus.EventBus;
 import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionRemovedEvent;
 import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionUpdatedEvent;
 import com.sengled.cloud.mediaserver.rtsp.event.TearDownEvent;
@@ -26,13 +27,13 @@ public class ServerEngine {
     
     private static final Logger logger = LoggerFactory.getLogger(ServerEngine.class);
     
-    private final AsyncEventBus eventBus = new AsyncEventBus(Executors.newSingleThreadExecutor());
+    private final EventBus eventBus = new AsyncEventBus(Executors.newSingleThreadExecutor());
     private ConcurrentHashMap<String, RtspSessionAndListeners> sessionAndListeners = new ConcurrentHashMap<String, RtspSessionAndListeners>();
    
     
     public ServerEngine(){}
     
-    public AsyncEventBus eventBus() {
+    public EventBus eventBus() {
         return eventBus;
     }
     
