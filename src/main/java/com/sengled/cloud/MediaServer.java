@@ -10,7 +10,6 @@ import java.util.List;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.log4j.PropertyConfigurator;
 import org.dom4j.DocumentException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,15 +35,16 @@ public class MediaServer {
     
     
     public static void main(String[] args) throws InterruptedException, IOException, DocumentException {
-        File configDir = getConfigDir(args);
-        if (null == configDir) {
+        File configFile = getConfigFile(args);
+        if (null == configFile) {
             System.exit(-1);
         }
         
         MediaServerConfigs configs;
         InputStream in = null;
         try {
-            in = new FileInputStream(new File(configDir, "server.xml"));
+            logger.info("load {}", configFile.getAbsolutePath());
+            in = new FileInputStream(configFile);
             configs = MediaServerConfigs.load(in);
         } finally {
             IOUtils.closeQuietly(in);
@@ -79,7 +79,7 @@ public class MediaServer {
 
         // 启动 spring 容器
         if (!"local".equalsIgnoreCase(configs.getMode())) {
-            SpringStarter starter = new SpringStarter(configDir);
+            SpringStarter starter = new SpringStarter(configFile);
             starter.start();
             
             if (null != rtspServerPort) {
@@ -110,29 +110,17 @@ public class MediaServer {
         
     }
 
-    private static File getConfigDir(String[] args) {
-        File configDir = null;
+    private static File getConfigFile(String[] args) {
+        File configFile = null;
         if (args.length > 0) { // read config from args
-            configDir = new File(FilenameUtils.normalize(args[0])).getAbsoluteFile();
-        }
-        
-        if (null == configDir) { // read config from jar
-            String serverConfigUrl = MediaServer.class.getResource("/config/server.xml").getFile();
-            if (null != serverConfigUrl && new File(serverConfigUrl).exists()) {
-                configDir = new File(serverConfigUrl).getAbsoluteFile().getParentFile();
+            configFile = new File(FilenameUtils.normalize(args[0])).getAbsoluteFile();
+            if(configFile.exists()) {
+                return configFile;
+            } else {
+                throw new IllegalArgumentException(configFile.getAbsolutePath() + " NOT Existed.");
             }
-        } else {  // log4j 配置文件
-            PropertyConfigurator.configure(new File(configDir , "log4j.properties").getAbsolutePath());
-        }
-
-        if (null == configDir) {
-            logger.error("cant load configs");
-            System.out.println("Usage: " + MediaServer.class.getCanonicalName() + " ./config");
-            return null;
-        } else {
-            System.out.println(MediaServer.class.getCanonicalName() + " " + configDir.getAbsolutePath());
         }
         
-        return configDir;
+        return new File(MediaServer.class.getResource("/config/server.xml").getFile());
     }
 }
