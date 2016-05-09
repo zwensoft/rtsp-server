@@ -158,8 +158,8 @@ public class RtcpPktSR extends UDPRtcpPkt {
     public String toString() {
         StringBuilder buf = new StringBuilder();
         buf.append("{RtcpPktSR, ssrc=").append(ssrc);
-        buf.append(", pktCount=").append(Long.toString(sendersPktCount));
-        buf.append(", octetCount=").append(Long.toString(sendersOctCount));
+        buf.append(", numPkt=").append(Long.toString(sendersPktCount));
+        buf.append(", octet=").append(Long.toString(sendersOctCount)).append("B");
         buf.append(", ntp=").append(DateFormatUtils.format(getNTPTime(), "yyyy-MM-dd HH:mm:ss.SSS"));
         buf.append(", rtpTs=").append(rtpTs);
         
