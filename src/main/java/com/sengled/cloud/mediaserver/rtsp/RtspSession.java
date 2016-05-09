@@ -256,30 +256,11 @@ public class RtspSession  {
         return this;
     }
     
-    public RtspSession withMode(SessionMode newMode) {
-        switch (newMode) {
-            case PLAY:
-                this.sd = engine.getSessionDescription(uri);
-                this.rtpSessions = new InterLeavedRTPSession[getMediaDescriptions(sd).size()];
-                this.listener = new RtspSessionListener(this, 128 * 1024); 
-                break;
-            case PUBLISH:
-                this.dispatcher = new RtspSessionDispatcher(this);
-                break;
-            default:
-                break;
-        }
-
-        this.mode = newMode;
-        return this;
-    }
-    
     public void record() {
         this.play();
     }
 
     public void play() {
-        
         switch (mode) {
             case PUBLISH:
                 engine.updateSession(name, this);
@@ -294,7 +275,27 @@ public class RtspSession  {
         }
     }
 
+    public RtspSession withMode(SessionMode newMode) {
+        switch (newMode) {
+            case PLAY:
+                this.sd = engine.getSessionDescription(name);
+                this.rtpSessions = new InterLeavedRTPSession[getMediaDescriptions(sd).size()];
+                this.listener = new RtspSessionListener(this, 128 * 1024); 
+                break;
+            case PUBLISH:
+                this.dispatcher = new RtspSessionDispatcher(this);
+                break;
+            default:
+                break;
+        }
+
+        this.mode = newMode;
+        return this;
+    }
+    
+ 
     public void destroy(String reason) {
+        logger.debug("destroy, mode = {}", mode);
 		switch (mode) {
 		case DESTROYED:
 			break; // has been destroyed
