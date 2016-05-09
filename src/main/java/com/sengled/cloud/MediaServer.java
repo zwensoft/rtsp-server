@@ -5,6 +5,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.ConnectException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
@@ -16,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import com.sengled.cloud.mediaserver.RtspClients;
 import com.sengled.cloud.mediaserver.RtspServerBootstrap;
 import com.sengled.cloud.mediaserver.rtsp.ServerEngine;
+import com.sengled.cloud.mediaserver.spring.reports.RtspSessionLogger;
 import com.sengled.cloud.mediaserver.spring.reports.SpringStarter;
 import com.sengled.cloud.mediaserver.xml.MediaServerConfigs;
 import com.sengled.cloud.mediaserver.xml.StreamSourceDef;
@@ -48,12 +51,14 @@ public class MediaServer {
         }
 
 
+        List<RtspServerBootstrap> bootstraps = new ArrayList<RtspServerBootstrap>();
         
-        // 启动 rtsp-server
+                
+        // 构造 rtsp-server
         ServerEngine rtspServerEngine = new ServerEngine();
         Integer rtspServerPort = configs.getPorts().get(PORT_RTSP_SERVER);
         if (null != rtspServerPort) {
-            new RtspServerBootstrap("rtsp-server", rtspServerEngine, rtspServerPort).start();
+            bootstraps.add(new RtspServerBootstrap("rtsp-server", rtspServerEngine, rtspServerPort));
 
             for (StreamSourceDef def : configs.getStreamSources()) {
                 try {
@@ -65,11 +70,11 @@ public class MediaServer {
             }
         }
 
-        // 启动 talkback-server
+        // 构造 talkback-server
         ServerEngine talkbackEngine = new ServerEngine();
         Integer talkbackServerPort = configs.getPorts().get(PORT_TALKBACK_SERVER);
         if (null != talkbackServerPort) {
-            new RtspServerBootstrap("talkback-server", talkbackEngine, talkbackServerPort).start();
+            bootstraps.add(new RtspServerBootstrap("talkback-server", talkbackEngine, talkbackServerPort));
         }
 
         // 启动 spring 容器
@@ -78,19 +83,30 @@ public class MediaServer {
             starter.start();
             
             if (null != rtspServerPort) {
-                starter.initMediaResource(rtspServerPort, rtspServerEngine);
+                starter.setMediaResource(rtspServerPort, rtspServerEngine);
             }
             
             if (null != talkbackServerPort) {
-                starter.initTalkbackResource(talkbackServerPort, talkbackEngine);
+                starter.setTalkbackResource(talkbackServerPort, talkbackEngine);
             }
             
         } else {        
             logger.warn("use local mode, don't start spring");
+            RtspSessionLogger sessionLogger = new RtspSessionLogger();
+            if (null != rtspServerPort) {
+                sessionLogger.register(rtspServerPort, rtspServerEngine);
+            }
+            
+            if (null != talkbackServerPort) {
+                sessionLogger.register(talkbackServerPort, talkbackEngine);
+            }
         }
 
         
-        
+        // 启动媒体服务器
+        for (RtspServerBootstrap rtspServerBootstrap : bootstraps) {
+            rtspServerBootstrap.start();
+        }
         
     }
 
