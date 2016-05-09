@@ -6,10 +6,8 @@ import io.netty.util.concurrent.GenericFutureListener;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
-import jlibrtp.Participant;
 import jlibrtp.RtcpPkt;
 
-import org.apache.commons.lang.time.DateFormatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,16 +23,14 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
     private static final Logger logger = LoggerFactory.getLogger(RtspSessionListener.class);
     
     final private RtspSession session;
-    final private int maxBufferSize;
     final private AtomicLong bufferSize = new AtomicLong();
+    final private int maxRtpBufferSize;
     
 
-    private PlayState state = PlayState.INITED;
-    
     public RtspSessionListener(RtspSession mySession, int maxRtpBufferSize) {
         super();
         this.session = mySession;
-        this.maxBufferSize = maxRtpBufferSize;
+        this.maxRtpBufferSize = maxRtpBufferSize;
     }
 
     /**
@@ -86,7 +82,7 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
     	if (null != rtpSession) {
     		List<RtcpPkt> pkts = RTCPCodec.decode(rtpSession, event.content(), event.content().length);
     		for (RtcpPkt pkt : pkts) {
-				logger.info("stream#{} receive {}", streamIndex, pkt);
+				logger.debug("stream#{} receive {}", streamIndex, pkt);
 			}
     	}
     }
@@ -102,112 +98,29 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         }
     }
 
-
-
-    protected void sendRtcpPktSR(int streamIndex, InterLeavedRTPSession dst) {
-        if (bufferIfFull()) {
-            return;
-        }
-
-        Participant p = dst.findParticipant();
-        if (p.lastNtpTs1 < 0) {
-            return;
-        } 
-        
-        
-        // TODO
-        // 丢弃的 SR
-        /**
-        
-        RtcpPktSR sr = new RtcpPktSR(dst.ssrc(), dst.sentPktCount, dst.sentOctetCount, null);
-        sr.ntpTs1 = p.lastNtpTs1;
-        sr.ntpTs2 = p.lastNtpTs2;
-        sr.rtpTs = p.lastRtpPkt;
-        
-        sr.encode();
-        byte[] rawByte = sr.rawPkt;
-        int rtcpChannel = dst.rtcpChannel();
-
-        ByteBufAllocator alloc = channel().alloc();
-        ByteBuf payload = alloc.buffer(4 + rawByte.length);
-        payload.writeByte('$');
-        payload.writeByte(rtcpChannel);
-        payload.writeShort(rawByte.length);
-        payload.writeBytes(rawByte);
-        channel().writeAndFlush(payload);
-        */
-    }
-    
     private void onRtpPktEvent(RtpPktEvent rtpEvent) {
         int streamIndex = rtpEvent.getStreamIndex();
         if (!session.isStreamSetup(streamIndex)) {
             logger.debug("stream#{} NOT setup", streamIndex);
         }
     
-        boolean sent = false;
-        boolean isNewFrame = false;
         RtpPkt rtpObj = rtpEvent.getSource();
-        InterLeavedRTPSession rtpSession = session.getRTPSessions()[streamIndex];
-
-        if (rtpObj.getTimestamp() == rtpSession.getPlayingTimestamp()) {
-            sent = true;
-        } else { // new frame
-            switch (state) {
-                case INITED:
-                    if (isSuitableForPlaying(rtpObj)) {
-                        state = PlayState.PLAYING;
-                    }
-                    break;
-                case PLAYING:
-                    if (bufferIfFull()) {
-                        state = PlayState.BUFFER_FULL;
-                    }
-                    break;
-                case BUFFER_FULL:
-                    if (bufferSize.get() < 1 && isSuitableForPlaying(rtpObj)) {
-                        state = PlayState.PLAYING;
-                    } else if (bufferSize.get() < 1) {
-                        state = PlayState.INITED;
-                    }
-                default:
-                    throw new IllegalStateException("illegal PlayState[" + state + "]");
-            }
-            
-            sent = (state == PlayState.PLAYING);
-            isNewFrame = true;
-        }
+        InterLeavedRTPSession[] rtpSessions = session.getRTPSessions();
+        InterLeavedRTPSession rtpSession = rtpSessions[streamIndex];
         
         // send or not ?
-        if(!sent) {
-            logger.debug("stream#{} drop: {}.", streamIndex, rtpObj);
+        if (bufferSize.get() < maxRtpBufferSize) {
+            bufferSize.incrementAndGet();
+            rtpSession.sendRtpPkt(rtpObj.duplicate(), this); // 拷贝一份，重复使用
         } else {
-        	bufferSize.incrementAndGet();
-            rtpSession.sendRtpPkt(isNewFrame, rtpObj.duplicate(), this); // 拷贝一份，重复使用
-            
-            if (isNewFrame && logger.isDebugEnabled()) {
-                MediaStream mediaStream = session.getRTPSessions()[streamIndex].getMediaStream();
-                long playingTimeMillis = rtpSession.getPlayingTimeMillis();
-                String logTime = DateFormatUtils.format(playingTimeMillis, "yyyy-MM-dd HH:mm:ss.SSS");
-                logger.debug("stream#{} {}, {}. {} bytes, seq = {}", streamIndex, logTime, mediaStream.getCodec(), rtpObj.dataLength(), rtpObj.getSeqNumber());
+            // reset rtp sessions
+            for (int i = 0; i < rtpSessions.length; i++) {
+                InterLeavedRTPSession subSession = rtpSessions[i];
+                if (null != subSession) {
+                    subSession.reset();
+                }
             }
         }
-    }
-
-    /**
-     * 可以作为媒体流的第一帧开始播放
-     * 
-     * @param fullRtp
-     * @return
-     */
-    private boolean isSuitableForPlaying(RtpPkt fullRtp) {
-        boolean onlyVideo = !session.hasVideo(); // 在对讲模式下， 只有音频，没有视频
-        return onlyVideo || fullRtp.isKeyFrame();
-        //return true;
-    }
-    
-    
-    private boolean bufferIfFull() {
-        return maxBufferSize > 0 && bufferSize.get() > maxBufferSize;
     }
 
 

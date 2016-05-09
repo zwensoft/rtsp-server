@@ -42,20 +42,16 @@ public class RtspServerBootstrap {
     final private ServerEngine engine;
     final private int port;
     final private NioEventLoopGroup bossGroup;
-    final private NioEventLoopGroup workerGroup;
     
     private ServerBootstrap bootstrap;
     private ChannelGroup channels = new DefaultChannelGroup("rtsp-server", null);
     
     
-    public RtspServerBootstrap(String name, ServerEngine engine, int port) {
-        int maxThreads = Math.max(1, Runtime.getRuntime().availableProcessors());
-
+    public RtspServerBootstrap(String name, ServerEngine engine, int port, NioEventLoopGroup workerGroup) {
         this.port = port;
         this.engine = engine;
         this.bossGroup = new NioEventLoopGroup(1, new DefaultThreadFactory(name));
-        this.workerGroup = new NioEventLoopGroup(maxThreads, new DefaultThreadFactory(name + "-worker"));
-        this.bootstrap = makeServerBosststrap();
+        this.bootstrap = makeServerBosststrap(workerGroup);
     }
     
     
@@ -92,7 +88,7 @@ public class RtspServerBootstrap {
         bootstrap.childGroup().shutdownGracefully();
     }
 
-    private ServerBootstrap makeServerBosststrap() {
+    private ServerBootstrap makeServerBosststrap(NioEventLoopGroup workerGroup) {
         ServerBootstrap b = new ServerBootstrap();
 
         // server socket

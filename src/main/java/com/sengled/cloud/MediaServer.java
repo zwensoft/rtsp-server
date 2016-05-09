@@ -1,5 +1,7 @@
 package com.sengled.cloud;
 
+import io.netty.channel.nio.NioEventLoopGroup;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -51,14 +53,19 @@ public class MediaServer {
         }
 
 
-        List<RtspServerBootstrap> bootstraps = new ArrayList<RtspServerBootstrap>();
+        // 默认启动的线程数
+        String maxWorkerThreads = System.getProperty("nThreads", "1000");
+        NioEventLoopGroup workerGroup = new NioEventLoopGroup(Integer.valueOf(maxWorkerThreads));
+        logger.info("max worker threads: {}", maxWorkerThreads);
         
+        
+        List<RtspServerBootstrap> bootstraps = new ArrayList<RtspServerBootstrap>();
                 
         // 构造 rtsp-server
         ServerEngine rtspServerEngine = new ServerEngine();
         Integer rtspServerPort = configs.getPorts().get(PORT_RTSP_SERVER);
         if (null != rtspServerPort) {
-            bootstraps.add(new RtspServerBootstrap("rtsp-server", rtspServerEngine, rtspServerPort));
+            bootstraps.add(new RtspServerBootstrap("rtsp-server", rtspServerEngine, rtspServerPort, workerGroup));
 
             for (StreamSourceDef def : configs.getStreamSources()) {
                 try {
@@ -74,7 +81,7 @@ public class MediaServer {
         ServerEngine talkbackEngine = new ServerEngine();
         Integer talkbackServerPort = configs.getPorts().get(PORT_TALKBACK_SERVER);
         if (null != talkbackServerPort) {
-            bootstraps.add(new RtspServerBootstrap("talkback-server", talkbackEngine, talkbackServerPort));
+            bootstraps.add(new RtspServerBootstrap("talkback-server", talkbackEngine, talkbackServerPort, workerGroup));
         }
 
         // 启动 spring 容器

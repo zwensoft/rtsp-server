@@ -102,8 +102,8 @@ public class ServerEngine {
         return sessionAndListeners.size();
     }
 
-    public SessionDescription getSessionDescription(String uri) {
-        RtspSessionAndListeners session = sessionAndListeners.get(uri);
+    public SessionDescription getSessionDescription(String name) {
+        RtspSessionAndListeners session = sessionAndListeners.get(name);
         
         return null != session ? session.getSessionDescription() : null;
     }

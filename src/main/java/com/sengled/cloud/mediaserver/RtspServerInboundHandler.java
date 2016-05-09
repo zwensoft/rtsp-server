@@ -140,25 +140,22 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
         FullHttpResponse response = null;
         
         response = makeHttpResponse(ctx, request);
-        try {
-            if (null == response) {
-                logger.info("no response");
-            } else if (!ctx.channel().isWritable()) {
-                logger.warn("channel writable is False, ignore response");
-            } else {
-                FullHttpMessageUtils.log(response).info();
-                ctx.writeAndFlush(response.retain());
-                
-
-                HttpMethod method = request.getMethod();
-                if (RtspMethods.RECORD.equals(method)) {
-                    session.record();
-                } else if (RtspMethods.PLAY.equals(method)) {
-                    session.play();
-                }
-            }
-        } finally {
+        if (null == response) {
+            logger.info("no response");
+        } else if (!ctx.channel().isWritable()) {
+            logger.warn("channel writable is False, ignore response");
             ReferenceCountUtil.release(response);
+        } else {
+            FullHttpMessageUtils.log(response).info();
+            ctx.writeAndFlush(response);
+            
+
+            HttpMethod method = request.getMethod();
+            if (RtspMethods.RECORD.equals(method)) {
+                session.record();
+            } else if (RtspMethods.PLAY.equals(method)) {
+                session.play();
+            }
         }
        
     }

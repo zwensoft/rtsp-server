@@ -1,6 +1,5 @@
 package com.sengled.cloud.mediaserver.rtsp;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.util.ReferenceCountUtil;
 
 import java.util.Iterator;
@@ -94,37 +93,9 @@ public class RtspSessionDispatcher {
             }
 
             InterLeavedRTPSession rtpSess = session.getRTPSessions()[streamIndex];
-            MediaStream stream = rtpSess.getMediaStream();
             rtpSess.sentPktCount += 1;
             rtpSess.sentOctetCount += rtpObj.dataLength();
             
-
-            // h264
-            if ("h264".equalsIgnoreCase(stream.getCodec())) {
-            	ByteBuf buf = rtpObj.data();
-            	
-            	int firstByte =  buf.readByte();
-                switch (firstByte & 0x1F) {
-                    case 5:  // IDR
-                    case 7:  // SPS
-                    case 8:  // PPS
-                        rtpObj.setKeyFrame(true);
-                        break;
-                    case 28:  // FU-A (fragmented nal)
-                        int fu_header = buf.readByte();
-                        int nal_type = fu_header & 0x1f;
-
-                        switch (nal_type) {
-                            case 5:  // IDR
-                            case 7:  // SPS
-                            case 8:  // PPS
-                                rtpObj.setKeyFrame(true);
-                                break;
-                        }
-                        break;
-                }
-            }
-
             logger.debug("dispatch: {}", rtpObj);
             dispatch(new RtpPktEvent(streamIndex, rtpObj.retain()));
         } finally {
@@ -145,7 +116,6 @@ public class RtspSessionDispatcher {
 
             RtcpPktRR rr = new RtcpPktRR(new Participant[]{part}, rtpSess.ssrc());
             rr.encode();
-            byte[] rawPkt = rr.rawPkt;
         }
         
     }

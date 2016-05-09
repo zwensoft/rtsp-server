@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import com.sengled.cloud.mediaserver.rtsp.MediaStream;
 import com.sengled.cloud.mediaserver.rtsp.NtpTime;
+import com.sengled.cloud.mediaserver.rtsp.PlayState;
 import com.sengled.cloud.mediaserver.rtsp.Rational;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtpPkt;
 
@@ -33,241 +34,338 @@ import com.sengled.cloud.mediaserver.rtsp.interleaved.RtpPkt;
  * @date 2016年4月28日
  */
 public class InterLeavedRTPSession extends RTPSession {
-	private static final Logger logger = LoggerFactory
-			.getLogger(InterLeavedRTPSession.class);
+    private static final Logger logger = LoggerFactory
+            .getLogger(InterLeavedRTPSession.class);
 
-	private MediaStream mediaStream;
-	private Channel channel;
-	private int rtpChannel;
+    private MediaStream mediaStream;
+    private Channel channel;
+    private int rtpChannel;
 
-	private NtpTime ntpTime;
-	private long playingTimestamp = -1;
-	Participant outPart;
+    private NtpTime ntpTime;
+    private long playingTimestamp = -1;
+    Participant outPart;
 
-	public InterLeavedRTPSession(MediaStream mediaStream, Channel channel,
-			int rtpChannel, int rtcpChannel) {
-		super(InterLeavedParticipantDatabase.FACTORY);
+    private PlayState state = PlayState.BUFFERING; 
+    
+    public InterLeavedRTPSession(MediaStream mediaStream, Channel channel,
+            int rtpChannel, int rtcpChannel) {
+        super(InterLeavedParticipantDatabase.FACTORY);
 
-		this.mediaStream = mediaStream;
-		this.channel = channel;
-		this.rtpChannel = rtpChannel;
-		this.generateCNAME();
-		this.generateSsrc();
+        this.mediaStream = mediaStream;
+        this.channel = channel;
+        this.rtpChannel = rtpChannel;
+        this.generateCNAME();
+        this.generateSsrc();
 
-		this.outPart = new Participant(ssrc()); // rtp session use as output
-												// part
-		this.rtcpSession = new InterLeavedRTCPSession(rtcpChannel);
-	}
+        this.outPart = new Participant(ssrc()); // rtp session use as output
+                                                // part
+        this.rtcpSession = new InterLeavedRTCPSession(rtcpChannel);
+    }
 
-	public long getPlayingTimestamp() {
-		return playingTimestamp;
-	}
+    public long getPlayingTimestamp() {
+        return playingTimestamp;
+    }
 
-	public long getPlayingTimeMillis() {
-		long ntpTimestamp = playingTimestamp;
-		return getNtpTimeMillis(ntpTimestamp);
-	}
+    public long getPlayingTimeMillis() {
+        long ntpTimestamp = playingTimestamp;
+        return getNtpTimeMillis(ntpTimestamp);
+    }
 
-	public long getNtpTimeMillis(long ntpTimestamp) {
-		Rational streamTimeUnit = mediaStream.getTimeUnit();
-		if (null == ntpTime) {
-			return Rational.$_1_000.convert(ntpTimestamp, streamTimeUnit);
-		} else {
-			long duration = ntpTimestamp - ntpTime.getRtpTime();
-			return ntpTime.getNtpTimeMillis()
-					+ Rational.$_1_000.convert(duration, streamTimeUnit);
-		}
-	}
+    public long getNtpTimeMillis(long ntpTimestamp) {
+        Rational streamTimeUnit = mediaStream.getTimeUnit();
+        if (null == ntpTime) {
+            return Rational.$_1_000.convert(ntpTimestamp, streamTimeUnit);
+        } else {
+            long duration = ntpTimestamp - ntpTime.getRtpTime();
+            return ntpTime.getNtpTimeMillis()
+                    + Rational.$_1_000.convert(duration, streamTimeUnit);
+        }
+    }
 
-	public void setNtpTime(NtpTime ntpTime) {
-		this.ntpTime = ntpTime;
-	}
-	
-	public NtpTime getNtpTime() {
+    public void setNtpTime(NtpTime ntpTime) {
+        this.ntpTime = ntpTime;
+    }
+
+    public NtpTime getNtpTime() {
         return ntpTime;
     }
 
-	public void sendRtpPkt(boolean isNewFrame, RtpPkt rtpObj,
-			GenericFutureListener<? extends Future<? super Void>> onComplete) {
-		// 更新播放时间
-		this.playingTimestamp = rtpObj.getTimestamp();
-		if (isNewFrame) {
-			sendRtcpPktSRIfNeed(rtpObj.getTimestamp());
-		}
+    public void reset() {
+        this.state = PlayState.BUFFERING;
+    }
 
-		// 统计流量
-		this.sentOctetCount += rtpObj.dataLength();
-		if (isNewFrame) {
-			this.sentPktCount++;
-		}
+    public void sendRtpPkt(RtpPkt rtpObj,
+                           GenericFutureListener<? extends Future<? super Void>> onComplete) {
+        boolean isNewFrame = this.playingTimestamp != rtpObj.getTimestamp();
+        
+        switch (mediaStream.getMediaType()) {
+            case VIDEO:
+                sendVideoRtpPkt(isNewFrame, rtpObj, onComplete);
+                break;
+            case AUDIO:
+                sendAudioRtpPkt(isNewFrame, rtpObj, onComplete);
+                break;
+            default:
+                break;
+        }
+        
+    }
 
-		// 依次发送 rtp 包
-		int payloadLength;
-		ByteBufAllocator alloc = channel().alloc();
-		payloadLength = rtpObj.content().readableBytes();
+    private void sendAudioRtpPkt(boolean isNewFrame,
+                                 RtpPkt rtpObj,
+                                 GenericFutureListener<? extends Future<? super Void>> onComplete) {
+        doSendRtpPkt(isNewFrame, rtpObj, onComplete);
+    }
 
-		final int nextSeqNo = 0xFFFF & (outPart.lastSeqNumber + 1);
-		outPart.lastSeqNumber = nextSeqNo;
+    private void sendVideoRtpPkt(boolean isNewFrame,
+                                 RtpPkt rtpObj,
+                                 GenericFutureListener<? extends Future<? super Void>> onComplete) {
+        ByteBuf buf = rtpObj.data();
+        
+        if(state == PlayState.BUFFERING) {
+            if (!isNewFrame) {
+                return;
+            }
 
-		if (outPart.firstSeqNumber < 0) {
-			outPart.firstSeqNumber = nextSeqNo;
-		}
+            // 不是 h264 的关键帧，则直接推出
+            if (!isH264KeyFrame(buf)) {
+                return;
+            }
+            
+            state = PlayState.PLAYING;
+        }
+        
+        doSendRtpPkt(isNewFrame, rtpObj, onComplete);
+    }
 
-		ByteBuf payload = alloc.buffer(4 + payloadLength);
-		payload.writeByte('$');
-		payload.writeByte(rtpChannel());
-		payload.writeShort(payloadLength);
+    private boolean isH264KeyFrame(ByteBuf buf) {
+        boolean isKeyFrame = false;
+        int firstByte =  buf.readByte();
+        
+        int nal_type = firstByte & 0x1F;
+        switch (nal_type) {
+            case 5:  // IDR
+            case 7:  // SPS
+            case 8:  // PPS
+                isKeyFrame = true;
+                break;
+            case 28:  // FU-A (fragmented nal)
+                int fu_header = buf.readByte();
+                nal_type = fu_header & 0x1f;
 
-		rtpObj.setSeqNumber(nextSeqNo);
-		rtpObj.ssrc(ssrc());
-		payload.writeBytes(rtpObj.content()); // 应为修改了 ssrc 和 seq, 所以只能用拷贝
+                switch (nal_type) {
+                    case 5:  // IDR
+                    case 7:  // SPS
+                    case 8:  // PPS
+                        isKeyFrame = true;
+                        break;
+                }
+                break;
+        }
+        
+        if(isKeyFrame) {
+            logger.info("key, nal_type = {}", nal_type);
+        }
 
-		writeAndFlush(payload, onComplete);
-	}
+        return isKeyFrame;
+    }
 
-
-	private void sendRtcpPktSRIfNeed(long rtpTs) {
-		boolean hasNtpTime = null != ntpTime
-				&& ntpTime.getRtpTime() <= rtpTs;
-		if (hasNtpTime && ntpTime.getNtpTs1() - outPart.lastNtpTs1 > 3) {
-			long sentNtpTs1 = sendRtcpPktSR(rtpTs);
-			outPart.lastNtpTs1 = sentNtpTs1;
-		}
-	}
-
-	/**
-	 * send Rtcp SR
-	 * @param rtpTs
-	 * @return the NTP time millil sent
-	 */
-	private long sendRtcpPktSR(long rtpTs) {
-		long ntpTimeMills = getNtpTimeMillis(rtpTs);
-		RtcpPktSR sr = new RtcpPktSR(outPart.ssrc(), sentPktCount, sentOctetCount, null);
-		sr.rtpTs = rtpTs;
-		sr.ntpTs1 = NtpTime.getNtpTs1(ntpTimeMills);
-		sr.ntpTs2 = NtpTime.getNtpTs2(ntpTimeMills);
-		
-		sendRtcpPkt(sr);
-		return sr.ntpTs1;
-	}
+    private void doSendRtpPkt(boolean isNewFrame,
+                              RtpPkt rtpObj,
+                           GenericFutureListener<? extends Future<? super Void>> onComplete) {
+        
+        // 更新播放时间
+        this.playingTimestamp = rtpObj.getTimestamp();
 
 
+        // 统计流量
+        this.sentOctetCount += rtpObj.dataLength();
+        if (isNewFrame) {
+            this.sentPktCount++;
+        }
 
-	private void sendRtcpPktBye(String reason) {
-		Charset utf8 = Charset.forName("UTF-8");
-		RtcpPktBYE bye = new RtcpPktBYE(new long[]{outPart.ssrc()}, null == reason ? null : reason.getBytes(utf8));
-	
-		sendRtcpPkt(bye);
-	}
 
-	public void sendRtcpPkt(RtcpPkt sr) {
-		sr.encode();
-		final byte[] rawPkt = sr.rawPkt;
-		final int payloadLength = rawPkt.length;
+        final int nextSeqNo = 0xFFFF & (outPart.lastSeqNumber + 1);
+        outPart.lastSeqNumber = nextSeqNo;
 
-		// 依次发送 rtp 包
-		ByteBufAllocator alloc = channel().alloc();
+        if (outPart.firstSeqNumber < 0) {
+            outPart.firstSeqNumber = nextSeqNo;
+        }
 
-		ByteBuf payload = alloc.buffer(4 + payloadLength);
-		payload.writeByte('$');
-		payload.writeByte(rtcpChannel());
-		payload.writeShort(payloadLength);
 
-		payload.writeBytes(rawPkt);
+        rtpObj.setSeqNumber(nextSeqNo);
+        rtpObj.ssrc(ssrc());
 
-		if(writeAndFlush(payload, null)) {
-		    // 'ch{}_sent'  与  dispatch 输出的日志等长
-			logger.info("stream#{} ch{}_sent {}", mediaStream.getStreamIndex(), rtcpChannel(), sr);
-		}
-	}
+        // 发送 rtcp
+        if (isNewFrame) {
+            sendRtcpPktSRIfNeed(rtpObj.getTimestamp());
+        }
 
-	
-	private boolean writeAndFlush(ByteBuf data,
-			GenericFutureListener<? extends Future<? super Void>> onComplete) {
-		Channel channel = channel();
-		if (channel.isWritable()) {
-			ChannelPromise promise = channel.newPromise();
-			if (null != onComplete) {
-				promise.addListener(onComplete);
-			}
-			
-			channel.writeAndFlush(data, promise);
+        // 依次发送 rtp
+        int payloadLength;
+        ByteBufAllocator alloc = channel().alloc();
+        payloadLength = rtpObj.content().readableBytes();
 
-			return true;
-		} else {
-			ReferenceCountUtil.release(data); // ignore it
-			return false;
-		}
-		
-	}
-	
-	public Channel channel() {
-		return channel;
-	}
+        ByteBuf payload = alloc.buffer(4 + payloadLength);
+        payload.writeByte('$');
+        payload.writeByte(rtpChannel());
+        payload.writeShort(payloadLength);
+        payload.writeBytes(rtpObj.content()); // 应为修改了 ssrc 和 seq, 所以只能用拷贝
 
-	public int rtcpChannel() {
-		return rtcpSession().rtcpChannel();
-	}
 
-	public int rtpChannel() {
-		return rtpChannel;
-	}
+        logger.trace("isNew={}, {}", isNewFrame, rtpObj);
+        writeAndFlush(payload, onComplete);
+    }
 
-	public void rtpChannel(int rtpChannel) {
-		this.rtpChannel = rtpChannel;
-	}
+    public void sendRtcpPkt(RtcpPkt sr) {
+        sr.encode();
+        final byte[] rawPkt = sr.rawPkt;
+        final int payloadLength = rawPkt.length;
 
-	@Override
-	public void endSession(String reason) {
-		sendRtcpPktBye(reason);
-	}
+        // 依次发送 rtp 包
+        ByteBufAllocator alloc = channel().alloc();
 
-	@Override
-	protected void generateCNAME() {
-		SocketAddress addr = channel.localAddress();
+        ByteBuf payload = alloc.buffer(4 + payloadLength);
+        payload.writeByte('$');
+        payload.writeByte(rtcpChannel());
+        payload.writeShort(payloadLength);
 
-		String hostname = null;
+        payload.writeBytes(rawPkt);
 
-		if (addr instanceof InetSocketAddress) {
-			InetSocketAddress inet = (InetSocketAddress) addr;
-			hostname = inet.getHostName();
-		}
+        if (writeAndFlush(payload, null)) {
+            // 'ch{}_sent' 与 dispatch 输出的日志等长
+            logger.info("stream#{} ch{}_sent {} byte(s) {}", mediaStream.getStreamIndex(),
+                    rtcpChannel(), payloadLength, sr);
+        }
+    }
 
-		if ((null == hostname || "0.0.0.0".equals(hostname))
-				&& System.getenv("HOSTNAME") != null) {
-			hostname = System.getenv("HOSTNAME");
-		}
+    private void sendRtcpPktSRIfNeed(long rtpTs) {
+        boolean hasNtpTime = null != ntpTime
+                && ntpTime.getRtpTime() <= rtpTs;
+        if (!hasNtpTime) {
+            return;
+        }
 
-		cname = System.getProperty("user.name") + "@" + hostname;
-	}
+        int duration = mediaStream.getMediaType().isVideo() ? 5 : 3;
+        if (ntpTime.getNtpTs1() - outPart.lastNtpTs1 > duration) {
+            long sentNtpTs1 = sendRtcpPktSR(rtpTs);
+            outPart.lastNtpTs1 = sentNtpTs1;
+        }
+    }
 
-	public InterLeavedRTCPSession rtcpSession() {
-		return (InterLeavedRTCPSession) rtcpSession;
-	}
+    /**
+     * send Rtcp SR
+     * 
+     * @param rtpTs
+     * @return the NTP time millil sent
+     */
+    private long sendRtcpPktSR(long rtpTs) {
+        long ntpTimeMills = getNtpTimeMillis(rtpTs);
+        RtcpPktSR sr = new RtcpPktSR(ssrc(), sentPktCount, sentOctetCount, null);
+        sr.rtpTs = rtpTs;
+        sr.ntpTs1 = NtpTime.getNtpTs1(ntpTimeMills);
+        sr.ntpTs2 = NtpTime.getNtpTs2(ntpTimeMills);
 
-	/**
-	 * Find out whether a participant with this SSRC is known.
-	 * 
-	 * If the user is unknown, and the system is operating in unicast mode, try
-	 * to match the ip-address of the sender to the ip address of a previously
-	 * unmatched target
-	 * 
-	 * @param ssrc
-	 *            the SSRC of the participant
-	 * @param packet
-	 *            the packet that notified us
-	 * @return the relevant participant, possibly newly created
-	 */
-	public Participant findParticipant() {
-		Participant p = partDb().getParticipant(ssrc);
-		if (p == null) {
-			p = new InterLeavedParticipant(this, ssrc);
-			partDb().addParticipant(2, p);
-		}
-		return p;
-	}
+        sendRtcpPkt(sr);
+        return sr.ntpTs1;
+    }
 
-	public MediaStream getMediaStream() {
-		return mediaStream;
-	}
+
+
+    private void sendRtcpPktBye(String reason) {
+        Charset utf8 = Charset.forName("UTF-8");
+        RtcpPktBYE bye =
+                new RtcpPktBYE(new long[] {outPart.ssrc()}, null == reason ? null
+                        : reason.getBytes(utf8));
+
+        sendRtcpPkt(bye);
+    }
+
+
+
+    private boolean writeAndFlush(ByteBuf data,
+                                  GenericFutureListener<? extends Future<? super Void>> onComplete) {
+        Channel channel = channel();
+        if (channel.isWritable()) {
+            ChannelPromise promise = channel.newPromise();
+            if (null != onComplete) {
+                promise.addListener(onComplete);
+            }
+
+            channel.writeAndFlush(data, promise);
+
+            return true;
+        } else {
+            ReferenceCountUtil.release(data); // ignore it
+            return false;
+        }
+
+    }
+
+    public Channel channel() {
+        return channel;
+    }
+
+    public int rtcpChannel() {
+        return rtcpSession().rtcpChannel();
+    }
+
+    public int rtpChannel() {
+        return rtpChannel;
+    }
+
+    public void rtpChannel(int rtpChannel) {
+        this.rtpChannel = rtpChannel;
+    }
+
+    @Override
+    public void endSession(String reason) {
+        sendRtcpPktBye(reason);
+    }
+
+    @Override
+    protected void generateCNAME() {
+        SocketAddress addr = channel.localAddress();
+
+        String hostname = null;
+
+        if (addr instanceof InetSocketAddress) {
+            InetSocketAddress inet = (InetSocketAddress) addr;
+            hostname = inet.getHostName();
+        }
+
+        if ((null == hostname || "0.0.0.0".equals(hostname))
+                && System.getenv("HOSTNAME") != null) {
+            hostname = System.getenv("HOSTNAME");
+        }
+
+        cname = System.getProperty("user.name") + "@" + hostname;
+    }
+
+    public InterLeavedRTCPSession rtcpSession() {
+        return (InterLeavedRTCPSession) rtcpSession;
+    }
+
+    /**
+     * Find out whether a participant with this SSRC is known.
+     * 
+     * If the user is unknown, and the system is operating in unicast mode, try to match the
+     * ip-address of the sender to the ip address of a previously unmatched target
+     * 
+     * @param ssrc the SSRC of the participant
+     * @param packet the packet that notified us
+     * @return the relevant participant, possibly newly created
+     */
+    public Participant findParticipant() {
+        Participant p = partDb().getParticipant(ssrc);
+        if (p == null) {
+            p = new InterLeavedParticipant(this, ssrc);
+            partDb().addParticipant(2, p);
+        }
+        return p;
+    }
+
+    public MediaStream getMediaStream() {
+        return mediaStream;
+    }
 }
