@@ -10,8 +10,8 @@ import com.sengled.cloud.mediaserver.rtsp.RtspSession;
  */
 public class RtspSessionRemovedEvent extends RtspSessionEvent {
 
-    public RtspSessionRemovedEvent(RtspSession session) {
-        super(session);
+    public RtspSessionRemovedEvent(int numSessions, RtspSession session) {
+        super(numSessions, session);
     }
 
 }

@@ -31,26 +31,26 @@ public class SpringStarter {
         return springContext;
     }
 
-    public void initMediaResource(Integer rtspServerPort,
+    public void setMediaResource(Integer rtspServerPort,
                                   ServerEngine rtspServerCtx) throws UnknownHostException {
         if (null != springContext) {
             MediaResource mediaResource = springContext.getBean(MediaResource.class);
-            mediaResource.start(rtspServerPort, rtspServerCtx);
+            mediaResource.register(rtspServerPort, rtspServerCtx);
             
             RtspSessionLogger sessionLogger = springContext.getBean(RtspSessionLogger.class);
-            sessionLogger.start(rtspServerPort, rtspServerCtx);
+            sessionLogger.register(rtspServerPort, rtspServerCtx);
         }
     }
 
-    public void initTalkbackResource(Integer talkbackServerPort,
+    public void setTalkbackResource(Integer talkbackServerPort,
                                      ServerEngine talkbackServerCtx) throws UnknownHostException {
         if (null != springContext) {
             TalkbackResource resource = springContext.getBean(TalkbackResource.class);
-            resource.start(talkbackServerPort, talkbackServerCtx);
+            resource.register(talkbackServerPort, talkbackServerCtx);
             
 
             RtspSessionLogger sessionLogger = springContext.getBean(RtspSessionLogger.class);
-            sessionLogger.start(talkbackServerPort, talkbackServerCtx);
+            sessionLogger.register(talkbackServerPort, talkbackServerCtx);
         }
     }
 

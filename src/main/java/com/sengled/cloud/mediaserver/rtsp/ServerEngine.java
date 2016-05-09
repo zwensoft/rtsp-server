@@ -42,7 +42,7 @@ public class ServerEngine {
             return null;
         }
         
-        eventBus.post(new RtspSessionRemovedEvent(session));
+        eventBus.post(new RtspSessionRemovedEvent(numSessions(), session));
         
         element.updateSession(null);
         sessionAndListeners.remove(name);
@@ -56,7 +56,7 @@ public class ServerEngine {
         RtspSessionAndListeners rtspSessionAndListeners = sessionAndListeners.get(name);
         rtspSessionAndListeners.updateSession(session);
         
-        eventBus.post(new RtspSessionUpdatedEvent(session));
+        eventBus.post(new RtspSessionUpdatedEvent(numSessions(), session));
         logger.info("{} device session(s) online", numSessions());
     }
 

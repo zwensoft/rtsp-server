@@ -34,7 +34,7 @@ public class RtspSessionLogger {
     }
 
 
-    public void start(int port, ServerEngine engine) {
+    public void register(int port, ServerEngine engine) {
         engine.eventBus().register(this);
     }
     
@@ -42,6 +42,7 @@ public class RtspSessionLogger {
     @Subscribe
     public void onSessionCreated(RtspSessionUpdatedEvent event) {
         final RtspSession session = event.getSession();
+        final int numSessions = event.getNumSessions();
         
         // save sdp
         final File file = getSdpFile(session);
@@ -49,7 +50,7 @@ public class RtspSessionLogger {
             @Override
             public Void call() throws Exception {
                 FileUtils.write(file, session.getSDP());
-                logger.info("update sdp '{}'", file.getAbsolutePath());
+                logger.info("save {}th sdp '{}'", numSessions, file.getAbsolutePath());
                 return null;
             }
         }, 0);
@@ -59,13 +60,14 @@ public class RtspSessionLogger {
     @Subscribe
     public void onSessionRemoved(RtspSessionRemovedEvent event) {
         final RtspSession session = event.getSession();
+        final int numSessions = event.getNumSessions();
         
         // delete sdp
         final File file = getSdpFile(session);
         executor.setTimeout(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
-                logger.info("delete sdp '{}'", file.getAbsolutePath());
+                logger.info("delete {}th sdp '{}'", numSessions, file.getAbsolutePath());
 
                 File newFile = new File(file.getParentFile(), file.getName() + ".deleted");
                 newFile.delete();

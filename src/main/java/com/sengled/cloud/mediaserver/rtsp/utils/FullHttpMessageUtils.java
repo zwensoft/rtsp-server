@@ -1,4 +1,4 @@
-package com.sengled.cloud.mediaserver.rtsp;
+package com.sengled.cloud.mediaserver.rtsp.utils;
 
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -9,6 +9,7 @@ import java.util.Map.Entry;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 
@@ -16,15 +17,16 @@ import org.slf4j.Logger;
  * @date 2016年5月4日
  */
 public class FullHttpMessageUtils {
+    private static final Logger LOGGER = LoggerFactory.getLogger(FullHttpMessageUtils.class);
     private static final String LINE_SEPARATOR = "\r\n";
     private static final Charset UTF_8 = Charset.forName("UTF-8");
     
-    public static MessageLogger log(Logger logger, FullHttpRequest request) {
-        return new MessageLogger(logger, request);
+    public static MessageLogger log(FullHttpRequest request) {
+        return new MessageLogger(LOGGER, request);
     }
     
-    public static MessageLogger log(Logger logger, FullHttpResponse response) {
-        return new MessageLogger(logger, response);
+    public static MessageLogger log(FullHttpResponse response) {
+        return new MessageLogger(LOGGER, response);
     }
     
     public static final class MessageLogger {

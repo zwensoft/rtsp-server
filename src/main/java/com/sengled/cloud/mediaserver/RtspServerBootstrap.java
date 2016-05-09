@@ -49,7 +49,7 @@ public class RtspServerBootstrap {
     
     
     public RtspServerBootstrap(String name, ServerEngine engine, int port) {
-        int maxThreads = Math.max(1, Runtime.getRuntime().availableProcessors() * 2);
+        int maxThreads = Math.max(1, Runtime.getRuntime().availableProcessors());
 
         this.port = port;
         this.engine = engine;

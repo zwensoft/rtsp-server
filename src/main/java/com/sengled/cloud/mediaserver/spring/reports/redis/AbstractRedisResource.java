@@ -53,7 +53,7 @@ public abstract class AbstractRedisResource {
         this.name = name;
     }
 
-    final public void start(int port, ServerEngine rtspServer) throws UnknownHostException {
+    final public void register(int port, ServerEngine rtspServer) throws UnknownHostException {
         this.port = port;
         this.engine = rtspServer;
 

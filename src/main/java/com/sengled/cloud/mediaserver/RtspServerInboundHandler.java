@@ -27,7 +27,6 @@ import javax.sip.TransportNotSupportedException;
 
 import org.slf4j.LoggerFactory;
 
-import com.sengled.cloud.mediaserver.rtsp.FullHttpMessageUtils;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.RtspSession.SessionMode;
 import com.sengled.cloud.mediaserver.rtsp.ServerEngine;
@@ -35,6 +34,7 @@ import com.sengled.cloud.mediaserver.rtsp.Transport;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtcpContent;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtpPkt;
 import com.sengled.cloud.mediaserver.rtsp.rtp.InterLeavedRTPSession;
+import com.sengled.cloud.mediaserver.rtsp.utils.FullHttpMessageUtils;
 
 /**
  * 处理客户端的 rtsp 请求。
@@ -107,7 +107,7 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
         try {
             if (msg instanceof FullHttpRequest) {
                 FullHttpRequest request = (FullHttpRequest) msg;
-                FullHttpMessageUtils.log(logger, request).info();
+                FullHttpMessageUtils.log(request).info();
                 
                 handleRequest(ctx, request);
             } else if (null != session) {
@@ -146,7 +146,7 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
         } else if (!ctx.channel().isWritable()) {
             logger.warn("channel writable is False");
         } else {
-            FullHttpMessageUtils.log(logger, response).info();
+            FullHttpMessageUtils.log(response).info();
             ctx.writeAndFlush(response);
             
 
