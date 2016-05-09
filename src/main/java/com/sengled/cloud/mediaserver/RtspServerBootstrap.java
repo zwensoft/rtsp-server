@@ -1,8 +1,6 @@
 package com.sengled.cloud.mediaserver;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -57,7 +55,7 @@ public class RtspServerBootstrap {
         this.engine = engine;
         this.bossGroup = new NioEventLoopGroup(1, new DefaultThreadFactory(name));
         this.workerGroup = new NioEventLoopGroup(maxThreads, new DefaultThreadFactory(name + "-worker"));
-        this.bootstrap = makeServerBosststrap(new PooledByteBufAllocator(true));
+        this.bootstrap = makeServerBosststrap();
     }
     
     
@@ -94,18 +92,16 @@ public class RtspServerBootstrap {
         bootstrap.childGroup().shutdownGracefully();
     }
 
-    private ServerBootstrap makeServerBosststrap(ByteBufAllocator allocator) {
+    private ServerBootstrap makeServerBosststrap() {
         ServerBootstrap b = new ServerBootstrap();
 
         // server socket
         b.group(bossGroup, workerGroup);
         b.channel(NioServerSocketChannel.class);
-        b.option(ChannelOption.ALLOCATOR, allocator);
         b.option(ChannelOption.SO_BACKLOG, 0); // 服务端处理线程全忙后，允许多少个新请求进入等待。 
         
         // accept socket
         b.childOption(ChannelOption.SO_KEEPALIVE, true)
-         .childOption(ChannelOption.ALLOCATOR, allocator)
          .childOption(ChannelOption.SO_RCVBUF, 16 * 1500)
          .childOption(ChannelOption.SO_SNDBUF, 16 * 1500)
          .childOption(ChannelOption.SO_LINGER, 0)      // SO_LINGER还有一个作用就是用来减少TIME_WAIT套接字的数量

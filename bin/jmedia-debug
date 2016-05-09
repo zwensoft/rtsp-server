@@ -55,5 +55,5 @@ LAUNCH_CLASSPATH="$JMEDIA_ASSEMBLY_JAR"
 # The launcher library will print arguments separated by a NULL character, to allow arguments with
 # characters that would be otherwise interpreted by the shell. Read that in a while loop, populating
 # an array that will be used to exec the final command.
-exec "$RUNNER" -Dio.netty.leakDetection.level=PARANOID  -cp "$LAUNCH_CLASSPATH" com.sengled.cloud.MediaServer "${JMEDIA_HOME}/config"  "$@"
+exec "$RUNNER" -Dio.netty.leakDetection.level=PARANOID -Dio.netty.allocator.type=pooled -Dio.netty.noPreferDirect=false  -cp "$LAUNCH_CLASSPATH" com.sengled.cloud.MediaServer "${JMEDIA_HOME}/config"  "$@"
 
