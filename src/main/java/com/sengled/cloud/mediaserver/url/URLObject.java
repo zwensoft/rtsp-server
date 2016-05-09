@@ -4,9 +4,6 @@ import java.net.MalformedURLException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 
 /**
  * URL 对象
@@ -17,8 +14,6 @@ import org.slf4j.LoggerFactory;
  * @date 2016年4月15日
  */
 public class URLObject {
-    private static final Logger logger = LoggerFactory.getLogger(URLObject.class);
-    
     private final String scheme;
     private final String user;
     private final String password;
