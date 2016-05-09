@@ -56,7 +56,6 @@ public class NtpTime {
     public String toString() {
         StringBuilder buf = new StringBuilder();
         buf.append("{NtpTime");
-        buf.append(", ntpTs1=").append(ntpTs1);
         buf.append(", ntp=").append(DateFormatUtils.format(getNtpTimeMillis(), "yyyy-MM-dd HH:mm:ss.SSS"));
         buf.append(", rtpTime=").append(rtpTime);
         buf.append("}");

@@ -53,9 +53,7 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
                 continue;
             }
             
-            Participant p = src.findParticipant();
-            
-            onNtpTimeEvent(new NtpTimeEvent(i, new NtpTime(p.lastNtpTs1, p.lastNtpTs2, p.lastRtpPkt)));
+            dst.setNtpTime(src.getNtpTime());
         }
     }
     
@@ -204,6 +202,7 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
     private boolean isSuitableForPlaying(RtpPkt fullRtp) {
         boolean onlyVideo = !session.hasVideo(); // 在对讲模式下， 只有音频，没有视频
         return onlyVideo || fullRtp.isKeyFrame();
+        //return true;
     }
     
     

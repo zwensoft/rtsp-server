@@ -82,6 +82,10 @@ public class InterLeavedRTPSession extends RTPSession {
 	public void setNtpTime(NtpTime ntpTime) {
 		this.ntpTime = ntpTime;
 	}
+	
+	public NtpTime getNtpTime() {
+        return ntpTime;
+    }
 
 	public void sendRtpPkt(boolean isNewFrame, RtpPkt rtpObj,
 			GenericFutureListener<? extends Future<? super Void>> onComplete) {
@@ -125,7 +129,7 @@ public class InterLeavedRTPSession extends RTPSession {
 	private void sendRtcpPktSRIfNeed(long rtpTs) {
 		boolean hasNtpTime = null != ntpTime
 				&& ntpTime.getRtpTime() <= rtpTs;
-		if (hasNtpTime && ntpTime.getNtpTs1() - outPart.lastNtpTs1 > 5) {
+		if (hasNtpTime && ntpTime.getNtpTs1() - outPart.lastNtpTs1 > 3) {
 			long sentNtpTs1 = sendRtcpPktSR(rtpTs);
 			outPart.lastNtpTs1 = sentNtpTs1;
 		}
@@ -172,7 +176,8 @@ public class InterLeavedRTPSession extends RTPSession {
 		payload.writeBytes(rawPkt);
 
 		if(writeAndFlush(payload, null)) {
-			logger.info("stream#{} channle#{} sent {}", mediaStream.getStreamIndex(), rtcpChannel(), sr);
+		    // 'ch{}_sent'  与  dispatch 输出的日志等长
+			logger.info("stream#{} ch{}_sent {}", mediaStream.getStreamIndex(), rtcpChannel(), sr);
 		}
 	}
 
