@@ -165,8 +165,6 @@ public class RtcpPktSR extends UDPRtcpPkt {
         
         if (null != this.rReports) {
             buf.append(", Part of Sender Report: ").append(rReports);
-        } else {
-            buf.append(", No Receiver Reports.");
         }
         
         buf.append("}");

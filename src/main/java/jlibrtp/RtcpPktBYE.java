@@ -98,7 +98,7 @@ public class RtcpPktBYE extends RtcpPkt {
         StringBuffer buf = new StringBuffer();
         buf.append("{RtcpPktBYE,");
         if(ssrcArray != null) {
-            buf.append("ssrc: [");
+            buf.append("ssrc=[");
             for(int i= 0; i<ssrcArray.length; i++) {
                 long anSsrc = ssrcArray[i];
                 if (i != 0) {
