@@ -1,12 +1,10 @@
 package com.sengled.cloud.mediaserver.rtsp;
 
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
-
-import jlibrtp.RtcpPkt;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,7 +15,6 @@ import com.sengled.cloud.mediaserver.rtsp.event.TearDownEvent;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtcpContent;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtpPkt;
 import com.sengled.cloud.mediaserver.rtsp.rtp.InterLeavedRTPSession;
-import com.sengled.cloud.mediaserver.rtsp.rtp.RTCPCodec;
 
 public class RtspSessionListener implements GenericFutureListener<Future<? super Void>> {
     private static final Logger logger = LoggerFactory.getLogger(RtspSessionListener.class);
@@ -78,14 +75,21 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
 
 
     public void receiveRtcpEvent(RtcpContent event) {
-    	int streamIndex = session.getStreamIndex(event);
-    	InterLeavedRTPSession rtpSession = session.getRTPSessions()[streamIndex];
-    	if (null != rtpSession) {
-    		List<RtcpPkt> pkts = RTCPCodec.decode(rtpSession, event.content(), event.content().length);
-    		for (RtcpPkt pkt : pkts) {
-				logger.debug("stream#{} receive {}", streamIndex, pkt);
-			}
-    	}
+        try {
+            /**
+            int streamIndex = session.getStreamIndex(event);
+            InterLeavedRTPSession rtpSession = session.getRTPSessions()[streamIndex];
+            if (null != rtpSession) {
+                List<RtcpPkt> pkts = RTCPCodec.decode(rtpSession, event.content(), event.content().length);
+                for (RtcpPkt pkt : pkts) {
+                    logger.debug("stream#{} receive {}", streamIndex, pkt);
+                }
+            }
+            */
+        } finally {
+            ReferenceCountUtil.release(event);
+        }
+
     }
 
     /**

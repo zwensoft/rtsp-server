@@ -104,6 +104,7 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx,
                             Object msg) throws Exception {
+       
         try {
             if (msg instanceof FullHttpRequest) {
                 FullHttpRequest request = (FullHttpRequest) msg;
@@ -112,14 +113,15 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
                 handleRequest(ctx, request);
             } else if (null != session) {
                 // 不是 http 请求, 则可能是  rtp 数据
-                handleRtps(msg);
+                handleInterleavedFrame(msg);
             }
         } finally {
             ReferenceCountUtil.release(msg);
         }
     }
 
-    private void handleRtps(Object msg) {
+    private void handleInterleavedFrame(Object msg) {
+
         if (msg instanceof RtpPkt) {
             long num = numRtp.incrementAndGet();
             if (num % 500 == 0) {
@@ -129,7 +131,7 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
             session.dispatcher().dispatch(((RtpPkt) msg).retain());
         } else if (msg instanceof RtcpContent)  {
             RtcpContent rtcpObj = (RtcpContent)msg;
-            session.onRtcpEvent(rtcpObj);
+            session.onRtcpEvent(rtcpObj.retain());
         } else {
             logger.info("ignore {}", msg);
         }

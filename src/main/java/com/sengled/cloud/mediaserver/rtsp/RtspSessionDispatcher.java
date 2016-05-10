@@ -131,9 +131,9 @@ public class RtspSessionDispatcher {
                 logger.debug("stream of channel#{} NOT Found", rtcp.channel());
                 return;
             }
-
+    
             InterLeavedRTPSession rtpSess = session.getRTPSessions()[streamIndex];
-            onRtcpEvent(streamIndex, rtpSess, rtcp.content());
+            onRtcpEvent(streamIndex, rtpSess, rtcp.readBytes());
         } finally {
             ReferenceCountUtil.release(rtcp);
         }

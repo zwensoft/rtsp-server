@@ -9,6 +9,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.rtsp.RtspHeaders;
+import io.netty.util.ReferenceCountUtil;
 
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -373,10 +374,16 @@ public class RtspSession  {
 
 
     public void onRtcpEvent(RtcpContent event) {
-        if (SessionMode.PUBLISH == mode) {
-            dispatcher().receiveRtcpEvent(event);
-        } else { 
-            listener().receiveRtcpEvent(event);
+        try {
+            if (SessionMode.PUBLISH == mode) {
+                dispatcher().receiveRtcpEvent(event.retain());
+            } else { 
+                listener().receiveRtcpEvent(event.retain());
+            }
+        } finally {
+            // 保证在  dispatcher(), listener() 发生异常时，
+            // 能够正常释放内存
+            ReferenceCountUtil.release(event);
         }
     }
     
