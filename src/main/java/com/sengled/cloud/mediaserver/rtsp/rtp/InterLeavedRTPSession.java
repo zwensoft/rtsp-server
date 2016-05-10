@@ -92,7 +92,12 @@ public class InterLeavedRTPSession extends RTPSession {
     }
 
     public void reset() {
+        PlayState oldState = this.state;
         this.state = PlayState.BUFFERING;
+        
+        if (oldState != this.state) {
+            logger.warn("state changed {}", this.state);
+        }
     }
 
     public void sendRtpPkt(RtpPkt rtpObj,
@@ -244,24 +249,26 @@ public class InterLeavedRTPSession extends RTPSession {
     }
 
     public void sendRtcpPkt(RtcpPkt sr) {
-        sr.encode();
-        final byte[] rawPkt = sr.rawPkt;
-        final int payloadLength = rawPkt.length;
+        if (state == PlayState.PLAYING) { // buffering 状态， 取消 rtcp 包的发送
+            sr.encode();
+            final byte[] rawPkt = sr.rawPkt;
+            final int payloadLength = rawPkt.length;
 
-        // 依次发送 rtp 包
-        ByteBufAllocator alloc = channel().alloc();
+            // 依次发送 rtp 包
+            ByteBufAllocator alloc = channel().alloc();
 
-        ByteBuf payload = alloc.buffer(4 + payloadLength);
-        payload.writeByte('$');
-        payload.writeByte(rtcpChannel());
-        payload.writeShort(payloadLength);
+            ByteBuf payload = alloc.buffer(4 + payloadLength);
+            payload.writeByte('$');
+            payload.writeByte(rtcpChannel());
+            payload.writeShort(payloadLength);
 
-        payload.writeBytes(rawPkt);
+            payload.writeBytes(rawPkt);
 
-        if (writeAndFlush(payload, null)) {
-            // 'ch{}_sent' 与 dispatch 输出的日志等长
-            logger.info("stream#{} ch{}_sent {} byte(s) {}", mediaStream.getStreamIndex(),
-                    rtcpChannel(), payloadLength, sr);
+            if (writeAndFlush(payload, null)) {
+                // 'ch{}_sent' 与 dispatch 输出的日志等长
+                logger.info("stream#{} ch{}_sent {} byte(s) {}", mediaStream.getStreamIndex(),
+                        rtcpChannel(), payloadLength, sr);
+            } 
         }
     }
 
