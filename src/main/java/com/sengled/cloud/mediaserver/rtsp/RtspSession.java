@@ -280,7 +280,7 @@ public class RtspSession  {
             case PLAY:
                 this.sd = engine.getSessionDescription(name);
                 this.rtpSessions = new InterLeavedRTPSession[getMediaDescriptions(sd).size()];
-                this.listener = new RtspSessionListener(this, 128 * 1024); 
+                this.listener = new RtspSessionListener(this, 128); 
                 break;
             case PUBLISH:
                 this.dispatcher = new RtspSessionDispatcher(this);
