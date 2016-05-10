@@ -218,7 +218,7 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
                 logger.error("Not supported transport '{}'", ex.getMessage());
                 
                 response = makeResponse(request, session);
-                response.setStatus(HttpResponseStatus.NOT_EXTENDED);
+                response.setStatus(HttpResponseStatus.NOT_IMPLEMENTED);
             }
         }
         else if (null != session && RtspMethods.RECORD.equals(method) || RtspMethods.PLAY.equals(method)) {
