@@ -215,7 +215,7 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
                 response.headers().add(RtspHeaders.Names.EXPIRES, response.headers().get(RtspHeaders.Names.DATE));
                 response.headers().add(RtspHeaders.Names.TRANSPORT, transport.toString());
             } catch (TransportNotSupportedException ex) {
-                logger.warn("Not Supported Transport '{}'", ex.getMessage(), ex);
+                logger.error("Not supported transport '{}'", ex.getMessage());
                 
                 response = makeResponse(request, session);
                 response.setStatus(HttpResponseStatus.NOT_EXTENDED);
