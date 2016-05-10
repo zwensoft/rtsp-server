@@ -93,8 +93,7 @@ public class RtspSessionDispatcher {
             }
 
             InterLeavedRTPSession rtpSess = session.getRTPSessions()[streamIndex];
-            rtpSess.sentPktCount += 1;
-            rtpSess.sentOctetCount += rtpObj.dataLength();
+            rtpSess.receiveRtpPkt(rtpObj);
             
             logger.debug("dispatch: {}", rtpObj);
             dispatch(new RtpPktEvent(streamIndex, rtpObj.retain()));
@@ -196,7 +195,7 @@ public class RtspSessionDispatcher {
                     }
 
                     NtpTimeEvent event = new NtpTimeEvent(streamIndex, new NtpTime(srPkt.ntpTs1, srPkt.ntpTs2, srPkt.rtpTs));
-                    logger.info("stream#{} dispatch {}", streamIndex, event.getSource());
+                    logger.debug("stream#{} dispatch {}", streamIndex, event.getSource());
 
                     dispatch(event);
 

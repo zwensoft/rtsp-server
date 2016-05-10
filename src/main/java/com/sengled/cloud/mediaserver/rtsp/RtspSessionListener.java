@@ -23,9 +23,10 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
     private static final Logger logger = LoggerFactory.getLogger(RtspSessionListener.class);
     
     final private RtspSession session;
-    final private AtomicLong bufferSize = new AtomicLong();
+    final private AtomicLong sendBufferSize = new AtomicLong();
     final private int maxRtpBufferSize;
     
+    private PlayState state = PlayState.BUFFERING;
 
     public RtspSessionListener(RtspSession mySession, int maxRtpBufferSize) {
         super();
@@ -108,11 +109,19 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         InterLeavedRTPSession[] rtpSessions = session.getRTPSessions();
         InterLeavedRTPSession rtpSession = rtpSessions[streamIndex];
         
-        // send or not ?
-        if (bufferSize.get() < maxRtpBufferSize) {
-            bufferSize.incrementAndGet();
+        if (state == PlayState.BUFFERING && sendBufferSize.get() > 0) {
+            logger.debug("ignore {} for send buffer NOT empty", rtpObj);
+            return; // 发送的缓冲区还有数据，暂时先不发送
+        } else {
+            state = PlayState.PLAYING;
+        }
+
+        if (sendBufferSize.get() < maxRtpBufferSize) {
+            sendBufferSize.incrementAndGet();
             rtpSession.sendRtpPkt(rtpObj.duplicate(), this); // 拷贝一份，重复使用
         } else {
+            state = PlayState.BUFFERING;
+            
             // reset rtp sessions
             for (int i = 0; i < rtpSessions.length; i++) {
                 InterLeavedRTPSession subSession = rtpSessions[i];
@@ -129,7 +138,7 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
      */
     @Override
     public void operationComplete(Future<? super Void> future) throws Exception {
-        bufferSize.decrementAndGet();
+        sendBufferSize.decrementAndGet();
     }
 
 

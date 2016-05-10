@@ -107,7 +107,7 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
         try {
             if (msg instanceof FullHttpRequest) {
                 FullHttpRequest request = (FullHttpRequest) msg;
-                FullHttpMessageUtils.log(request).info();
+                FullHttpMessageUtils.log(request).debug();
                 
                 handleRequest(ctx, request);
             } else if (null != session) {
@@ -146,7 +146,7 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
             logger.warn("channel writable is False, ignore response");
             ReferenceCountUtil.release(response);
         } else {
-            FullHttpMessageUtils.log(response).info();
+            FullHttpMessageUtils.log(response).debug();
             ctx.writeAndFlush(response);
             
 

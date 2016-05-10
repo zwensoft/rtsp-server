@@ -100,25 +100,42 @@ public class InterLeavedRTPSession extends RTPSession {
         }
     }
 
+
+    /**
+     * 收到 rtp 包的时候调用
+     * 
+     * @param rtpObj
+     */
+    public void receiveRtpPkt(RtpPkt rtpObj) {
+        if (rtpObj.getTimestamp() != playingTimestamp) {
+            rtpObj.setFrameStart(true);
+        }
+        
+        this.playingTimestamp = rtpObj.getTimestamp();
+    }
+    
     public void sendRtpPkt(RtpPkt rtpObj,
                            GenericFutureListener<? extends Future<? super Void>> onComplete) {
-        boolean isNewFrame = this.playingTimestamp != rtpObj.getTimestamp();
         
-        switch (mediaStream.getMediaType()) {
-            case VIDEO:
-                sendVideoRtpPkt(isNewFrame, rtpObj, onComplete);
-                break;
-            case AUDIO:
-                sendAudioRtpPkt(isNewFrame, rtpObj, onComplete);
-                break;
-            default:
-                break;
+        rtpObj = rtpObj.share();
+        try {
+            switch (mediaStream.getMediaType()) {
+                case VIDEO:
+                    sendVideoRtpPkt(rtpObj, onComplete);
+                    break;
+                case AUDIO:
+                    sendAudioRtpPkt(rtpObj, onComplete);
+                    break;
+                default:
+                    break;
+            } 
+        } finally {
+            rtpObj.release();
         }
         
     }
 
-    private void sendAudioRtpPkt(boolean isNewFrame,
-                                 RtpPkt rtpObj,
+    private void sendAudioRtpPkt(RtpPkt rtpObj,
                                  GenericFutureListener<? extends Future<? super Void>> onComplete) {
         if (state == PlayState.BUFFERING) {
             boolean hasVideo = false;
@@ -145,28 +162,23 @@ public class InterLeavedRTPSession extends RTPSession {
             }
         }
         
-        doSendRtpPkt(isNewFrame, rtpObj, onComplete);
+        doSendRtpPkt(rtpObj, onComplete);
     }
 
-    private void sendVideoRtpPkt(boolean isNewFrame,
+    private void sendVideoRtpPkt(
                                  RtpPkt rtpObj,
                                  GenericFutureListener<? extends Future<? super Void>> onComplete) {
-        ByteBuf buf = rtpObj.data();
         
         if(state == PlayState.BUFFERING) {
-            if (!isNewFrame) {
-                return;
-            }
-
-            // 不是 h264 的关键帧，则直接推出
-            if (!isH264KeyFrameStart(buf)) {
+            // 如果是一帧的开始就可以
+            if (!rtpObj.isFrameStart()) {
                 return;
             }
             
             state = PlayState.PLAYING;
         }
         
-        doSendRtpPkt(isNewFrame, rtpObj, onComplete);
+        doSendRtpPkt(rtpObj, onComplete);
     }
 
     private boolean isH264KeyFrameStart(ByteBuf buf) {
@@ -201,7 +213,7 @@ public class InterLeavedRTPSession extends RTPSession {
         return isKeyFrame;
     }
 
-    private void doSendRtpPkt(boolean isNewFrame,
+    private void doSendRtpPkt(
                               RtpPkt rtpObj,
                            GenericFutureListener<? extends Future<? super Void>> onComplete) {
         
@@ -211,7 +223,7 @@ public class InterLeavedRTPSession extends RTPSession {
 
         // 统计流量
         this.sentOctetCount += rtpObj.dataLength();
-        if (isNewFrame) {
+        if (rtpObj.isFrameStart()) {
             this.sentPktCount++;
         }
 
@@ -228,7 +240,7 @@ public class InterLeavedRTPSession extends RTPSession {
         rtpObj.ssrc(ssrc());
 
         // 发送 rtcp
-        if (isNewFrame) {
+        if (rtpObj.isFrameStart()) {
             sendRtcpPktSRIfNeed(rtpObj.getTimestamp());
         }
 
@@ -244,7 +256,7 @@ public class InterLeavedRTPSession extends RTPSession {
         payload.writeBytes(rtpObj.content()); // 应为修改了 ssrc 和 seq, 所以只能用拷贝
 
 
-        logger.trace("isNew={}, {}", isNewFrame, rtpObj);
+        logger.trace("isNew={}, {}", rtpObj.isFrameStart(), rtpObj);
         writeAndFlush(payload, onComplete);
     }
 
@@ -401,4 +413,5 @@ public class InterLeavedRTPSession extends RTPSession {
     public MediaStream getMediaStream() {
         return mediaStream;
     }
+
 }
