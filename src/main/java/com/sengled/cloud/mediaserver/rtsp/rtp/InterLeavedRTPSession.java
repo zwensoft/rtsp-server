@@ -93,14 +93,22 @@ public class InterLeavedRTPSession extends RTPSession {
     }
 
     public void reset() {
-        PlayState oldState = this.state;
-        this.state = PlayState.BUFFERING;
-        
-        if (oldState != this.state) {
-            logger.warn("state changed {}", this.state);
-        }
+        state(PlayState.BUFFERING);
     }
 
+
+    private PlayState state() {
+        return state;
+    }
+    
+    private void state(PlayState newState) {
+        PlayState oldState = this.state;
+        this.state = newState;
+        
+        if (oldState != newState) {
+            logger.warn("state changed {}", newState);
+        }
+    }
 
     /**
      * 收到 rtp 包的时候调用
@@ -138,7 +146,7 @@ public class InterLeavedRTPSession extends RTPSession {
 
     private void sendAudioRtpPkt(RtpPkt rtpObj,
                                  GenericFutureListener<? extends Future<? super Void>> onComplete) {
-        if (state == PlayState.BUFFERING) {
+        if (state() == PlayState.BUFFERING) {
             boolean hasVideo = false;
             boolean videoStarted = false;
             InterLeavedRTPSession[] subs = rtspSession.getRTPSessions();
@@ -151,13 +159,15 @@ public class InterLeavedRTPSession extends RTPSession {
                 
                 if (subSession.getMediaStream().getMediaType().isVideo()) {
                     hasVideo = true;
-                    videoStarted = (subSession.state == PlayState.PLAYING);
+                    videoStarted = (subSession.state() == PlayState.PLAYING);
                 }
             } 
             
             
             if (hasVideo && videoStarted) {
-                state = PlayState.PLAYING;
+                state(PlayState.PLAYING);
+            } else if (!hasVideo){
+                state(PlayState.PLAYING);
             } else {
                 return;
             }
@@ -169,13 +179,13 @@ public class InterLeavedRTPSession extends RTPSession {
     private void sendVideoRtpPkt(RtpPkt rtpObj,
                                  GenericFutureListener<? extends Future<? super Void>> onComplete) {
         
-        if(state == PlayState.BUFFERING) {
+        if(state() == PlayState.BUFFERING) {
             // 如果是一帧的开始就可以
             if (!rtpObj.isFrameStart()) {
                 return;
             }
             
-            state = PlayState.PLAYING;
+            state(PlayState.PLAYING);
         }
         
         doSendRtpPkt(rtpObj, onComplete);
@@ -259,7 +269,7 @@ public class InterLeavedRTPSession extends RTPSession {
     }
 
     public void sendRtcpPkt(RtcpPkt sr) {
-        if (state == PlayState.PLAYING) { // buffering 状态， 取消 rtcp 包的发送
+        if (state() == PlayState.PLAYING) { // buffering 状态， 取消 rtcp 包的发送
             sr.encode();
             final byte[] rawPkt = sr.rawPkt;
             final int payloadLength = rawPkt.length;
@@ -364,6 +374,8 @@ public class InterLeavedRTPSession extends RTPSession {
     @Override
     public void endSession(String reason) {
         sendRtcpPktBye(reason);
+        
+        state(PlayState.END);
     }
 
     @Override
