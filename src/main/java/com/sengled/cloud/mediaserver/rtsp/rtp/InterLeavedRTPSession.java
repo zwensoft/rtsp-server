@@ -47,7 +47,7 @@ public class InterLeavedRTPSession extends RTPSession {
     private long playingTimestamp = -1;
     Participant outPart;
 
-    private PlayState state = PlayState.BUFFERING; 
+    private PlayState state = PlayState.DROP_PKT; 
     
     public InterLeavedRTPSession(MediaStream mediaStream, RtspSession rtspSession,
             int rtpChannel, int rtcpChannel) {
@@ -92,8 +92,12 @@ public class InterLeavedRTPSession extends RTPSession {
         return ntpTime;
     }
 
-    public void reset() {
-        state(PlayState.BUFFERING);
+    
+    /**
+     * 进入到丢包模式
+     */
+    public void stateDropPkt() {
+        state(PlayState.DROP_PKT);
     }
 
 
@@ -106,7 +110,7 @@ public class InterLeavedRTPSession extends RTPSession {
         this.state = newState;
         
         if (oldState != newState) {
-            logger.warn("state changed {}", newState);
+            logger.info("state changed {}, {}", newState, this);
         }
     }
 
@@ -146,7 +150,7 @@ public class InterLeavedRTPSession extends RTPSession {
 
     private void sendAudioRtpPkt(RtpPkt rtpObj,
                                  GenericFutureListener<? extends Future<? super Void>> onComplete) {
-        if (state() == PlayState.BUFFERING) {
+        if (state() == PlayState.DROP_PKT) {
             boolean hasVideo = false;
             boolean videoStarted = false;
             InterLeavedRTPSession[] subs = rtspSession.getRTPSessions();
@@ -179,7 +183,7 @@ public class InterLeavedRTPSession extends RTPSession {
     private void sendVideoRtpPkt(RtpPkt rtpObj,
                                  GenericFutureListener<? extends Future<? super Void>> onComplete) {
         
-        if(state() == PlayState.BUFFERING) {
+        if(state() == PlayState.DROP_PKT) {
             // 如果是一帧的开始就可以
             if (!rtpObj.isFrameStart()) {
                 return;
@@ -424,4 +428,14 @@ public class InterLeavedRTPSession extends RTPSession {
         return mediaStream;
     }
 
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder();
+        buf.append("{RtpSession");
+        buf.append(", ").append(mediaStream.getMediaType());
+        buf.append(", name = ").append(rtspSession.getName());
+        buf.append(", ").append(channel().remoteAddress());
+        buf.append("}");
+        return buf.toString();
+    }
 }
