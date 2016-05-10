@@ -2,6 +2,7 @@ package com.sengled.cloud.mediaserver.rtsp.rtp;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
@@ -249,15 +250,14 @@ public class InterLeavedRTPSession extends RTPSession {
         ByteBufAllocator alloc = channel().alloc();
         payloadLength = rtpObj.content().readableBytes();
 
-        ByteBuf payload = alloc.buffer(4 + payloadLength);
-        payload.writeByte('$');
-        payload.writeByte(rtpChannel());
-        payload.writeShort(payloadLength);
-        payload.writeBytes(rtpObj.content()); // 应为修改了 ssrc 和 seq, 所以只能用拷贝
-
+        ByteBuf interleaveHeader = alloc.buffer(4);
+        interleaveHeader.writeByte('$');
+        interleaveHeader.writeByte(rtpChannel());
+        interleaveHeader.writeShort(payloadLength);
 
         logger.trace("isNew={}, {}", rtpObj.isFrameStart(), rtpObj);
-        writeAndFlush(payload, onComplete);
+        ByteBuf rtp = Unpooled.wrappedBuffer(interleaveHeader, rtpObj.content().retain());
+        writeAndFlush(rtp, onComplete);
     }
 
     public void sendRtcpPkt(RtcpPkt sr) {
