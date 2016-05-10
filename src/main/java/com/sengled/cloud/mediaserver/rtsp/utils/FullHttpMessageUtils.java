@@ -55,15 +55,15 @@ public class FullHttpMessageUtils {
         }
 
 
-        public void info() {
-            logger.info(line);
-            logger.info("{} {} {}", firstLine);
+        public void debug() {
+            logger.debug(line);
+            logger.debug("{} {} {}", firstLine);
             for (Entry<String, String> entry : headers) {
-                logger.info("{}:{}", entry.getKey(), entry.getValue());
+                logger.debug("{}:{}", entry.getKey(), entry.getValue());
             }
-            logger.info("");
-            logger.info("{}", StringUtils.isEmpty(content) ? "[no-content]":content);
-            logger.info("<<<");
+            logger.debug("");
+            logger.debug("{}", StringUtils.isEmpty(content) ? "[no-content]":content);
+            logger.debug("<<<");
         }
         
         @Override
