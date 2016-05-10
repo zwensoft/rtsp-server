@@ -166,8 +166,7 @@ public class InterLeavedRTPSession extends RTPSession {
         doSendRtpPkt(rtpObj, onComplete);
     }
 
-    private void sendVideoRtpPkt(
-                                 RtpPkt rtpObj,
+    private void sendVideoRtpPkt(RtpPkt rtpObj,
                                  GenericFutureListener<? extends Future<? super Void>> onComplete) {
         
         if(state == PlayState.BUFFERING) {
@@ -214,8 +213,7 @@ public class InterLeavedRTPSession extends RTPSession {
         return isKeyFrame;
     }
 
-    private void doSendRtpPkt(
-                              RtpPkt rtpObj,
+    private void doSendRtpPkt(RtpPkt rtpObj,
                            GenericFutureListener<? extends Future<? super Void>> onComplete) {
         
         // 更新播放时间
