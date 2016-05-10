@@ -25,6 +25,7 @@ import com.sengled.cloud.mediaserver.rtsp.MediaStream;
 import com.sengled.cloud.mediaserver.rtsp.NtpTime;
 import com.sengled.cloud.mediaserver.rtsp.PlayState;
 import com.sengled.cloud.mediaserver.rtsp.Rational;
+import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtpPkt;
 
 /**
@@ -37,8 +38,8 @@ public class InterLeavedRTPSession extends RTPSession {
     private static final Logger logger = LoggerFactory
             .getLogger(InterLeavedRTPSession.class);
 
+    private RtspSession rtspSession; 
     private MediaStream mediaStream;
-    private Channel channel;
     private int rtpChannel;
 
     private NtpTime ntpTime;
@@ -47,12 +48,12 @@ public class InterLeavedRTPSession extends RTPSession {
 
     private PlayState state = PlayState.BUFFERING; 
     
-    public InterLeavedRTPSession(MediaStream mediaStream, Channel channel,
+    public InterLeavedRTPSession(MediaStream mediaStream, RtspSession rtspSession,
             int rtpChannel, int rtcpChannel) {
         super(InterLeavedParticipantDatabase.FACTORY);
 
         this.mediaStream = mediaStream;
-        this.channel = channel;
+        this.rtspSession = rtspSession;
         this.rtpChannel = rtpChannel;
         this.generateCNAME();
         this.generateSsrc();
@@ -114,6 +115,31 @@ public class InterLeavedRTPSession extends RTPSession {
     private void sendAudioRtpPkt(boolean isNewFrame,
                                  RtpPkt rtpObj,
                                  GenericFutureListener<? extends Future<? super Void>> onComplete) {
+        if (state == PlayState.BUFFERING) {
+            boolean hasVideo = false;
+            boolean videoStarted = false;
+            InterLeavedRTPSession[] subs = rtspSession.getRTPSessions();
+            
+            for (int i = 0; i < subs.length; i++) {
+                InterLeavedRTPSession subSession = subs[i];
+                if (null == subSession || subSession == this) {
+                    continue;
+                }
+                
+                if (subSession.getMediaStream().getMediaType().isVideo()) {
+                    hasVideo = true;
+                    videoStarted = (subSession.state == PlayState.PLAYING);
+                }
+            } 
+            
+            
+            if (hasVideo && videoStarted) {
+                state = PlayState.PLAYING;
+            } else {
+                return;
+            }
+        }
+        
         doSendRtpPkt(isNewFrame, rtpObj, onComplete);
     }
 
@@ -128,7 +154,7 @@ public class InterLeavedRTPSession extends RTPSession {
             }
 
             // 不是 h264 的关键帧，则直接推出
-            if (!isH264KeyFrame(buf)) {
+            if (!isH264KeyFrameStart(buf)) {
                 return;
             }
             
@@ -138,7 +164,7 @@ public class InterLeavedRTPSession extends RTPSession {
         doSendRtpPkt(isNewFrame, rtpObj, onComplete);
     }
 
-    private boolean isH264KeyFrame(ByteBuf buf) {
+    private boolean isH264KeyFrameStart(ByteBuf buf) {
         boolean isKeyFrame = false;
         int firstByte =  buf.readByte();
         
@@ -164,7 +190,7 @@ public class InterLeavedRTPSession extends RTPSession {
         }
         
         if(isKeyFrame) {
-            logger.info("key, nal_type = {}", nal_type);
+            logger.debug("key, nal_type = {}", nal_type);
         }
 
         return isKeyFrame;
@@ -303,7 +329,7 @@ public class InterLeavedRTPSession extends RTPSession {
     }
 
     public Channel channel() {
-        return channel;
+        return rtspSession.channel();
     }
 
     public int rtcpChannel() {
@@ -325,7 +351,7 @@ public class InterLeavedRTPSession extends RTPSession {
 
     @Override
     protected void generateCNAME() {
-        SocketAddress addr = channel.localAddress();
+        SocketAddress addr = channel().localAddress();
 
         String hostname = null;
 

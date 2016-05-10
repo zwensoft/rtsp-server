@@ -119,7 +119,7 @@ public class RtspSession  {
             try {
                 if (StringUtils.endsWith(uri, getControlUri(dm))) {
                 	MediaStream stream = new MediaStream(mediaIndex, dm, url);
-                    rtpSessions[mediaIndex] = new InterLeavedRTPSession(stream, ctx.channel(), interleaved[0], interleaved[1]);
+                    rtpSessions[mediaIndex] = new InterLeavedRTPSession(stream, this, interleaved[0], interleaved[1]);
                     return t;
                 }
             } catch (IllegalArgumentException ex) {
