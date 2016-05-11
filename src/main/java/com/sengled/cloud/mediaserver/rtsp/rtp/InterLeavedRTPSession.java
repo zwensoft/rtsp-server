@@ -4,7 +4,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPromise;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
@@ -357,20 +356,14 @@ public class InterLeavedRTPSession extends RTPSession {
     private boolean writeAndFlush(ByteBuf data,
                                   GenericFutureListener<? extends Future<? super Void>> onComplete) {
         Channel channel = channel();
-        if (channel.isWritable()) {
-            ChannelPromise promise = channel.newPromise();
-            if (null != onComplete) {
-                promise.addListener(onComplete);
-            }
-
-            channel.writeAndFlush(data, promise);
-
-            return true;
-        } else {
-            ReferenceCountUtil.release(data); // ignore it
-            return false;
+        ChannelPromise promise = channel.newPromise();
+        if (null != onComplete) {
+            promise.addListener(onComplete);
         }
 
+        channel.writeAndFlush(data, promise);
+
+        return true;
     }
 
     public Channel channel() {
