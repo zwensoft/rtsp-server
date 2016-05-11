@@ -52,7 +52,6 @@ public class RtspServerBootstrap {
     
     public RtspServerBootstrap group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {
         bootstrap.group(parentGroup, childGroup);
-        logger.info("boss group: {}", parentGroup);
         return this;
     }
     
