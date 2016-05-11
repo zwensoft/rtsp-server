@@ -404,7 +404,9 @@ public class RtspSession  {
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
-        buf.append("{RtspSession#").append(id);
+        buf.append("{RtspSession");
+        buf.append(", id=").append(id);
+        buf.append(", state=").append(state());
         buf.append(", uri=").append(uri);
         buf.append(", ").append(mode);
         
