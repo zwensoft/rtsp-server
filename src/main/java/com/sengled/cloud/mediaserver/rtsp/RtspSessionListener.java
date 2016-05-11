@@ -22,8 +22,6 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
     final private RtspSession session;
     final private AtomicLong sendBufferSize = new AtomicLong();
     final private int maxRtpBufferSize;
-    
-    private PlayState state = PlayState.DROP_PKT;
 
     public RtspSessionListener(RtspSession mySession, int maxRtpBufferSize) {
         super();
@@ -115,18 +113,18 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         InterLeavedRTPSession[] rtpSessions = session.getRTPSessions();
         InterLeavedRTPSession rtpSession = rtpSessions[streamIndex];
         
-        if (state() == PlayState.DROP_PKT && sendBufferSize.get() > 0) {
+        if (session.state() == PlayState.WAITING && sendBufferSize.get() > 0) {
             logger.debug("ignore {} for send buffer NOT empty", rtpObj);
             return; // 发送的缓冲区还有数据，暂时先不发送
         } else {
-            state(PlayState.PLAYING);
+            session.state(PlayState.PLAYING);
         }
 
-        if (sendBufferSize.get() < maxRtpBufferSize) {
+        if (sendBufferSize.get() < maxRtpBufferSize || !rtpObj.isFrameStart()) {
             sendBufferSize.incrementAndGet();
-            rtpSession.sendRtpPkt(rtpObj.duplicate(), this); // 拷贝一份，重复使用
+            rtpSession.sendRtpPkt(rtpObj, this); // 拷贝一份，重复使用
         } else {
-            state(PlayState.DROP_PKT);
+            session.state(PlayState.WAITING);
         }
     }
 
@@ -139,28 +137,7 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         sendBufferSize.decrementAndGet();
     }
 
-    private PlayState state() {
-        return state;
-    }
     
-    private void state(PlayState newState) {
-        PlayState oldState = this.state;
-        this.state = newState;
-        
-        if (oldState != newState) {
-            logger.info("state changed {}, {}", newState, this);
-        }
-
-        if (newState == PlayState.DROP_PKT) {
-            InterLeavedRTPSession[] rtpSessions = session.getRTPSessions();
-            for (int i = 0; i < rtpSessions.length; i++) {
-                InterLeavedRTPSession subSession = rtpSessions[i];
-                if (null != subSession) {
-                    subSession.stateDropPkt();
-                }
-            }
-        }
-    }
     
     @Override
     public String toString() {

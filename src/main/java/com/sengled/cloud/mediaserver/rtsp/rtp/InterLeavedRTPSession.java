@@ -22,6 +22,7 @@ import jlibrtp.RtcpPktSR;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.sengled.cloud.SystemPropertyKeys;
 import com.sengled.cloud.mediaserver.rtsp.MediaStream;
 import com.sengled.cloud.mediaserver.rtsp.NtpTime;
 import com.sengled.cloud.mediaserver.rtsp.PlayState;
@@ -38,6 +39,11 @@ import com.sengled.cloud.mediaserver.rtsp.interleaved.RtpPkt;
 public class InterLeavedRTPSession extends RTPSession {
     private static final Logger logger = LoggerFactory
             .getLogger(InterLeavedRTPSession.class);
+    private static final boolean PLAY_AUDIO_UNTIL_VIDEO_START;
+    static {
+        String playAudioUtilVideoStart = System.getProperty(SystemPropertyKeys.PLAY_AUDIO_UNTIL_VIDEO_START);
+        PLAY_AUDIO_UNTIL_VIDEO_START = "true".equalsIgnoreCase(playAudioUtilVideoStart);
+    }
 
     private RtspSession rtspSession; 
     private MediaStream mediaStream;
@@ -47,7 +53,7 @@ public class InterLeavedRTPSession extends RTPSession {
     private long playingTimestamp = -1;
     Participant outPart;
 
-    private PlayState state = PlayState.DROP_PKT; 
+    private PlayState state = PlayState.WAITING; 
     
     public InterLeavedRTPSession(MediaStream mediaStream, RtspSession rtspSession,
             int rtpChannel, int rtcpChannel) {
@@ -94,10 +100,10 @@ public class InterLeavedRTPSession extends RTPSession {
 
     
     /**
-     * 进入到丢包模式
+     * 等待新的数据包过来
      */
-    public void stateDropPkt() {
-        state(PlayState.DROP_PKT);
+    public void await() {
+        state(PlayState.WAITING);
     }
 
 
@@ -150,30 +156,35 @@ public class InterLeavedRTPSession extends RTPSession {
 
     private void sendAudioRtpPkt(RtpPkt rtpObj,
                                  GenericFutureListener<? extends Future<? super Void>> onComplete) {
-        if (state() == PlayState.DROP_PKT) {
-            boolean hasVideo = false;
-            boolean videoStarted = false;
-            InterLeavedRTPSession[] subs = rtspSession.getRTPSessions();
-            
-            for (int i = 0; i < subs.length; i++) {
-                InterLeavedRTPSession subSession = subs[i];
-                if (null == subSession || subSession == this) {
-                    continue;
-                }
+        if (state() == PlayState.WAITING) {
+            if (PLAY_AUDIO_UNTIL_VIDEO_START) {
+                boolean hasVideo = false;
+                boolean videoStarted = false;
+                InterLeavedRTPSession[] subs = rtspSession.getRTPSessions();
                 
-                if (subSession.getMediaStream().getMediaType().isVideo()) {
-                    hasVideo = true;
-                    videoStarted = (subSession.state() == PlayState.PLAYING);
-                }
-            } 
-            
-            
-            if (hasVideo && videoStarted) {
-                state(PlayState.PLAYING);
-            } else if (!hasVideo){
-                state(PlayState.PLAYING);
+                for (int i = 0; i < subs.length; i++) {
+                    InterLeavedRTPSession subSession = subs[i];
+                    if (null == subSession || subSession == this) {
+                        continue;
+                    }
+                    
+                    if (subSession.getMediaStream().getMediaType().isVideo()) {
+                        hasVideo = true;
+                        videoStarted = (subSession.state() == PlayState.PLAYING);
+                    }
+                } 
+                
+                if (!hasVideo || videoStarted){
+                    state(PlayState.PLAYING);
+                } else {
+                    return;
+                }    
             } else {
-                return;
+                if (!rtpObj.isFrameStart()) {
+                    return;
+                }
+
+                state(PlayState.PLAYING);
             }
         }
         
@@ -183,9 +194,14 @@ public class InterLeavedRTPSession extends RTPSession {
     private void sendVideoRtpPkt(RtpPkt rtpObj,
                                  GenericFutureListener<? extends Future<? super Void>> onComplete) {
         
-        if(state() == PlayState.DROP_PKT) {
+        if(state() == PlayState.WAITING) {
             // 如果是一帧的开始就可以
             if (!rtpObj.isFrameStart()) {
+                return;
+            }
+            
+            // 等关键帧
+            if (!isH264KeyFrameStart(rtpObj.data())) {
                 return;
             }
             

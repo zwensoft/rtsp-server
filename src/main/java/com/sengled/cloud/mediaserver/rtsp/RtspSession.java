@@ -53,9 +53,6 @@ public class RtspSession  {
         /** PLAY: 客户端从服务器拉流 */
         PLAY,
         
-        /** has been destroyed **/
-        DESTROYED,
-        
         /** 其他 */
         OTHERS
     }
@@ -66,8 +63,10 @@ public class RtspSession  {
     private String id;
     private String name;
     private String uri;
+    
     private SessionMode mode = SessionMode.OTHERS;
-
+    private PlayState state = PlayState.WAITING;
+    
     private String userAgent;
     private SessionDescription sd;
     private InterLeavedRTPSession[] rtpSessions = null;
@@ -297,26 +296,26 @@ public class RtspSession  {
  
     public void destroy(String reason) {
         logger.debug("destroy, mode = {}", mode);
-		switch (mode) {
-		case DESTROYED:
-			break; // has been destroyed
-		case PUBLISH:
-			dispatcher().teardown(reason);
-			engine.removeSession(name, this);
-			break;
-		case PLAY:
-			engine.unregister(name, listener());
-			for (int i = 0; i < numStreams(); i++) {
-				if (null != rtpSessions[i]) {
-					rtpSessions[i].endSession(reason);
-				}
-			}
-			
-		default:
-			break;
+		if (state() != PlayState.END) {
+            switch (mode) {
+    		case PUBLISH:
+    			dispatcher().teardown(reason);
+    			engine.removeSession(name, this);
+    			break;
+    		case PLAY:
+    			engine.unregister(name, listener());
+    			for (int i = 0; i < numStreams(); i++) {
+    				if (null != rtpSessions[i]) {
+    					rtpSessions[i].endSession(reason);
+    				}
+    			}
+    			
+    		default:
+    			break;
+    		}
 		}
-		
-		this.mode = SessionMode.DESTROYED;
+
+		state(PlayState.END);
     }
     
     public void close() {
@@ -325,7 +324,7 @@ public class RtspSession  {
     }
     
     public boolean isDestroyed() {
-        return mode == SessionMode.DESTROYED;
+        return state() == PlayState.END;
     }
 
     
@@ -427,4 +426,26 @@ public class RtspSession  {
         return false;
     }
 
+    public PlayState state() {
+        return state;
+    }
+    
+    public void state(PlayState newState) {
+        PlayState oldState = this.state;
+        this.state = newState;
+        
+        if (oldState != newState) {
+            logger.info("state changed {}, {}", newState, this);
+        }
+
+        if (newState == PlayState.WAITING) {
+            InterLeavedRTPSession[] rtpSessions = getRTPSessions();
+            for (int i = 0; i < rtpSessions.length; i++) {
+                InterLeavedRTPSession subSession = rtpSessions[i];
+                if (null != subSession) {
+                    subSession.await();
+                }
+            }
+        }
+    }
 }

@@ -1,7 +1,7 @@
 package com.sengled.cloud.mediaserver.rtsp;
 
 public enum PlayState {
-    DROP_PKT,
+    WAITING,
     PLAYING,
     END;
 }

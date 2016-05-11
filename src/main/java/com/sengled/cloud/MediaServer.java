@@ -55,7 +55,7 @@ public class MediaServer {
 
         // 默认启动的线程数
         int defaultWorkerThreads = 1 + Runtime.getRuntime().availableProcessors() * 2;
-        String maxWorkerThreads = System.getProperty("nThreads", String.valueOf(defaultWorkerThreads));
+        String maxWorkerThreads = System.getProperty(SystemPropertyKeys.WORKER_THREADS, String.valueOf(defaultWorkerThreads));
         NioEventLoopGroup workerGroup = new NioEventLoopGroup(Integer.valueOf(maxWorkerThreads));
         logger.info("max worker threads: {}", maxWorkerThreads);
         
