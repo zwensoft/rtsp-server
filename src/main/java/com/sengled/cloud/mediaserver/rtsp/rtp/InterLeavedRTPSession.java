@@ -2,7 +2,6 @@ package com.sengled.cloud.mediaserver.rtsp.rtp;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
@@ -277,14 +276,14 @@ public class InterLeavedRTPSession extends RTPSession {
         ByteBufAllocator alloc = channel().alloc();
         payloadLength = rtpObj.content().readableBytes();
 
-        ByteBuf interleaveHeader = alloc.buffer(4);
-        interleaveHeader.writeByte('$');
-        interleaveHeader.writeByte(rtpChannel());
-        interleaveHeader.writeShort(payloadLength);
-
+        ByteBuf interleaved = alloc.buffer(4 + payloadLength);
+        interleaved.writeByte('$');
+        interleaved.writeByte(rtpChannel());
+        interleaved.writeShort(payloadLength);
+        interleaved.writeBytes(rtpObj.content());
+        
         logger.trace("isNew={}, {}", rtpObj.isFrameStart(), rtpObj);
-        ByteBuf rtp = Unpooled.wrappedBuffer(interleaveHeader, rtpObj.content().retain());
-        return writeAndFlush(rtp, onComplete);
+        return writeAndFlush(interleaved, onComplete);
     }
 
     public void sendRtcpPkt(RtcpPkt sr) {
