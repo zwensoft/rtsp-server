@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.concurrent.Callable;
 
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.InitializingBean;
 
 import com.sengled.cloud.async.TimerExecutor;
 
@@ -20,7 +19,7 @@ import com.sengled.cloud.async.TimerExecutor;
  * @author 陈修恒
  * @date 2016年5月3日
  */
-public class OSMonitor  implements InitializingBean {
+public class OSMonitor {
     /***
      * CPU 使用率
      */
@@ -53,12 +52,12 @@ public class OSMonitor  implements InitializingBean {
         return task;
     }
 
-    @Override
-    public void afterPropertiesSet() throws Exception {
+
+    public void start() {
         // 300毫秒后， 开始系统检测
         monitorTaskExecutor.setTimeout(task, 300);
     }
-
+    
     public double getCpuUseRate() {
         return cpuUseRate;
     }
