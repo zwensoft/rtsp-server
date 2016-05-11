@@ -245,32 +245,22 @@ public class InterLeavedRTPSession extends RTPSession {
         
         // 更新播放时间
         this.playingTimestamp = rtpObj.getTimestamp();
-
-
-        // 统计流量
-        this.sentOctetCount += rtpObj.dataLength();
-        if (rtpObj.isFrameStart()) {
-            this.sentPktCount++;
-        }
-
-
-        final int nextSeqNo = 0xFFFF & (outPart.lastSeqNumber + 1);
-        outPart.lastSeqNumber = nextSeqNo;
-
-        if (outPart.firstSeqNumber < 0) {
-            outPart.firstSeqNumber = nextSeqNo;
-        }
-
-
-        rtpObj.setSeqNumber(nextSeqNo);
-        rtpObj.ssrc(ssrc());
-
+        
         // 发送 rtcp
         if (rtpObj.isFrameStart()) {
             sendRtcpPktSRIfNeed(rtpObj.getTimestamp());
         }
 
-        // 依次发送 rtp
+        // 发送 rtp
+        final int nextSeqNo = 0xFFFF & (outPart.lastSeqNumber + 1);
+        outPart.lastSeqNumber = nextSeqNo;
+        if (outPart.firstSeqNumber < 0) {
+            outPart.firstSeqNumber = nextSeqNo;
+        }
+        rtpObj.setSeqNumber(nextSeqNo);
+        rtpObj.ssrc(ssrc());
+
+
         int payloadLength;
         ByteBufAllocator alloc = channel().alloc();
         payloadLength = rtpObj.content().readableBytes();
@@ -280,9 +270,19 @@ public class InterLeavedRTPSession extends RTPSession {
         interleaved.writeByte(rtpChannel());
         interleaved.writeShort(payloadLength);
         interleaved.writeBytes(rtpObj.content());
-        
+
         logger.trace("isNew={}, {}", rtpObj.isFrameStart(), rtpObj);
-        return writeAndFlush(interleaved, onComplete);
+        boolean sent = writeAndFlush(interleaved, onComplete);
+        
+        // 统计 rtp 流量
+        if (!sent) {
+            this.sentOctetCount += rtpObj.dataLength();
+            if (rtpObj.isFrameStart()) {
+                this.sentPktCount++;
+            }
+        }
+
+        return sent;
     }
 
     public void sendRtcpPkt(RtcpPkt sr) {
