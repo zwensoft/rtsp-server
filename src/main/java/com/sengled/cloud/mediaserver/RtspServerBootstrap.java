@@ -5,14 +5,13 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ServerChannel;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.rtsp.RtspEncoder;
 import io.netty.handler.timeout.IdleStateHandler;
-import io.netty.util.concurrent.DefaultThreadFactory;
 
 import org.slf4j.LoggerFactory;
 
@@ -41,19 +40,26 @@ public class RtspServerBootstrap {
     
     final private ServerEngine engine;
     final private int port;
-    final private NioEventLoopGroup bossGroup;
     
-    private ServerBootstrap bootstrap;
-    private ChannelGroup channels = new DefaultChannelGroup("rtsp-server", null);
+    final private ServerBootstrap bootstrap;
+    final private ChannelGroup channels = new DefaultChannelGroup("rtsp-server", null);
     
-    
-    public RtspServerBootstrap(String name, ServerEngine engine, int port, NioEventLoopGroup workerGroup) {
+    public RtspServerBootstrap(String name, ServerEngine engine, int port) {
         this.port = port;
         this.engine = engine;
-        this.bossGroup = new NioEventLoopGroup(1, new DefaultThreadFactory(name));
-        this.bootstrap = makeServerBosststrap(workerGroup);
+        this.bootstrap = makeServerBosststrap();
     }
     
+    public RtspServerBootstrap group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {
+        bootstrap.group(parentGroup, childGroup);
+        logger.info("boss group: {}", parentGroup);
+        return this;
+    }
+    
+    public RtspServerBootstrap channel(Class<? extends ServerChannel> channelClass) {
+        bootstrap.channel(channelClass);
+        return this;
+    }
     
     public void start() throws InterruptedException {
         listen(getPort());
@@ -88,18 +94,16 @@ public class RtspServerBootstrap {
         bootstrap.childGroup().shutdownGracefully();
     }
 
-    private ServerBootstrap makeServerBosststrap(NioEventLoopGroup workerGroup) {
+    private ServerBootstrap makeServerBosststrap() {
         ServerBootstrap b = new ServerBootstrap();
-
+        
         // server socket
-        b.group(bossGroup, workerGroup);
-        b.channel(NioServerSocketChannel.class);
         b.option(ChannelOption.SO_BACKLOG, 0); // 服务端处理线程全忙后，允许多少个新请求进入等待。 
         
         // accept socket
         b.childOption(ChannelOption.SO_KEEPALIVE, true)
-         .childOption(ChannelOption.SO_RCVBUF, 16 * 1500)
-         .childOption(ChannelOption.SO_SNDBUF, 16 * 1500)
+         .childOption(ChannelOption.SO_RCVBUF, 128 * 1500)
+         .childOption(ChannelOption.SO_SNDBUF, 256 * 1500)
          .childOption(ChannelOption.SO_LINGER, 0)      // SO_LINGER还有一个作用就是用来减少TIME_WAIT套接字的数量
          .childOption(ChannelOption.TCP_NODELAY, true) // 禁用nagle算法，减少时延迟
          .childHandler(new ChannelInitializer<SocketChannel>() {

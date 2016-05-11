@@ -144,9 +144,6 @@ public class RtspServerInboundHandler extends ChannelInboundHandlerAdapter {
         response = makeHttpResponse(ctx, request);
         if (null == response) {
             logger.info("no response");
-        } else if (!ctx.channel().isWritable()) {
-            logger.warn("channel writable is False, ignore response");
-            ReferenceCountUtil.release(response);
         } else {
             FullHttpMessageUtils.log(response).debug();
             ctx.writeAndFlush(response);

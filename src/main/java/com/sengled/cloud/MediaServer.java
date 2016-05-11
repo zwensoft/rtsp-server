@@ -1,6 +1,12 @@
 package com.sengled.cloud;
 
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ServerChannel;
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -54,10 +60,9 @@ public class MediaServer {
 
 
         // 默认启动的线程数
-        int defaultWorkerThreads = 1 + Runtime.getRuntime().availableProcessors() * 2;
-        String maxWorkerThreads = System.getProperty(SystemPropertyKeys.WORKER_THREADS, String.valueOf(defaultWorkerThreads));
-        NioEventLoopGroup workerGroup = new NioEventLoopGroup(Integer.valueOf(maxWorkerThreads));
-        logger.info("max worker threads: {}", maxWorkerThreads);
+        int defaultWorkerThreads = Runtime.getRuntime().availableProcessors() * 2;
+        String workerThreadsProperty = System.getProperty(SystemPropertyKeys.WORKER_THREADS, String.valueOf(defaultWorkerThreads));
+        int maxWorkerThreads = Integer.valueOf(workerThreadsProperty);
         
         
         List<RtspServerBootstrap> bootstraps = new ArrayList<RtspServerBootstrap>();
@@ -66,7 +71,7 @@ public class MediaServer {
         ServerEngine rtspServerEngine = new ServerEngine();
         Integer rtspServerPort = configs.getPorts().get(PORT_RTSP_SERVER);
         if (null != rtspServerPort) {
-            bootstraps.add(new RtspServerBootstrap("rtsp-server", rtspServerEngine, rtspServerPort, workerGroup));
+            bootstraps.add(new RtspServerBootstrap("rtsp-server", rtspServerEngine, rtspServerPort));
 
             for (StreamSourceDef def : configs.getStreamSources()) {
                 try {
@@ -82,7 +87,7 @@ public class MediaServer {
         ServerEngine talkbackEngine = new ServerEngine();
         Integer talkbackServerPort = configs.getPorts().get(PORT_TALKBACK_SERVER);
         if (null != talkbackServerPort) {
-            bootstraps.add(new RtspServerBootstrap("talkback-server", talkbackEngine, talkbackServerPort, workerGroup));
+            bootstraps.add(new RtspServerBootstrap("talkback-server", talkbackEngine, talkbackServerPort));
         }
 
         // 启动 spring 容器
@@ -112,8 +117,28 @@ public class MediaServer {
 
         
         // 启动媒体服务器
+        EventLoopGroup bossGroup;
+        EventLoopGroup workerGroup;
+        Class<? extends ServerChannel> channelClass;
+        if (bootstraps.isEmpty()) {
+            logger.error("NO rtsp server started");
+            System.exit(-1);
+            return;
+        } else if(Epoll.isAvailable()) {
+            bossGroup = new EpollEventLoopGroup(bootstraps.size());
+            workerGroup = new EpollEventLoopGroup(maxWorkerThreads);
+            channelClass = EpollServerSocketChannel.class;
+        } else {
+            bossGroup = new NioEventLoopGroup(bootstraps.size());
+            workerGroup = new NioEventLoopGroup(maxWorkerThreads);
+            channelClass = NioServerSocketChannel.class;
+        }
+
+        logger.warn("!!! ServerChannel used '{}'", channelClass);
         for (RtspServerBootstrap rtspServerBootstrap : bootstraps) {
-            rtspServerBootstrap.start();
+            rtspServerBootstrap.group(bossGroup, workerGroup)
+                               .channel(channelClass)
+                               .start();
         }
         
     }
