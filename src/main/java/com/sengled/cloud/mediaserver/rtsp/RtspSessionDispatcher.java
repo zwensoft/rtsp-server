@@ -195,6 +195,7 @@ public class RtspSessionDispatcher {
                     }
 
                     NtpTimeEvent event = new NtpTimeEvent(streamIndex, new NtpTime(srPkt.ntpTs1, srPkt.ntpTs2, srPkt.rtpTs));
+                    logger.info("{}", srPkt);
                     logger.debug("stream#{} dispatch {}", streamIndex, event.getSource());
 
                     dispatch(event);
