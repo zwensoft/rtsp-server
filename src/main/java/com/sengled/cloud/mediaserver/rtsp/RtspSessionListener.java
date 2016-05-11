@@ -22,11 +22,13 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
     final private RtspSession session;
     final private AtomicLong sendBufferSize = new AtomicLong();
     final private int maxRtpBufferSize;
+    final private int minRtpBufferSize;
 
     public RtspSessionListener(RtspSession mySession, int maxRtpBufferSize) {
         super();
         this.session = mySession;
         this.maxRtpBufferSize = maxRtpBufferSize;
+        this.minRtpBufferSize = 1 + maxRtpBufferSize / 2;
     }
 
 
@@ -113,19 +115,39 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         InterLeavedRTPSession[] rtpSessions = session.getRTPSessions();
         InterLeavedRTPSession rtpSession = rtpSessions[streamIndex];
         
-        if (session.state() == PlayState.WAITING && sendBufferSize.get() > 0) {
-            logger.debug("ignore {} for send buffer NOT empty", rtpObj);
-            return; // 发送的缓冲区还有数据，暂时先不发送
-        } else {
-            session.state(PlayState.PLAYING);
+        switch (session.state()) {
+            case PLAYING:
+                if (sendBufferSize.get() < maxRtpBufferSize || !rtpObj.isFrameStart()) {
+                    boolean sent = rtpSession.sendRtpPkt(rtpObj, this);
+                    if (sent) {
+                        sendBufferSize.incrementAndGet();
+                    }
+                } else {
+                    session.state(PlayState.WAITING);
+                }
+                break;
+            case WAITING:
+                if (sendBufferSize.get() > minRtpBufferSize) {
+                    return;
+                } else {
+                    session.state(PlayState.PLAYING);
+                    
+                    if (!rtpObj.isFrameStart()) {
+                        return;
+                    } else {
+                        boolean sent = rtpSession.sendRtpPkt(rtpObj, this);
+                        if (sent) {
+                            sendBufferSize.incrementAndGet();
+                        }
+                    }
+                }
+                break;
+            case END:
+                break;
+            default:
+                break;
         }
-
-        if (sendBufferSize.get() < maxRtpBufferSize || !rtpObj.isFrameStart()) {
-            sendBufferSize.incrementAndGet();
-            rtpSession.sendRtpPkt(rtpObj, this); // 拷贝一份，重复使用
-        } else {
-            session.state(PlayState.WAITING);
-        }
+     
     }
 
 

@@ -435,7 +435,7 @@ public class RtspSession  {
         this.state = newState;
         
         if (oldState != newState) {
-            logger.info("state changed {}, {}", newState, this);
+            logger.info("Playing {}, {}", newState, this);
         }
 
         if (newState == PlayState.WAITING) {

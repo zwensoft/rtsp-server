@@ -116,7 +116,7 @@ public class InterLeavedRTPSession extends RTPSession {
         this.state = newState;
         
         if (oldState != newState) {
-            logger.info("state changed {}, {}", newState, this);
+            logger.info("Playing {}, {}", newState, this);
         }
     }
 
@@ -133,18 +133,16 @@ public class InterLeavedRTPSession extends RTPSession {
         this.playingTimestamp = rtpObj.getTimestamp();
     }
     
-    public void sendRtpPkt(RtpPkt rtpObj,
+    public boolean sendRtpPkt(RtpPkt rtpObj,
                            GenericFutureListener<? extends Future<? super Void>> onComplete) {
         
         rtpObj = rtpObj.share();
         try {
             switch (mediaStream.getMediaType()) {
                 case VIDEO:
-                    sendVideoRtpPkt(rtpObj, onComplete);
-                    break;
+                    return sendVideoRtpPkt(rtpObj, onComplete);
                 case AUDIO:
-                    sendAudioRtpPkt(rtpObj, onComplete);
-                    break;
+                    return sendAudioRtpPkt(rtpObj, onComplete);
                 default:
                     break;
             } 
@@ -152,9 +150,10 @@ public class InterLeavedRTPSession extends RTPSession {
             rtpObj.release();
         }
         
+        return false;
     }
 
-    private void sendAudioRtpPkt(RtpPkt rtpObj,
+    private boolean sendAudioRtpPkt(RtpPkt rtpObj,
                                  GenericFutureListener<? extends Future<? super Void>> onComplete) {
         if (state() == PlayState.WAITING) {
             if (PLAY_AUDIO_UNTIL_VIDEO_START) {
@@ -177,38 +176,38 @@ public class InterLeavedRTPSession extends RTPSession {
                 if (!hasVideo || videoStarted){
                     state(PlayState.PLAYING);
                 } else {
-                    return;
+                    return false;
                 }    
             } else {
                 if (!rtpObj.isFrameStart()) {
-                    return;
+                    return false;
                 }
 
                 state(PlayState.PLAYING);
             }
         }
         
-        doSendRtpPkt(rtpObj, onComplete);
+        return doSendRtpPkt(rtpObj, onComplete);
     }
 
-    private void sendVideoRtpPkt(RtpPkt rtpObj,
+    private boolean sendVideoRtpPkt(RtpPkt rtpObj,
                                  GenericFutureListener<? extends Future<? super Void>> onComplete) {
         
         if(state() == PlayState.WAITING) {
             // 如果是一帧的开始就可以
             if (!rtpObj.isFrameStart()) {
-                return;
+                return false;
             }
             
             // 等关键帧
             if (!isH264KeyFrameStart(rtpObj.data())) {
-                return;
+                return false;
             }
             
             state(PlayState.PLAYING);
         }
         
-        doSendRtpPkt(rtpObj, onComplete);
+        return doSendRtpPkt(rtpObj, onComplete);
     }
 
     private boolean isH264KeyFrameStart(ByteBuf buf) {
@@ -243,7 +242,7 @@ public class InterLeavedRTPSession extends RTPSession {
         return isKeyFrame;
     }
 
-    private void doSendRtpPkt(RtpPkt rtpObj,
+    private boolean doSendRtpPkt(RtpPkt rtpObj,
                            GenericFutureListener<? extends Future<? super Void>> onComplete) {
         
         // 更新播放时间
@@ -285,7 +284,7 @@ public class InterLeavedRTPSession extends RTPSession {
 
         logger.trace("isNew={}, {}", rtpObj.isFrameStart(), rtpObj);
         ByteBuf rtp = Unpooled.wrappedBuffer(interleaveHeader, rtpObj.content().retain());
-        writeAndFlush(rtp, onComplete);
+        return writeAndFlush(rtp, onComplete);
     }
 
     public void sendRtcpPkt(RtcpPkt sr) {
