@@ -9,6 +9,7 @@
     <properties>
         <jetty8.version>8.1.18.v20150929</jetty8.version>
         <metrics.version>3.1.2</metrics.version>
+        <netty.version>4.0.36.Final</netty.version>
     </properties>
     <dependencies>
         <!-- Google-Guava-EventBus -->
@@ -30,7 +31,18 @@
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
-            <version>4.0.36.Final</version>
+            <version>${netty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-transport-native-epoll</artifactId>
+            <version>${netty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-transport-native-epoll</artifactId>
+            <classifier>linux-x86_64</classifier>
+            <version>${netty.version}</version>
         </dependency>
 
         <!-- metrics 度量衡工具， 用于系统监测 -->
@@ -128,8 +140,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>1.6</source>
-                    <target>1.6</target>
+                    <source>1.7</source>
+                    <target>1.7</target>
                     <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
