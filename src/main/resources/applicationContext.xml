@@ -27,7 +27,7 @@
 	<import resource="applicationContext-*.xml" />
     
     
-    <bean id="osMonitor" class="com.sengled.cloud.mediaserver.spring.monitor.OSMonitor"></bean>
+    <bean id="osMonitor" class="com.sengled.cloud.mediaserver.spring.monitor.OSMonitor" init-method="start"></bean>
     <!-- 测试过程中不写 redis 
      -->
     <bean id="mediaResource" class="com.sengled.cloud.mediaserver.spring.reports.redis.MediaResource">
