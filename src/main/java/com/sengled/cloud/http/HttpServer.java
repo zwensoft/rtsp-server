@@ -1,6 +1,7 @@
 package com.sengled.cloud.http;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.FilenameUtils;
@@ -30,15 +31,23 @@ public class HttpServer {
     HandlerList handlers = new HandlerList();
     final private String base;
     
-    public HttpServer(int port) {
+    public HttpServer(int port) throws IOException {
         this.port = port;
-        this.base = FilenameUtils.normalize(new File("./work").getAbsolutePath());
+        this.base = FilenameUtils.normalize(new File("./htdocs").getAbsolutePath());
+        
         
         // static resource(s)
         logger.warn("use '{}' as resource base", base);
         ResourceHandler resourceHandler = new ResourceHandler();
         resourceHandler.setDirectoriesListed(true);
         resourceHandler.setResourceBase(base);
+        
+        
+        // 导出 jar 包
+        WebJarExtractor extractor = new WebJarExtractor();
+        File jsDir = new File(base, "asset");
+        jsDir.mkdirs();
+        extractor.extractAllWebJarsTo(jsDir);
         
         handlers.addHandler(resourceHandler);
     }
@@ -61,12 +70,7 @@ public class HttpServer {
         // http server socket
         SocketConnector connector = new SocketConnector();
         connector.setPort(port);
-        
-        // 导出 jar 包
-        WebJarExtractor extractor = new WebJarExtractor();
-        File jsDir = new File(base, "asset");
-        jsDir.mkdirs();
-        extractor.extractAllWebJarsTo(jsDir);
+
         
         // Set the connector
         Server server = new Server();
