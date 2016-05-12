@@ -135,7 +135,7 @@ final public class ServerEngine {
      * @param session
      * @throws IOException session 已经被移除
      */
-    public Dispatcher getDispatcher(String name, RtspSession session) throws IOException {
+    public Dispatcher getDispatcher(String name, RtspSession session) {
         Dispatcher element = dispatchers.get(name);
         
         boolean hasListener = null != element && element.session == session;
@@ -150,8 +150,9 @@ final public class ServerEngine {
             } else {
                 err.append(", real is NULL");
             }
+            logger.warn("{}", err);
             
-            throw new IOException(err.toString());
+            return null;
         }
     }
 

@@ -10,7 +10,6 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.rtsp.RtspHeaders;
 import io.netty.util.ReferenceCountUtil;
 
-import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -398,13 +397,12 @@ public class RtspSession  {
   
     public <T> void dispatch(RtpEvent<T> event) {
         if (isStreamSetup(event.getStreamIndex()) || event.getStreamIndex() < 0) {
-            try {
-                Dispatcher dispatcher;
-                dispatcher = engine.getDispatcher(name, this);
+            Dispatcher dispatcher;
+            dispatcher = engine.getDispatcher(name, this);
+            if (null != dispatcher) {
                 dispatcher.dispatch(event);
-            } catch (IOException ex) {
+            } else {
                 close();
-                return;
             }
         }
     }
