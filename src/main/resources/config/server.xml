@@ -6,8 +6,11 @@
         <!-- 作为 rtsp-server -->    
         <rtsp-server>5454</rtsp-server>
     
-        <!-- 作为 talkback-server -->
-        <talkback-server>25454</talkback-server>
+        <!-- 作为 talkback-server 
+        <talkback-server>25454</talkback-server>-->
+        
+        <!-- 内部调用 -->
+        <http-server>9999</http-server>
     </ports>
     
 	<streams>  

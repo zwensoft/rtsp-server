@@ -10,7 +10,6 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.ConnectException;
 import java.util.ArrayList;
@@ -19,12 +18,12 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
-import org.dom4j.DocumentException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Slf4jReporter;
+import com.sengled.cloud.http.HttpServer;
 import com.sengled.cloud.mediaserver.RtspClients;
 import com.sengled.cloud.mediaserver.RtspServerBootstrap;
 import com.sengled.cloud.mediaserver.rtsp.ServerEngine;
@@ -41,11 +40,12 @@ import com.sengled.cloud.mediaserver.xml.StreamSourceDef;
 public class MediaServer {
     private static final String PORT_TALKBACK_SERVER = "talkback-server";
     private static final String PORT_RTSP_SERVER = "rtsp-server";
+    private static final String PORT_HTTP_SERVER = "http-server";
 
     private static final Logger logger = LoggerFactory.getLogger(MediaServer.class);
     
     
-    public static void main(String[] args) throws InterruptedException, IOException, DocumentException {
+    public static void main(String[] args) throws Exception {
         File configFile = getConfigFile(args);
         if (null == configFile) {
             System.exit(-1);
@@ -63,7 +63,10 @@ public class MediaServer {
 
         // 性能统计
         final MetricRegistry metrics = new MetricRegistry();
-        
+        Integer httpPort = configs.getPorts().get(PORT_HTTP_SERVER);
+        if (null != httpPort) {
+            new HttpServer(httpPort).withMetricRegistry(metrics).start();
+        }
 
         // 默认启动的线程数
         int defaultWorkerThreads = Runtime.getRuntime().availableProcessors() * 2;
@@ -77,7 +80,7 @@ public class MediaServer {
         ServerEngine rtspServerEngine = new ServerEngine();
         Integer rtspServerPort = configs.getPorts().get(PORT_RTSP_SERVER);
         if (null != rtspServerPort) {
-            rtspServerEngine.withMetricRegistry("RtspServer", metrics);
+            rtspServerEngine.withMetricRegistry("rtsp-server", metrics);
             bootstraps.add(new RtspServerBootstrap("rtsp-server", rtspServerEngine, rtspServerPort));
 
             for (StreamSourceDef def : configs.getStreamSources()) {
@@ -94,7 +97,7 @@ public class MediaServer {
         ServerEngine talkbackEngine = new ServerEngine();
         Integer talkbackServerPort = configs.getPorts().get(PORT_TALKBACK_SERVER);
         if (null != talkbackServerPort) {
-            talkbackEngine.withMetricRegistry("TalbackServer", metrics);
+            talkbackEngine.withMetricRegistry("talkback-server", metrics);
             bootstraps.add(new RtspServerBootstrap("talkback-server", talkbackEngine, talkbackServerPort));
         }
 
@@ -155,6 +158,7 @@ public class MediaServer {
                                .channel(channelClass)
                                .start();
         }
+        
         
     }
 
