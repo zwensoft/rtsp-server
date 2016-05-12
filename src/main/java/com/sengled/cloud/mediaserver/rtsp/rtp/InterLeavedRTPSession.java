@@ -2,7 +2,7 @@ package com.sengled.cloud.mediaserver.rtsp.rtp;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -262,7 +262,7 @@ public class InterLeavedRTPSession extends RTPSession {
 
 
         int payloadLength;
-        ByteBufAllocator alloc = channel().alloc();
+        ByteBufAllocator alloc = rtspSession.channelHandlerContext().alloc();
         payloadLength = rtpObj.content().readableBytes();
 
         ByteBuf interleaved = alloc.buffer(4 + payloadLength);
@@ -292,7 +292,7 @@ public class InterLeavedRTPSession extends RTPSession {
             final int payloadLength = rawPkt.length;
 
             // 依次发送 rtp 包
-            ByteBufAllocator alloc = channel().alloc();
+            ByteBufAllocator alloc = rtspSession.channelHandlerContext().alloc();
 
             ByteBuf payload = alloc.buffer(4 + payloadLength);
             payload.writeByte('$');
@@ -355,20 +355,19 @@ public class InterLeavedRTPSession extends RTPSession {
 
     private boolean writeAndFlush(ByteBuf data,
                                   GenericFutureListener<? extends Future<? super Void>> onComplete) {
-        Channel channel = channel();
-        ChannelPromise promise = channel.newPromise();
+        ChannelHandlerContext  ctx = rtspSession.channelHandlerContext();
+        
+        
+        ChannelPromise promise = ctx.newPromise();
         if (null != onComplete) {
             promise.addListener(onComplete);
         }
 
-        channel.writeAndFlush(data, promise);
+        ctx.writeAndFlush(data, promise);
 
         return true;
     }
 
-    public Channel channel() {
-        return rtspSession.channel();
-    }
 
     public int rtcpChannel() {
         return rtcpSession().rtcpChannel();
@@ -391,7 +390,7 @@ public class InterLeavedRTPSession extends RTPSession {
 
     @Override
     protected void generateCNAME() {
-        SocketAddress addr = channel().localAddress();
+        SocketAddress addr = rtspSession.channelHandlerContext().channel().localAddress();
 
         String hostname = null;
 
@@ -441,7 +440,7 @@ public class InterLeavedRTPSession extends RTPSession {
         buf.append("{RtpSession");
         buf.append(", ").append(mediaStream.getMediaType());
         buf.append(", name = ").append(rtspSession.getName());
-        buf.append(", ").append(channel().remoteAddress());
+        buf.append(", ").append(rtspSession.channelHandlerContext().channel().remoteAddress());
         buf.append("}");
         return buf.toString();
     }

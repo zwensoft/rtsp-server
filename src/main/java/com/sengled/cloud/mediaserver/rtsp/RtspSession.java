@@ -5,12 +5,12 @@ import gov.nist.javax.sdp.SessionDescriptionImpl;
 import gov.nist.javax.sdp.fields.SDPField;
 import gov.nist.javax.sdp.parser.ParserFactory;
 import gov.nist.javax.sdp.parser.SDPParser;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.rtsp.RtspHeaders;
 import io.netty.util.ReferenceCountUtil;
 
+import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,6 +28,7 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.sengled.cloud.mediaserver.rtsp.ServerEngine.Dispatcher;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtcpContent;
 import com.sengled.cloud.mediaserver.rtsp.interleaved.RtpPkt;
 import com.sengled.cloud.mediaserver.rtsp.rtp.InterLeavedRTPSession;
@@ -90,8 +91,10 @@ public class RtspSession  {
         this.name = name;
     }
     
-    public Channel channel() {
-        return ctx.channel();
+
+    
+    public ServerEngine engine() {
+        return engine;
     }
     
     public ChannelHandlerContext channelHandlerContext() {
@@ -263,7 +266,7 @@ public class RtspSession  {
     public void play() {
         switch (mode) {
             case PUBLISH:
-                engine.updateSession(name, this);
+                engine.putSession(name, this);
                 logger.info("{} will publish media", userAgent);
                 break;
             case PLAY:
@@ -397,7 +400,16 @@ public class RtspSession  {
   
     public <T> void dispatch(RtpEvent<T> event) {
         if (isStreamSetup(event.getStreamIndex()) || event.getStreamIndex() < 0) {
-            engine.dispatch(getName(), event);
+            Dispatcher dispatcher;
+            
+            try {
+                dispatcher = engine.getDispatcher(name, this);
+            } catch (IOException ex) {
+                close();
+                return;
+            }
+
+            dispatcher.dispatch(event);
         }
     }
     

@@ -15,6 +15,7 @@ import java.io.InputStream;
 import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
@@ -22,6 +23,8 @@ import org.dom4j.DocumentException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Slf4jReporter;
 import com.sengled.cloud.mediaserver.RtspClients;
 import com.sengled.cloud.mediaserver.RtspServerBootstrap;
 import com.sengled.cloud.mediaserver.rtsp.ServerEngine;
@@ -58,6 +61,9 @@ public class MediaServer {
             IOUtils.closeQuietly(in);
         }
 
+        // 性能统计
+        final MetricRegistry metrics = new MetricRegistry();
+        
 
         // 默认启动的线程数
         int defaultWorkerThreads = Runtime.getRuntime().availableProcessors() * 2;
@@ -71,6 +77,7 @@ public class MediaServer {
         ServerEngine rtspServerEngine = new ServerEngine();
         Integer rtspServerPort = configs.getPorts().get(PORT_RTSP_SERVER);
         if (null != rtspServerPort) {
+            rtspServerEngine.withMetricRegistry("RtspServer", metrics);
             bootstraps.add(new RtspServerBootstrap("rtsp-server", rtspServerEngine, rtspServerPort));
 
             for (StreamSourceDef def : configs.getStreamSources()) {
@@ -87,6 +94,7 @@ public class MediaServer {
         ServerEngine talkbackEngine = new ServerEngine();
         Integer talkbackServerPort = configs.getPorts().get(PORT_TALKBACK_SERVER);
         if (null != talkbackServerPort) {
+            talkbackEngine.withMetricRegistry("TalbackServer", metrics);
             bootstraps.add(new RtspServerBootstrap("talkback-server", talkbackEngine, talkbackServerPort));
         }
 
@@ -115,6 +123,13 @@ public class MediaServer {
             }
         }
 
+        // 日志输出
+        Slf4jReporter.forRegistry(metrics)
+                .convertRatesTo(TimeUnit.SECONDS)
+                .convertDurationsTo(TimeUnit.SECONDS)
+                .outputTo(logger)
+                .build()
+                .start(10, TimeUnit.SECONDS);
         
         // 启动媒体服务器
         EventLoopGroup bossGroup;

@@ -108,11 +108,15 @@ public class RtspServerBootstrap {
          .childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
             public void initChannel(SocketChannel ch) throws Exception {
+                
                 // 心跳
                 ch.pipeline().addLast(new IdleStateHandler(0, 0, 60));
-                ch.pipeline().addLast("rtspEncoder", new RtspEncoder());
-        
+                
                 // server端接收到的是httpRequest，所以要使用HttpRequestDecoder进行解码
+                ch.pipeline().addLast(engine.channelOutboundMeterHandler());
+                ch.pipeline().addLast("rtspEncoder", new RtspEncoder());
+                
+                ch.pipeline().addLast(engine.channelInboundMeterHandler());
                 ch.pipeline().addLast(RtspObjectDecoder.NAME, new RtspRequestDecoder());
                 ch.pipeline().addLast("rtsp", new RtspServerInboundHandler(engine));
             }

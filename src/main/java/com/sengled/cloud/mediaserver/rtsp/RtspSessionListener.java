@@ -30,8 +30,6 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         this.maxRtpBufferSize = maxRtpBufferSize;
         this.minRtpBufferSize = 1 + maxRtpBufferSize / 2;
     }
-
-
     
     /**
      * 初始化
@@ -166,7 +164,7 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         StringBuilder buf = new StringBuilder();
         buf.append("{RtpSessionDispatcher");
         buf.append(", name = ").append(session.getName());
-        buf.append(", ").append(session.channel().remoteAddress());
+        buf.append(", ").append(session.channelHandlerContext().channel().remoteAddress());
         buf.append("}");
         return buf.toString();
     }
