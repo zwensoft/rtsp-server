@@ -321,7 +321,6 @@ public class RtspSession  {
     }
     
     public void close() {
-    	destroy(null);
     	ctx.close();
     }
     
@@ -399,16 +398,14 @@ public class RtspSession  {
   
     public <T> void dispatch(RtpEvent<T> event) {
         if (isStreamSetup(event.getStreamIndex()) || event.getStreamIndex() < 0) {
-            Dispatcher dispatcher;
-            
             try {
+                Dispatcher dispatcher;
                 dispatcher = engine.getDispatcher(name, this);
+                dispatcher.dispatch(event);
             } catch (IOException ex) {
                 close();
                 return;
             }
-
-            dispatcher.dispatch(event);
         }
     }
     

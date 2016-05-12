@@ -39,7 +39,7 @@ public class InterLeavedRTPSession extends RTPSession {
             .getLogger(InterLeavedRTPSession.class);
     private static final boolean PLAY_AUDIO_UNTIL_VIDEO_START;
     static {
-        String playAudioUtilVideoStart = System.getProperty(SystemPropertyKeys.PLAY_AUDIO_UNTIL_VIDEO_START);
+        String playAudioUtilVideoStart = System.getProperty(SystemPropertyKeys.PLAY_AUDIO_UNTIL_VIDEO_START, "true");
         PLAY_AUDIO_UNTIL_VIDEO_START = "true".equalsIgnoreCase(playAudioUtilVideoStart);
     }
 

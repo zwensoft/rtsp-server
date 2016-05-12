@@ -205,7 +205,7 @@ final public class ServerEngine {
                     logger.warn("fail close {}", rtspListener);
                 }
             }
-            session.destroy("replaced");
+            session.close();
             listeners.clear();
         }
 

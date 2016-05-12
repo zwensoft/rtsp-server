@@ -224,7 +224,6 @@ public class RtspSessionDispatcher {
                     dispatch(event);
                     
                     logger.info("stream#{} dispatch {}", streamIndex, event.getSource());
-                    session.close();
                     
                     /**        Application specific Packets       **/
                 } else if(aPkt instanceof RtcpPktAPP) {
