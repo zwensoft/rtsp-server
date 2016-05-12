@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.sengled.cloud.async.TimerExecutor;
+import com.sengled.cloud.mediaserver.rtsp.ServerEngine.Dispatcher;
 import com.sengled.cloud.mediaserver.rtsp.event.NtpTimeEvent;
 import com.sengled.cloud.mediaserver.rtsp.event.RtpPktEvent;
 import com.sengled.cloud.mediaserver.rtsp.event.TearDownEvent;
@@ -39,9 +40,11 @@ public class RtspSessionDispatcher {
     final private static TimerExecutor tasker = new TimerExecutor();
     
     private RtspSession session;
+    private Dispatcher proxy;
 
-    public RtspSessionDispatcher(final RtspSession session) {
+    public RtspSessionDispatcher(final Dispatcher dispatcher, final RtspSession session) {
         super();
+        this.proxy = dispatcher;
         this.session = session;
         
         tasker.setInterval(new Callable<Boolean>() {
@@ -63,7 +66,10 @@ public class RtspSessionDispatcher {
     public <T> void dispatch(RtpEvent<T> event) {
         if (null != event) {
             try {
-                session.dispatch(event);
+                if (session.isStreamSetup(event.getStreamIndex())
+                        || event.getStreamIndex() < 0) {
+                    proxy.dispatch(event);
+                }
             } finally {
                 event.destroy();
             }

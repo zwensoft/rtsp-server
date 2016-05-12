@@ -7,7 +7,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -91,7 +90,7 @@ final public class ServerEngine {
         return removed.session;
     }
 
-    public void putSession(final String name,
+    public Dispatcher putSession(final String name,
                               final RtspSession session) {
         final Dispatcher removed = dispatchers.put(name, new Dispatcher(session));
         if (null != removed) {
@@ -103,6 +102,9 @@ final public class ServerEngine {
         inboundSessionCounter.inc();
         eventBus.post(new RtspSessionUpdatedEvent(numSessions(), session));
         logger.info("{} device session(s) online", numSessions());
+        
+        
+        return dispatchers.get(name);
     }
 
     public int register(String name,
@@ -130,31 +132,6 @@ final public class ServerEngine {
         }
     }
 
-    /**
-     * @param name
-     * @param session
-     * @throws IOException session 已经被移除
-     */
-    public Dispatcher getDispatcher(String name, RtspSession session) {
-        Dispatcher element = dispatchers.get(name);
-        
-        boolean hasListener = null != element && element.session == session;
-        if (hasListener) {
-            return element;
-        } else {
-            StringBuilder err = new StringBuilder();
-            err.append("session[").append(name).append("has removed");
-            err.append(", except is ").append(session);
-            if (null != element) {
-                err.append(", real is ").append(element.session);
-            } else {
-                err.append(", real is NULL");
-            }
-            logger.warn("{}", err);
-            
-            return null;
-        }
-    }
 
     public Collection<String> sessionNames() {
         return dispatchers.keySet();

@@ -265,10 +265,12 @@ public class RtspSession  {
     public void play() {
         switch (mode) {
             case PUBLISH:
-                engine.putSession(name, this);
+                Dispatcher dispatcher = engine.putSession(name, this);
+                this.dispatcher = new RtspSessionDispatcher(dispatcher, this);
                 logger.info("{} will publish media", userAgent);
                 break;
-            case PLAY:
+            case PLAY: 
+                this.listener = new RtspSessionListener(this, 128); 
                 int numListeners = engine.register(name, listener);
                 logger.info("{} is {}th listener of '{}'", userAgent, numListeners, name);
                 break;
@@ -282,10 +284,9 @@ public class RtspSession  {
             case PLAY:
                 this.sd = engine.getSessionDescription(name);
                 this.rtpSessions = new InterLeavedRTPSession[getMediaDescriptions(sd).size()];
-                this.listener = new RtspSessionListener(this, 128); 
+               
                 break;
             case PUBLISH:
-                this.dispatcher = new RtspSessionDispatcher(this);
                 break;
             default:
                 break;
@@ -395,17 +396,6 @@ public class RtspSession  {
     	return listener;
     }
   
-    public <T> void dispatch(RtpEvent<T> event) {
-        if (isStreamSetup(event.getStreamIndex()) || event.getStreamIndex() < 0) {
-            Dispatcher dispatcher;
-            dispatcher = engine.getDispatcher(name, this);
-            if (null != dispatcher) {
-                dispatcher.dispatch(event);
-            } else {
-                close();
-            }
-        }
-    }
     
     @Override
     public String toString() {
