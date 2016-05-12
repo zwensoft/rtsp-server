@@ -26,7 +26,6 @@ import com.google.common.eventbus.AsyncEventBus;
 import com.google.common.eventbus.EventBus;
 import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionRemovedEvent;
 import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionUpdatedEvent;
-import com.sengled.cloud.mediaserver.rtsp.event.TearDownEvent;
 
 /**
  * 一个 server 实例
@@ -62,8 +61,8 @@ final public class ServerEngine {
                 registry.counter(MetricRegistry.name(ServerEngine.class, name, "channels"));
         inboundSessionCounter =
                 registry.counter(MetricRegistry.name(ServerEngine.class, name, "inboundSession"));
-        inboundIoMeter = registry.meter(MetricRegistry.name(ServerEngine.class, name, "input"));
-        outboundIoMeter = registry.meter(MetricRegistry.name(ServerEngine.class, name, "output"));
+        inboundIoMeter = registry.meter(MetricRegistry.name(ServerEngine.class, name, "inbound"));
+        outboundIoMeter = registry.meter(MetricRegistry.name(ServerEngine.class, name, "outbound"));
         
         return this;
     }
@@ -198,8 +197,15 @@ final public class ServerEngine {
 
 
         void closeAll() {
+            for (RtspSessionListener rtspListener : listeners) {
+                try {
+                    rtspListener.close();
+                } catch (Exception ex) {
+                    // 独立 Listener 的异常不能传播到其他 listener
+                    logger.warn("fail close {}", rtspListener);
+                }
+            }
             session.destroy("replaced");
-            dispatch(new TearDownEvent("session-clean"));
             listeners.clear();
         }
 

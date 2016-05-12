@@ -73,13 +73,6 @@ public class RtspSessionDispatcher {
 
     
     /**
-     * 视频流停止上传了
-     */
-    public void teardown(String reason) {
-        dispatch(new TearDownEvent(reason));
-    }
-    
-    /**
      * 新收到一组 RTP 帧
      * 
      * @param rtpObj

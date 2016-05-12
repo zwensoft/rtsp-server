@@ -168,4 +168,8 @@ public class RtspSessionListener implements GenericFutureListener<Future<? super
         buf.append("}");
         return buf.toString();
     }
+
+    public void close() {
+       session.close();
+    }
 }

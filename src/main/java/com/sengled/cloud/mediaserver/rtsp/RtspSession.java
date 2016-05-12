@@ -302,7 +302,6 @@ public class RtspSession  {
 		if (state() != PlayState.END) {
             switch (mode) {
     		case PUBLISH:
-    			dispatcher().teardown(reason);
     			engine.removeSession(name, this);
     			break;
     		case PLAY:
