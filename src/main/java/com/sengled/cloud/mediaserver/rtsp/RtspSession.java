@@ -270,7 +270,7 @@ public class RtspSession  {
                 logger.info("{} will publish media", userAgent);
                 break;
             case PLAY: 
-                this.listener = new RtspSessionListener(this, 128); 
+                this.listener = new RtspSessionListener(this, 2 * 1024); // 3M (2 * 1024 * 1500K) 缓冲区每人 
                 int numListeners = engine.register(name, listener);
                 logger.info("{} is {}th listener of '{}'", userAgent, numListeners, name);
                 break;
