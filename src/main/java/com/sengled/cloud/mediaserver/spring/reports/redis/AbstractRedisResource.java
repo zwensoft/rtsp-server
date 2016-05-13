@@ -21,7 +21,7 @@ import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 import com.sengled.cloud.mediaserver.rtsp.ServerEngine;
 import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionRemovedEvent;
 import com.sengled.cloud.mediaserver.rtsp.event.RtspSessionUpdatedEvent;
-import com.sengled.cloud.mediaserver.spring.monitor.OSMonitor;
+import com.sengled.cloud.monitor.OSMonitor;
 
 /**
  * 每台服务器都是一个 Resource 实例
