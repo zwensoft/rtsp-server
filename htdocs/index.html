@@ -109,9 +109,9 @@
     <script src="/asset/d3/d3.js"></script>
     <script src="/asset/metrics-graphics/dist/metricsgraphics.js"></script>
     <script type="text/javascript">
-	    d3.json('/metrics/gauge?name=com.sengled.cloud.mediaserver.spring.monitor.OSMonitor.us&column=value', function(usUages){
-	      d3.json('/metrics/gauge?name=com.sengled.cloud.mediaserver.spring.monitor.OSMonitor.sy,st&column=value', function(syUages){
-	        d3.json('/metrics/gauge?name=com.sengled.cloud.mediaserver.spring.monitor.OSMonitor.id&column=value', function(idUages){
+	    d3.json('/metrics/gauge?name=com.sengled.cloud.monitor.OSMonitor.us&column=value', function(usUages){
+	      d3.json('/metrics/gauge?name=com.sengled.cloud.monitor.OSMonitor.sy,st&column=value', function(syUages){
+	        d3.json('/metrics/gauge?name=com.sengled.cloud.monitor.OSMonitor.id&column=value', function(idUages){
 	            data = new Array();
 	            data.push(MG.convert.date(usUages, 'date', '%Y-%m-%d %H:%M:%S'));
 	               data.push(MG.convert.date(syUages, 'date', '%Y-%m-%d %H:%M:%S'));
