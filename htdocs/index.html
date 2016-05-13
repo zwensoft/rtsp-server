@@ -71,9 +71,9 @@
               <p class='col-lg-9 text-left ' id="cpuUsageRate-legend"></p>
             </div>
             <div class="col-6 col-sm-6 col-lg-6">
-              <h2>网络流量(mean_rate)</h2>
-              <p id="network-meter-mean"></p>
-              <p class='col-lg-9 text-left ' id="network-meter-mean-legend"></p>
+              <h2>网络流量(m1)</h2>
+              <p id="network-meter-m1"></p>
+              <p class='col-lg-9 text-left ' id="network-meter-m1-legend"></p>
             </div>
             <div class="col-6 col-sm-6 col-lg-6">
               <h2>网络流量(m5)</h2>
@@ -109,24 +109,30 @@
     <script src="/asset/d3/d3.js"></script>
     <script src="/asset/metrics-graphics/dist/metricsgraphics.js"></script>
     <script type="text/javascript">
+	    d3.json('/metrics/gauge?name=com.sengled.cloud.mediaserver.spring.monitor.OSMonitor.us&column=value', function(usUages){
+	      d3.json('/metrics/gauge?name=com.sengled.cloud.mediaserver.spring.monitor.OSMonitor.sy,st&column=value', function(syUages){
+	        d3.json('/metrics/gauge?name=com.sengled.cloud.mediaserver.spring.monitor.OSMonitor.id&column=value', function(idUages){
+	            data = new Array();
+	            data.push(MG.convert.date(usUages, 'date', '%Y-%m-%d %H:%M:%S'));
+	               data.push(MG.convert.date(syUages, 'date', '%Y-%m-%d %H:%M:%S'));
+	               data.push(MG.convert.date(idUages, 'date', '%Y-%m-%d %H:%M:%S'));
+	            
+	            MG.data_graphic({
+	              title : "vmstat",
+	              description : "",
+	              data : data,
+	              width : 400,
+	              height : 200,
+	              right : 20,
+	              target : document.getElementById('cpuUsageRate'),
+	              legend: ['us', 'sy+st', 'id'],
+	              legend_target: '#cpuUsageRate-legend',
+	              aggregate_rollover: true
+	            });
+	        });
+	      });      
+	    });
 
-       d3.json('/metrics/counter?name=com.sengled.cloud.mediaserver.rtsp.ServerEngine.rtsp-server.inboundSession', function(usages) {
-         data = new Array();
-         data.push(MG.convert.date(usages, 'date', '%Y-%m-%d %H:%M:%S'));
-         
-         MG.data_graphic({
-           title : "使用率",
-           description : "",
-           data : data,
-           width : 400,
-           height : 200,
-           right : 20,
-           target : document.getElementById('cpuUsageRate'),
-           legend: ['cpu usage'],
-           legend_target: '#cpuUsageRate-legend',
-           aggregate_rollover: true
-         });
-       });
 
        d3.json('/metrics/counter?name=com.sengled.cloud.mediaserver.rtsp.ServerEngine.rtsp-server.channels', function(channels) {
          d3.json('/metrics/counter?name=com.sengled.cloud.mediaserver.rtsp.ServerEngine.rtsp-server.inboundSession', function(sessions) {
@@ -143,7 +149,7 @@
              right : 40,
              target : document.getElementById('channels'),
              colors: ['#00BFFF', '#0000FF'],
-             legend: ['all channels','inbound channels'],
+             legend: ['all channels','publish channels'],
              legend_target: '#channels-legend',
              aggregate_rollover: true
            });
@@ -151,22 +157,22 @@
        })
       
        
-       d3.json('/metrics/meter?name=com.sengled.cloud.mediaserver.rtsp.ServerEngine.rtsp-server.inbound&column=mean_rate', function(inbound) {
-         d3.json('/metrics/meter?name=com.sengled.cloud.mediaserver.rtsp.ServerEngine.rtsp-server.outbound&column=mean_rate', function(outbound) {
+       d3.json('/metrics/meter?name=com.sengled.cloud.mediaserver.rtsp.ServerEngine.rtsp-server.inbound&column=m1', function(inbound) {
+         d3.json('/metrics/meter?name=com.sengled.cloud.mediaserver.rtsp.ServerEngine.rtsp-server.outbound&column=m1', function(outbound) {
            data = new Array();
            data.push(MG.convert.date(inbound, 'date', '%Y-%m-%d %H:%M:%S'));
            data.push(MG.convert.date(outbound, 'date', '%Y-%m-%d %H:%M:%S'));
            
            MG.data_graphic({
-             title : "network-meter-mean",
+             title : "network 1 minute EWMA",
              description : "",
              data : data,
              width : 400,
              height : 200,
              right : 40,
-             target : document.getElementById('network-meter-mean'),
+             target : document.getElementById('network-meter-m1'),
              legend: ['inbound','outbound'],
-             legend_target: '#network-meter-mean-legend',
+             legend_target: '#network-meter-m1-legend',
              aggregate_rollover: true
            });
          });
@@ -179,7 +185,7 @@
            data.push(MG.convert.date(outbound, 'date', '%Y-%m-%d %H:%M:%S'));
            
            MG.data_graphic({
-             title : "network-meter-m5",
+             title : "network 5 minute EWMA",
              description : "",
              data : data,
              width : 400,
