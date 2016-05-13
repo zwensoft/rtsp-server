@@ -1,4 +1,4 @@
-package com.sengled.cloud.mediaserver.spring.reports.redis;
+package com.sengled.cloud.spring.reports.redis;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;

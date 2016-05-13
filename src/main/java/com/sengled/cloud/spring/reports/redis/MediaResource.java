@@ -1,4 +1,4 @@
-package com.sengled.cloud.mediaserver.spring.reports.redis;
+package com.sengled.cloud.spring.reports.redis;
 
 import com.sengled.cloud.mediaserver.rtsp.RtspSession;
 

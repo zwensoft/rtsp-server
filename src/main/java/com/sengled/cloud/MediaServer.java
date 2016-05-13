@@ -27,11 +27,11 @@ import com.sengled.cloud.http.HttpServer;
 import com.sengled.cloud.mediaserver.RtspClients;
 import com.sengled.cloud.mediaserver.RtspServerBootstrap;
 import com.sengled.cloud.mediaserver.rtsp.ServerEngine;
-import com.sengled.cloud.mediaserver.spring.reports.RtspSessionLogger;
-import com.sengled.cloud.mediaserver.spring.reports.SpringStarter;
 import com.sengled.cloud.mediaserver.xml.MediaServerConfigs;
 import com.sengled.cloud.mediaserver.xml.StreamSourceDef;
 import com.sengled.cloud.monitor.OSMonitor;
+import com.sengled.cloud.spring.reports.SpringStarter;
+import com.sengled.cloud.spring.reports.local.RtspSessionLogger;
 
 /**
  * rtsp media server

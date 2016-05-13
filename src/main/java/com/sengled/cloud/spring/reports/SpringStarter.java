@@ -1,4 +1,4 @@
-package com.sengled.cloud.mediaserver.spring.reports;
+package com.sengled.cloud.spring.reports;
 
 import java.io.File;
 import java.net.UnknownHostException;
@@ -8,9 +8,10 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import com.codahale.metrics.MetricRegistry;
 import com.sengled.cloud.mediaserver.rtsp.ServerEngine;
-import com.sengled.cloud.mediaserver.spring.reports.redis.MediaResource;
-import com.sengled.cloud.mediaserver.spring.reports.redis.TalkbackResource;
 import com.sengled.cloud.monitor.OSMonitor;
+import com.sengled.cloud.spring.reports.local.RtspSessionLogger;
+import com.sengled.cloud.spring.reports.redis.MediaResource;
+import com.sengled.cloud.spring.reports.redis.TalkbackResource;
 
 /**
  * 启动 spring

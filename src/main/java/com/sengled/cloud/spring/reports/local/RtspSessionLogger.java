@@ -1,4 +1,4 @@
-package com.sengled.cloud.mediaserver.spring.reports;
+package com.sengled.cloud.spring.reports.local;
 
 import java.io.File;
 import java.io.IOException;
