@@ -6,7 +6,9 @@ import java.net.UnknownHostException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
+import com.codahale.metrics.MetricRegistry;
 import com.sengled.cloud.mediaserver.rtsp.ServerEngine;
+import com.sengled.cloud.mediaserver.spring.monitor.OSMonitor;
 import com.sengled.cloud.mediaserver.spring.reports.redis.MediaResource;
 import com.sengled.cloud.mediaserver.spring.reports.redis.TalkbackResource;
 
@@ -52,6 +54,11 @@ public class SpringStarter {
             RtspSessionLogger sessionLogger = springContext.getBean(RtspSessionLogger.class);
             sessionLogger.register(talkbackServerPort, talkbackServerCtx);
         }
+    }
+
+    public void withMetricRegistry(MetricRegistry metrics) {
+        OSMonitor osMonitor =  springContext.getBean(OSMonitor.class);
+        osMonitor.withMetricRegistry(metrics);
     }
 
 }

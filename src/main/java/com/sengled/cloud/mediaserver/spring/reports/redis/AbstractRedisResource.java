@@ -168,7 +168,7 @@ public abstract class AbstractRedisResource {
         redisTemplate.execute(new RedisCallback<Void>() {
             @Override
             public Void doInRedis(RedisConnection connection) throws DataAccessException {
-                double leftCpuUsageRate = 100 - osMonitor.getCpuUseRate();
+                double leftCpuUsageRate = 100 - osMonitor.getCpuIdRate();
 
                 // 更新 media-list
                 String key = getListKey();

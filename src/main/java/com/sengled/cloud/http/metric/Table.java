@@ -50,9 +50,19 @@ class Table {
             return false;
         }
 
+        
         JSONWriter writer = new JSONWriter(new OutputStreamWriter(out, "UTF-8"));
         writer.startArray();
-        for (Row row : new ArrayList<Row>(rows)) {
+        
+        
+        // 只显示最近 30 分钟的数据
+        long mixCreated = System.currentTimeMillis() - (1000 * 60 * 30);
+        ArrayList<Row> arrayList = new ArrayList<Row>(rows);
+        for (Row row : arrayList) {
+            if (row.getCreated() < mixCreated) {
+                continue;
+            }
+
             writer.startObject();
             
             // value

@@ -27,6 +27,7 @@ import com.sengled.cloud.http.HttpServer;
 import com.sengled.cloud.mediaserver.RtspClients;
 import com.sengled.cloud.mediaserver.RtspServerBootstrap;
 import com.sengled.cloud.mediaserver.rtsp.ServerEngine;
+import com.sengled.cloud.mediaserver.spring.monitor.OSMonitor;
 import com.sengled.cloud.mediaserver.spring.reports.RtspSessionLogger;
 import com.sengled.cloud.mediaserver.spring.reports.SpringStarter;
 import com.sengled.cloud.mediaserver.xml.MediaServerConfigs;
@@ -51,6 +52,7 @@ public class MediaServer {
             System.exit(-1);
         }
         
+
         MediaServerConfigs configs;
         InputStream in = null;
         try {
@@ -61,7 +63,7 @@ public class MediaServer {
             IOUtils.closeQuietly(in);
         }
 
-        // 性能统计
+        // http-server，用于输出性能统计数据
         final MetricRegistry metrics = new MetricRegistry();
         Integer httpPort = configs.getPorts().get(PORT_HTTP_SERVER);
         if (null != httpPort) {
@@ -114,6 +116,8 @@ public class MediaServer {
                 starter.setTalkbackResource(talkbackServerPort, talkbackEngine);
             }
             
+            
+            starter.withMetricRegistry(metrics);
         } else {        
             logger.warn("use local mode, don't start spring");
             RtspSessionLogger sessionLogger = new RtspSessionLogger();
@@ -124,6 +128,8 @@ public class MediaServer {
             if (null != talkbackServerPort) {
                 sessionLogger.register(talkbackServerPort, talkbackEngine);
             }
+            
+            new OSMonitor().withMetricRegistry(metrics).start();
         }
 
         // 日志输出
